@@ -41,6 +41,10 @@
             <a href="/inventory/items/new" class="btn btn-primary">Add Item</a>
         </div>
 
+        <div class="search-container">
+            <input type="text" id="itemSearch" placeholder="Search items by name or category..." autocomplete="off">
+        </div>
+
         <div class="inventory-table">
             <table>
                 <thead>
@@ -55,7 +59,7 @@
                 </thead>
                 <tbody>
                     {{range .Items}}
-                        <tr data-id="{{.ID}}">
+                        <tr class="item-row" data-id="{{.ID}}" data-item-name="{{.Name}}" data-item-category="{{.Category.Name}}">
                             <td>{{.Name}}</td>
                             <td>{{.Category.Name}}</td>
                             <td>{{.WeightGrams}}g</td>
@@ -84,6 +88,34 @@
     <footer class="footer">
         <p>&copy; 2025 Carryless. Built for outdoor enthusiasts.</p>
     </footer>
+
+    <script>
+        function filterItems(query) {
+            const rows = document.querySelectorAll('.item-row');
+            
+            rows.forEach(row => {
+                const itemName = row.dataset.itemName.toLowerCase();
+                const itemCategory = row.dataset.itemCategory.toLowerCase();
+                const searchQuery = query.toLowerCase();
+                
+                if (itemName.includes(searchQuery) || itemCategory.includes(searchQuery)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        // Setup search input event listener
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('itemSearch');
+            if (searchInput) {
+                searchInput.addEventListener('input', (e) => {
+                    filterItems(e.target.value);
+                });
+            }
+        });
+    </script>
 </body>
 </html>
 {{end}}
