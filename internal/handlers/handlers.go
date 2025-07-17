@@ -29,6 +29,8 @@ func SetupRoutes(r *gin.Engine, db *sql.DB) {
 	{
 		protected.GET("/dashboard", handleDashboard)
 		protected.GET("/inventory", handleInventory)
+		protected.GET("/inventory/export", handleExportInventory)
+		protected.POST("/inventory/import", handleImportInventory)
 		protected.GET("/inventory/items/new", handleNewItemPage)
 		protected.POST("/inventory/items", handleCreateItem)
 		protected.GET("/inventory/items/:id/edit", handleEditItemPage)

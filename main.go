@@ -45,6 +45,14 @@ func main() {
 			}
 			return groups
 		},
+		"groupItemsByCategory": func(items []models.Item) map[string][]models.Item {
+			groups := make(map[string][]models.Item)
+			for _, item := range items {
+				category := item.Category.Name
+				groups[category] = append(groups[category], item)
+			}
+			return groups
+		},
 	}
 
 	r.SetFuncMap(funcMap)

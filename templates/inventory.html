@@ -36,6 +36,40 @@
             <div class="alert alert-error">{{.Error}}</div>
         {{end}}
         
+        <!-- Import/Export feedback messages -->
+        <script>
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('success') === 'imported') {
+                document.addEventListener('DOMContentLoaded', function() {
+                    const alert = document.createElement('div');
+                    alert.className = 'alert alert-success';
+                    alert.textContent = 'Inventory successfully imported!';
+                    document.querySelector('.page-header').after(alert);
+                });
+            }
+            
+            const error = urlParams.get('error');
+            if (error) {
+                document.addEventListener('DOMContentLoaded', function() {
+                    const alert = document.createElement('div');
+                    alert.className = 'alert alert-error';
+                    let message = 'Import failed. ';
+                    switch(error) {
+                        case 'no_file': message += 'No file was selected.'; break;
+                        case 'invalid_file': message += 'Invalid file format or content.'; break;
+                        case 'parse_error': message += 'Could not parse CSV file.'; break;
+                        case 'database_error': message += 'Database error occurred.'; break;
+                        case 'delete_error': message += 'Could not clear existing inventory.'; break;
+                        case 'import_error': message += 'Could not import items.'; break;
+                        case 'commit_error': message += 'Could not complete import.'; break;
+                        default: message += 'Unknown error occurred.';
+                    }
+                    alert.textContent = message;
+                    document.querySelector('.page-header').after(alert);
+                });
+            }
+        </script>
+        
         <div class="page-header">
             <h1>Inventory</h1>
             <a href="/inventory/items/new" class="btn btn-primary">Add Item</a>
@@ -45,43 +79,85 @@
             <input type="text" id="itemSearch" placeholder="Search items by name or category..." autocomplete="off">
         </div>
 
-        <div class="inventory-table">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Category</th>
-                        <th>Weight (g)</th>
-                        <th>Price</th>
-                        <th>Note</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {{range .Items}}
-                        <tr class="item-row" data-id="{{.ID}}" data-item-name="{{.Name}}" data-item-category="{{.Category.Name}}">
-                            <td>{{.Name}}</td>
-                            <td>{{.Category.Name}}</td>
-                            <td>{{.WeightGrams}}g</td>
-                            <td>{{$.User.Currency}}{{printf "%.2f" .Price}}</td>
-                            <td>{{.Note}}</td>
-                            <td>
-                                <form action="/inventory/items/{{.ID}}/edit" method="GET" style="display: inline;">
-                                    <button type="submit" class="btn btn-small btn-secondary">Edit</button>
-                                </form>
-                                <form action="/inventory/items/{{.ID}}/delete" method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this item?')">
-                                    <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
-                                    <button type="submit" class="btn btn-small btn-danger">Delete</button>
-                                </form>
-                            </td>
-                        </tr>
-                    {{else}}
-                        <tr>
-                            <td colspan="6" class="empty-state">No items yet. Add your first piece of gear to get started.</td>
-                        </tr>
-                    {{end}}
-                </tbody>
-            </table>
+        {{if .Items}}
+            {{range $category, $items := (groupItemsByCategory .Items)}}
+                <div class="category-section">
+                    <h3>{{$category}}</h3>
+                    <div class="inventory-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Weight (g)</th>
+                                    <th>Price</th>
+                                    <th>Note</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {{range $items}}
+                                    <tr class="item-row" data-id="{{.ID}}" data-item-name="{{.Name}}" data-item-category="{{.Category.Name}}">
+                                        <td>{{.Name}}</td>
+                                        <td>{{.WeightGrams}}g</td>
+                                        <td>{{$.User.Currency}}{{printf "%.2f" .Price}}</td>
+                                        <td>{{.Note}}</td>
+                                        <td>
+                                            <div class="dropdown">
+                                                <button class="dropdown-toggle" onclick="toggleDropdown(event, {{.ID}})">
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                        <circle cx="12" cy="12" r="1"></circle>
+                                                        <circle cx="12" cy="5" r="1"></circle>
+                                                        <circle cx="12" cy="19" r="1"></circle>
+                                                    </svg>
+                                                </button>
+                                                <div class="dropdown-menu" id="dropdown-{{.ID}}">
+                                                    <form action="/inventory/items/{{.ID}}/edit" method="GET">
+                                                        <button type="submit" class="dropdown-item">Edit</button>
+                                                    </form>
+                                                    <form action="/inventory/items/{{.ID}}/delete" method="POST" onsubmit="return confirm('Are you sure you want to delete this item?')">
+                                                        <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                                                        <button type="submit" class="dropdown-item dropdown-item-danger">Delete</button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {{end}}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            {{end}}
+        {{else}}
+            <div class="empty-state">No items yet. Add your first piece of gear to get started.</div>
+        {{end}}
+
+        <div class="inventory-actions">
+            <a href="/inventory/export" class="btn btn-secondary">Export Inventory</a>
+            <button onclick="showImportModal()" class="btn btn-secondary">Import Inventory</button>
+        </div>
+
+        <!-- Import Modal -->
+        <div id="importModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <h3>Import Inventory</h3>
+                <div class="alert alert-warning">
+                    <strong>Warning:</strong> Importing will completely replace your current inventory. All existing items will be deleted. This action cannot be undone.
+                </div>
+                <form id="importForm" action="/inventory/import" method="POST" enctype="multipart/form-data">
+                    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                    <div class="form-group">
+                        <label for="csvFile">Select CSV file:</label>
+                        <input type="file" id="csvFile" name="csvFile" accept=".csv,text/csv" required>
+                        <small>CSV format: Name,Category,Weight (grams),Price,Note</small>
+                        <small>Note: Categories that don't exist will be created automatically.</small>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" onclick="hideImportModal()" class="btn btn-secondary">Cancel</button>
+                        <button type="submit" class="btn btn-danger">Replace Inventory</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </main>
 
@@ -92,6 +168,7 @@
     <script>
         function filterItems(query) {
             const rows = document.querySelectorAll('.item-row');
+            const categories = document.querySelectorAll('.category-section');
             
             rows.forEach(row => {
                 const itemName = row.dataset.itemName.toLowerCase();
@@ -104,6 +181,49 @@
                     row.style.display = 'none';
                 }
             });
+            
+            // Hide empty categories
+            categories.forEach(category => {
+                const visibleRows = category.querySelectorAll('.item-row[style=""], .item-row:not([style])');
+                if (visibleRows.length === 0) {
+                    category.style.display = 'none';
+                } else {
+                    category.style.display = '';
+                }
+            });
+        }
+
+        function toggleDropdown(event, itemId) {
+            event.stopPropagation();
+            
+            // Close all other dropdowns
+            document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
+                if (menu.id !== `dropdown-${itemId}`) {
+                    menu.classList.remove('show');
+                }
+            });
+            
+            // Toggle current dropdown
+            const dropdown = document.getElementById(`dropdown-${itemId}`);
+            dropdown.classList.toggle('show');
+        }
+
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', function(event) {
+            if (!event.target.closest('.dropdown')) {
+                document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
+                    menu.classList.remove('show');
+                });
+            }
+        });
+
+        function showImportModal() {
+            document.getElementById('importModal').style.display = 'flex';
+        }
+
+        function hideImportModal() {
+            document.getElementById('importModal').style.display = 'none';
+            document.getElementById('importForm').reset();
         }
 
         // Setup search input event listener

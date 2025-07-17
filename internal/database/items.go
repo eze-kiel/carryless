@@ -223,3 +223,24 @@ func GetItemsByCategory(db *sql.DB, userID, categoryID int) ([]models.Item, erro
 
 	return items, nil
 }
+
+func DeleteAllItems(db *sql.DB, userID int) error {
+	// First, delete all pack items that reference the user's items
+	deletePackItemsQuery := `
+		DELETE FROM pack_items 
+		WHERE item_id IN (SELECT id FROM items WHERE user_id = ?)
+	`
+	_, err := db.Exec(deletePackItemsQuery, userID)
+	if err != nil {
+		return fmt.Errorf("failed to delete pack items: %w", err)
+	}
+
+	// Then delete all items for the user
+	deleteItemsQuery := `DELETE FROM items WHERE user_id = ?`
+	_, err = db.Exec(deleteItemsQuery, userID)
+	if err != nil {
+		return fmt.Errorf("failed to delete items: %w", err)
+	}
+
+	return nil
+}

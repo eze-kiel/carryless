@@ -1,7 +1,12 @@
 package handlers
 
 import (
+	"bytes"
 	"database/sql"
+	"encoding/csv"
+	"fmt"
+	"io"
+	"mime/multipart"
 	"net/http"
 	"strconv"
 	"strings"
@@ -360,4 +365,225 @@ func handleDeleteItem(c *gin.Context) {
 	}
 
 	c.Redirect(http.StatusFound, "/inventory")
+}
+
+func handleExportInventory(c *gin.Context) {
+	userID := c.MustGet("user_id").(int)
+	db := c.MustGet("db").(*sql.DB)
+
+	items, err := database.GetItems(db, userID)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Failed to load inventory")
+		return
+	}
+
+	// Create CSV content
+	var buf bytes.Buffer
+	writer := csv.NewWriter(&buf)
+	
+	// Write header
+	header := []string{"Name", "Category", "Weight (grams)", "Price", "Note"}
+	if err := writer.Write(header); err != nil {
+		c.String(http.StatusInternalServerError, "Failed to generate CSV")
+		return
+	}
+
+	// Write items
+	for _, item := range items {
+		record := []string{
+			item.Name,
+			item.Category.Name,
+			strconv.Itoa(item.WeightGrams),
+			fmt.Sprintf("%.2f", item.Price),
+			item.Note,
+		}
+		if err := writer.Write(record); err != nil {
+			c.String(http.StatusInternalServerError, "Failed to generate CSV")
+			return
+		}
+	}
+
+	writer.Flush()
+	if err := writer.Error(); err != nil {
+		c.String(http.StatusInternalServerError, "Failed to generate CSV")
+		return
+	}
+
+	// Set headers for download
+	c.Header("Content-Type", "text/csv")
+	c.Header("Content-Disposition", "attachment; filename=inventory.csv")
+	c.Data(http.StatusOK, "text/csv", buf.Bytes())
+}
+
+func handleImportInventory(c *gin.Context) {
+	userID := c.MustGet("user_id").(int)
+	db := c.MustGet("db").(*sql.DB)
+
+	// Validate file upload
+	file, header, err := c.Request.FormFile("csvFile")
+	if err != nil {
+		c.Redirect(http.StatusFound, "/inventory?error=no_file")
+		return
+	}
+	defer file.Close()
+
+	// Security validations
+	if err := validateCSVFile(file, header); err != nil {
+		c.Redirect(http.StatusFound, "/inventory?error=invalid_file")
+		return
+	}
+
+	// Reset file position after validation
+	file.Seek(0, 0)
+
+	// Parse CSV
+	items, err := parseCSVFile(file, db, userID)
+	if err != nil {
+		c.Redirect(http.StatusFound, "/inventory?error=parse_error")
+		return
+	}
+
+	// Begin transaction for atomic operation
+	tx, err := db.Begin()
+	if err != nil {
+		c.Redirect(http.StatusFound, "/inventory?error=database_error")
+		return
+	}
+	defer tx.Rollback()
+
+	// Delete all existing items
+	if err := database.DeleteAllItems(db, userID); err != nil {
+		c.Redirect(http.StatusFound, "/inventory?error=delete_error")
+		return
+	}
+
+	// Insert new items
+	for _, item := range items {
+		if _, err := database.CreateItem(db, userID, item); err != nil {
+			c.Redirect(http.StatusFound, "/inventory?error=import_error")
+			return
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		c.Redirect(http.StatusFound, "/inventory?error=commit_error")
+		return
+	}
+
+	c.Redirect(http.StatusFound, "/inventory?success=imported")
+}
+
+func validateCSVFile(file multipart.File, header *multipart.FileHeader) error {
+	// Check file size (max 10MB)
+	if header.Size > 10*1024*1024 {
+		return fmt.Errorf("file too large")
+	}
+
+	// Validate filename extension
+	filename := strings.ToLower(header.Filename)
+	if !strings.HasSuffix(filename, ".csv") {
+		return fmt.Errorf("invalid file extension")
+	}
+
+	// Read first 512 bytes for MIME type detection
+	buffer := make([]byte, 512)
+	_, err := file.Read(buffer)
+	if err != nil {
+		return fmt.Errorf("cannot read file")
+	}
+
+	// Check MIME type (should be text/plain or text/csv)
+	contentType := http.DetectContentType(buffer)
+	if !strings.HasPrefix(contentType, "text/") {
+		return fmt.Errorf("invalid file type: %s", contentType)
+	}
+
+	// Additional CSV validation - check for common CSV patterns
+	content := string(buffer)
+	if !strings.Contains(content, ",") && !strings.Contains(content, "\n") {
+		return fmt.Errorf("file does not appear to be CSV format")
+	}
+
+	return nil
+}
+
+func parseCSVFile(file multipart.File, db *sql.DB, userID int) ([]models.Item, error) {
+	reader := csv.NewReader(file)
+	reader.FieldsPerRecord = 5 // Expect exactly 5 fields
+
+	var items []models.Item
+	lineNumber := 0
+
+	for {
+		record, err := reader.Read()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, fmt.Errorf("CSV parse error at line %d: %v", lineNumber, err)
+		}
+
+		lineNumber++
+
+		// Skip header row
+		if lineNumber == 1 {
+			continue
+		}
+
+		// Limit total rows to prevent DoS
+		if lineNumber > 10000 {
+			return nil, fmt.Errorf("too many rows (max 10000)")
+		}
+
+		// Validate and sanitize record
+		if len(record) != 5 {
+			return nil, fmt.Errorf("invalid number of fields at line %d", lineNumber)
+		}
+
+		name := strings.TrimSpace(record[0])
+		categoryName := strings.TrimSpace(record[1])
+		weightStr := strings.TrimSpace(record[2])
+		priceStr := strings.TrimSpace(record[3])
+		note := strings.TrimSpace(record[4])
+
+		// Validate required fields
+		if name == "" || categoryName == "" {
+			return nil, fmt.Errorf("empty required field at line %d", lineNumber)
+		}
+
+		// Validate field lengths
+		if len(name) > 255 || len(categoryName) > 100 || len(note) > 1000 {
+			return nil, fmt.Errorf("field too long at line %d", lineNumber)
+		}
+
+		// Parse weight
+		weight, err := strconv.Atoi(weightStr)
+		if err != nil || weight < 0 || weight > 100000 {
+			return nil, fmt.Errorf("invalid weight at line %d", lineNumber)
+		}
+
+		// Parse price
+		price, err := strconv.ParseFloat(priceStr, 64)
+		if err != nil || price < 0 || price > 100000 {
+			return nil, fmt.Errorf("invalid price at line %d", lineNumber)
+		}
+
+		// Find or create category
+		category, err := database.GetOrCreateCategory(db, userID, categoryName)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get/create category at line %d", lineNumber)
+		}
+
+		item := models.Item{
+			Name:        name,
+			CategoryID:  category.ID,
+			WeightGrams: weight,
+			Price:       price,
+			Note:        note,
+		}
+
+		items = append(items, item)
+	}
+
+	return items, nil
 }

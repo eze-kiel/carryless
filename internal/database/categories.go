@@ -151,3 +151,23 @@ func DeleteCategory(db *sql.DB, userID, categoryID int) error {
 
 	return nil
 }
+
+func GetOrCreateCategory(db *sql.DB, userID int, name string) (*models.Category, error) {
+	// First try to get existing category
+	query := `SELECT id, user_id, name FROM categories WHERE user_id = ? AND name = ?`
+	var category models.Category
+	err := db.QueryRow(query, userID, name).Scan(&category.ID, &category.UserID, &category.Name)
+	
+	if err == nil {
+		// Category exists, return it
+		return &category, nil
+	}
+	
+	if err != sql.ErrNoRows {
+		// Real error occurred
+		return nil, fmt.Errorf("failed to query category: %w", err)
+	}
+	
+	// Category doesn't exist, create it
+	return CreateCategory(db, userID, name)
+}
