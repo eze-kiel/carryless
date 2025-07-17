@@ -1,0 +1,680 @@
+/* Clean, minimal CSS for Carryless */
+
+/* Reset */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    font-size: 16px;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    line-height: 1.5;
+    color: #333;
+    background: #f8f9fa;
+}
+
+/* Layout */
+.header {
+    background: #fff;
+    border-bottom: 1px solid #ddd;
+    padding: 1rem 0;
+}
+
+.nav {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.nav-brand a {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #333;
+    text-decoration: none;
+}
+
+.nav-links {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.nav-links a {
+    color: #666;
+    text-decoration: none;
+    padding: 0.5rem;
+}
+
+.nav-links a:hover {
+    color: #333;
+}
+
+.main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+
+.footer {
+    text-align: center;
+    padding: 2rem;
+    color: #666;
+    border-top: 1px solid #ddd;
+    margin-top: 3rem;
+}
+
+/* Page Header */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.page-header h1 {
+    font-size: 2rem;
+    color: #333;
+}
+
+/* Buttons */
+.btn {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #fff;
+    color: #333;
+    text-decoration: none;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.2s;
+    text-align: center;
+}
+
+.btn:hover {
+    background: #f8f9fa;
+}
+
+.btn-primary {
+    background: #007bff;
+    color: #fff;
+    border-color: #007bff;
+}
+
+.btn-primary:hover {
+    background: #0056b3;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: #fff;
+    border-color: #6c757d;
+}
+
+.btn-secondary:hover {
+    background: #545b62;
+}
+
+.btn-danger {
+    background: #dc3545;
+    color: #fff;
+    border-color: #dc3545;
+}
+
+.btn-danger:hover {
+    background: #c82333;
+}
+
+.btn-small {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+}
+
+/* Forms */
+.form-container {
+    max-width: 600px;
+    margin: 0 auto;
+    background: #fff;
+    padding: 2rem;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #333;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #007bff;
+}
+
+/* Checkbox */
+.form-group label {
+    cursor: pointer;
+}
+
+.form-group input[type="checkbox"] {
+    width: auto;
+    margin-right: 8px;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 2rem;
+}
+
+/* Tables */
+.categories-table,
+.packs-table,
+.available-items-table,
+.inventory-table {
+    background: #fff;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    overflow: hidden;
+    width: 100%;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th,
+td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+th {
+    background: #f8f9fa;
+    font-weight: 500;
+    color: #333;
+}
+
+tr:last-child td {
+    border-bottom: none;
+}
+
+tr:hover {
+    background: #f8f9fa;
+}
+
+.table-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.table-actions .btn {
+    min-width: 60px;
+}
+
+/* Pack specific */
+.pack-name-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.pack-name {
+    font-weight: 500;
+    color: #007bff;
+    text-decoration: none;
+}
+
+.pack-name:hover {
+    color: #0056b3;
+    text-decoration: underline;
+}
+
+/* Pack Detail */
+.pack-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin: 2rem 0;
+}
+
+.stat {
+    text-align: center;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #007bff;
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    color: #666;
+    margin-top: 0.5rem;
+}
+
+.category-section {
+    margin: 2rem 0;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.category-section h3 {
+    background: #f8f9fa;
+    padding: 1rem;
+    margin: 0;
+    border-bottom: 1px solid #ddd;
+}
+
+/* Available Items */
+.available-items-section {
+    margin-top: 3rem;
+    background: #fff;
+    padding: 2rem;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+}
+
+.search-container {
+    margin-bottom: 1rem;
+}
+
+.search-container input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+/* Chart */
+.chart-container {
+    max-width: 400px;
+    margin: 2rem auto;
+    width: 100%;
+    padding: 0 1rem;
+}
+
+/* Badges */
+.badge {
+    background: #007bff;
+    color: #fff;
+    padding: 0.2rem 0.5rem;
+    border-radius: 3px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
+.badge-private {
+    background: #6c757d;
+}
+
+/* Alerts */
+.alert {
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 4px;
+}
+
+.alert-error {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: #666;
+}
+
+/* Danger Zone */
+.danger-zone {
+    margin-top: 2rem;
+    padding: 1rem;
+    border: 1px solid #dc3545;
+    border-radius: 6px;
+    background: #f8d7da;
+}
+
+.danger-zone h3 {
+    color: #721c24;
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+}
+
+.danger-zone p {
+    color: #721c24;
+    margin-bottom: 0.75rem;
+    font-size: 0.9rem;
+}
+
+/* Hero */
+.hero {
+    text-align: center;
+    padding: 4rem 2rem;
+}
+
+.hero h1 {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.hero p {
+    font-size: 1.25rem;
+    color: #666;
+    margin-bottom: 2rem;
+}
+
+.hero-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+
+/* Dashboard */
+.dashboard h1 {
+    font-size: 2rem;
+    color: #333;
+    margin-bottom: 2.5rem;
+}
+
+.dashboard-stats {
+    margin-bottom: 3rem;
+}
+
+.stat-card {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 2rem;
+}
+
+.stat-card h3 {
+    font-size: 1.25rem;
+    color: #333;
+    margin-bottom: 1.5rem;
+}
+
+.quick-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.dashboard-content {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 2rem;
+}
+
+.recent-packs h2 {
+    font-size: 1.5rem;
+    color: #333;
+    margin-bottom: 1rem;
+}
+
+.recent-packs p {
+    color: #666;
+    margin-bottom: 2rem;
+    line-height: 1.6;
+}
+
+.getting-started {
+    margin-top: 1.5rem;
+}
+
+.getting-started h3 {
+    font-size: 1.25rem;
+    color: #333;
+    margin-bottom: 1rem;
+}
+
+.getting-started ol {
+    padding-left: 1.5rem;
+}
+
+.getting-started li {
+    margin-bottom: 0.75rem;
+    line-height: 1.5;
+    color: #555;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .main {
+        padding: 1.5rem 1rem;
+    }
+    
+    .pack-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .chart-container {
+        max-width: 320px;
+    }
+    
+    .dashboard h1 {
+        font-size: 1.75rem;
+    }
+    
+    .quick-actions {
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 768px) {
+    .nav {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .nav-links {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .page-header {
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
+    }
+    
+    .page-header h1 {
+        font-size: 1.75rem;
+    }
+    
+    .form-container {
+        padding: 1.5rem;
+        margin: 0 0.5rem;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+    
+    .form-actions .btn {
+        width: 100%;
+    }
+    
+    th,
+    td {
+        padding: 0.75rem 0.5rem;
+        font-size: 0.9rem;
+    }
+    
+    .table-actions {
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+    
+    .table-actions .btn {
+        width: 100%;
+        min-width: 60px;
+        flex: 1;
+    }
+    
+    .table-actions form {
+        flex: 1;
+        width: 100%;
+    }
+    
+    .pack-stats {
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem;
+    }
+    
+    .available-items-section {
+        padding: 1rem;
+        margin-top: 2rem;
+    }
+    
+    .hero {
+        padding: 2rem 1rem;
+    }
+    
+    .hero h1 {
+        font-size: 2rem;
+    }
+    
+    .hero-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .hero-actions .btn {
+        width: 100%;
+        max-width: 280px;
+    }
+    
+    .stat-card,
+    .dashboard-content {
+        padding: 1.5rem;
+    }
+    
+    .dashboard h1 {
+        font-size: 1.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .main {
+        padding: 0.75rem 0.5rem;
+    }
+    
+    .nav {
+        padding: 0 0.5rem;
+    }
+    
+    .nav-brand a {
+        font-size: 1.25rem;
+    }
+    
+    .page-header h1 {
+        font-size: 1.5rem;
+    }
+    
+    .form-container {
+        margin: 0;
+        padding: 1rem;
+    }
+    
+    .pack-stats {
+        grid-template-columns: 1fr;
+    }
+    
+    .chart-container {
+        max-width: 280px;
+    }
+    
+    th,
+    td {
+        padding: 0.5rem 0.25rem;
+        font-size: 0.85rem;
+    }
+    
+    .table-actions .btn {
+        font-size: 0.75rem;
+        padding: 0.4rem 0.6rem;
+        min-width: 60px;
+        flex: 1;
+    }
+    
+    .table-actions form {
+        flex: 1;
+        width: 100%;
+    }
+    
+    .available-items-section {
+        padding: 0.75rem;
+    }
+    
+    .hero {
+        padding: 1.5rem 0.75rem;
+    }
+    
+    .hero h1 {
+        font-size: 1.75rem;
+    }
+    
+    .hero p {
+        font-size: 1.1rem;
+    }
+    
+    .footer {
+        padding: 1.5rem 0.5rem;
+        font-size: 0.9rem;
+    }
+    
+    .badge {
+        font-size: 0.7rem;
+        padding: 0.15rem 0.3rem;
+    }
+    
+    .stat-card,
+    .dashboard-content {
+        padding: 1rem;
+    }
+    
+    .dashboard h1 {
+        font-size: 1.25rem;
+        margin-bottom: 2rem;
+    }
+}

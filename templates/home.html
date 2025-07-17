@@ -1,0 +1,77 @@
+{{define "home.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <header class="header">
+        <nav class="nav">
+            <div class="nav-brand">
+                <a href="/">Carryless</a>
+            </div>
+            <div class="nav-links">
+                {{if .User}}
+                    <a href="/dashboard">Dashboard</a>
+                    <a href="/inventory">Inventory</a>
+                    <a href="/categories">Categories</a>
+                    <a href="/packs">Packs</a>
+                    <form class="logout-form" action="/logout" method="POST">
+                        {{if .CSRFToken}}<input type="hidden" name="csrf_token" value="{{.CSRFToken}}">{{end}}
+                        <button type="submit" class="btn btn-secondary">Logout</button>
+                    </form>
+                {{else}}
+                    <a href="/login">Login</a>
+                    <a href="/register">Register</a>
+                {{end}}
+            </div>
+        </nav>
+    </header>
+
+    <main class="main">
+        {{if .Error}}
+            <div class="alert alert-error">{{.Error}}</div>
+        {{end}}
+<div class="hero">
+    <h1>Welcome to Carryless</h1>
+    <p>Your lightweight outdoor gear catalog and pack planner</p>
+    {{if not .User}}
+        <div class="hero-actions">
+            <a href="/register" class="btn btn-primary">Get Started</a>
+            <a href="/login" class="btn btn-secondary">Login</a>
+        </div>
+    {{end}}
+</div>
+
+<section class="features">
+    <div class="feature">
+        <h3>Gear Inventory</h3>
+        <p>Catalog your outdoor gear with weights, categories, and notes</p>
+    </div>
+    <div class="feature">
+        <h3>Pack Planning</h3>
+        <p>Create and organize packs for different trips</p>
+    </div>
+    <div class="feature">
+        <h3>Weight Analysis</h3>
+        <p>Track total weight and visualize weight distribution by category</p>
+    </div>
+    <div class="feature">
+        <h3>Pack Sharing</h3>
+        <p>Share your packs publicly with other outdoor enthusiasts</p>
+    </div>
+</section>
+    </main>
+
+    <footer class="footer">
+        <p>&copy; 2025 Carryless. Built for outdoor enthusiasts.</p>
+    </footer>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
+{{end}}

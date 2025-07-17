@@ -1,0 +1,74 @@
+{{define "register.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <header class="header">
+        <nav class="nav">
+            <div class="nav-brand">
+                <a href="/">Carryless</a>
+            </div>
+            <div class="nav-links">
+                <a href="/login">Login</a>
+                <a href="/register">Register</a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="main">
+        {{if .Error}}
+            <div class="alert alert-error">{{.Error}}</div>
+        {{end}}
+        
+        <div class="auth-container">
+            <form class="auth-form" action="/register" method="POST">
+                <h2>Create Account</h2>
+                
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" value="{{.Username}}" required>
+                    {{if .Errors.username}}<span class="error">{{.Errors.username}}</span>{{end}}
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" value="{{.Email}}" required>
+                    {{if .Errors.email}}<span class="error">{{.Errors.email}}</span>{{end}}
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required>
+                    {{if .Errors.password}}<span class="error">{{.Errors.password}}</span>{{end}}
+                </div>
+
+                <div class="form-group">
+                    <label for="confirm_password">Confirm Password</label>
+                    <input type="password" id="confirm_password" name="confirm_password" required>
+                    {{if .Errors.confirm_password}}<span class="error">{{.Errors.confirm_password}}</span>{{end}}
+                </div>
+
+                {{if .Errors.general}}
+                    <div class="alert alert-error">{{.Errors.general}}</div>
+                {{end}}
+
+                <button type="submit" class="btn btn-primary btn-full">Create Account</button>
+                
+                <p class="auth-link">
+                    Already have an account? <a href="/login">Login here</a>
+                </p>
+            </form>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>&copy; 2025 Carryless. Built for outdoor enthusiasts.</p>
+    </footer>
+</body>
+</html>
+{{end}}

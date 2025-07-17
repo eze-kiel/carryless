@@ -1,0 +1,308 @@
+{{template "base.html" .}}
+
+{{define "content"}}
+<div class="pack-detail">
+    <div class="pack-header">
+        <div class="page-header">
+            <h1>{{.Pack.Name}}</h1>
+            <div>
+                {{if .Pack.IsPublic}}
+                    <a href="/public/packs/{{.Pack.ID}}" class="btn btn-secondary" target="_blank">Public View</a>
+                {{end}}
+            </div>
+        </div>
+        
+        <div class="pack-stats">
+            <div class="stat">
+                <div class="stat-value">{{.TotalWeight}}g</div>
+                <div class="stat-label">Pack Weight</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value">{{.TotalWornWeight}}g</div>
+                <div class="stat-label">Worn Weight</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value">{{add .TotalWeight .TotalWornWeight}}g</div>
+                <div class="stat-label">Total Weight</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value">{{len .Pack.Items}}</div>
+                <div class="stat-label">Items</div>
+            </div>
+        </div>
+
+        {{if .CategoryWeights}}
+            <div class="chart-container">
+                <canvas id="weightChart"></canvas>
+            </div>
+        {{end}}
+    </div>
+
+    {{if .Pack.Items}}
+        {{$categoryWeights := .CategoryWeights}}
+        {{$categoryWornWeights := .CategoryWornWeights}}
+        {{range $category, $items := (groupByCategory .Pack.Items)}}
+            <div class="category-section">
+                <h3>{{$category}} ({{index $categoryWeights $category}}g{{if index $categoryWornWeights $category}} + {{index $categoryWornWeights $category}}g worn{{end}})</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Count</th>
+                            <th>Item</th>
+                            <th>Weight</th>
+                            <th>Note</th>
+                            <th>Worn</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{range $items}}
+                            <tr>
+                                <td>{{.Count}}</td>
+                                <td>{{.Item.Name}}</td>
+                                <td>{{.Item.WeightGrams}}g</td>
+                                <td>{{.Item.Note}}</td>
+                                <td>
+                                    {{if eq .Count 1}}
+                                        <input type="checkbox" {{if .IsWorn}}checked{{end}} 
+                                               onchange="toggleWorn('{{$.Pack.ID}}', {{.Item.ID}}, this.checked)">
+                                    {{else}}
+                                        <input type="number" min="0" max="{{.Count}}" value="{{.WornCount}}" 
+                                               onchange="updateWornCount('{{$.Pack.ID}}', {{.Item.ID}}, this.value)"
+                                               style="width: 60px;">
+                                    {{end}}
+                                </td>
+                                <td>
+                                    <button class="btn btn-small btn-danger" 
+                                            onclick="removeFromPack('{{$.Pack.ID}}', {{.Item.ID}})">Remove</button>
+                                </td>
+                            </tr>
+                        {{end}}
+                    </tbody>
+                </table>
+            </div>
+        {{end}}
+    {{else}}
+        <div class="empty-state">
+            <p>No items in this pack yet. Add some items from the available items below.</p>
+        </div>
+    {{end}}
+
+    <!-- Available Items Section -->
+    <div class="available-items-section">
+        <h2>Available Items</h2>
+        <div class="search-container">
+            <input type="text" id="itemSearch" placeholder="Search available items..." autocomplete="off">
+        </div>
+        
+        <div class="available-items-table">
+            <table id="availableItemsTable">
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Weight</th>
+                        <th>Category</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="availableItemsBody">
+                    {{range .Items}}
+                        <tr class="available-item-row" data-item-id="{{.ID}}" data-item-name="{{.Name}}" data-item-category="{{.Category.Name}}">
+                            <td>{{.Name}}</td>
+                            <td>{{.WeightGrams}}g</td>
+                            <td>{{.Category.Name}}</td>
+                            <td>
+                                <button class="btn btn-small btn-primary" onclick="addItemToPack({{.ID}})">Add</button>
+                            </td>
+                        </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+let csrfToken = '';
+
+async function fetchCSRFToken() {
+    try {
+        const response = await fetch('/api/csrf-token');
+        const data = await response.json();
+        csrfToken = data.token;
+    } catch (error) {
+        console.error('Failed to fetch CSRF token:', error);
+    }
+}
+
+function filterAvailableItems(query) {
+    const rows = document.querySelectorAll('.available-item-row');
+    
+    rows.forEach(row => {
+        const itemName = row.dataset.itemName.toLowerCase();
+        const itemCategory = row.dataset.itemCategory.toLowerCase();
+        const searchQuery = query.toLowerCase();
+        
+        if (itemName.includes(searchQuery) || itemCategory.includes(searchQuery)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+
+async function addItemToPack(itemId) {
+    await fetchCSRFToken();
+    
+    const formData = new FormData();
+    formData.append('item_id', itemId);
+    formData.append('csrf_token', csrfToken);
+
+    try {
+        const response = await fetch(`/packs/{{.Pack.ID}}/items`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRF-Token': csrfToken
+            }
+        });
+
+        if (response.ok) {
+            location.reload();
+        } else {
+            const data = await response.json();
+            alert(data.error || 'Failed to add item to pack');
+        }
+    } catch (error) {
+        alert('Failed to add item to pack');
+    }
+}
+
+// Setup search input event listener
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('itemSearch');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            filterAvailableItems(e.target.value);
+        });
+    }
+});
+
+async function toggleWorn(packId, itemId, isWorn) {
+    await fetchCSRFToken();
+    
+    const formData = new FormData();
+    formData.append('is_worn', isWorn);
+    formData.append('csrf_token', csrfToken);
+
+    try {
+        const response = await fetch(`/packs/${packId}/items/${itemId}/worn`, {
+            method: 'PUT',
+            body: formData,
+            headers: {
+                'X-CSRF-Token': csrfToken
+            }
+        });
+
+        if (response.ok) {
+            location.reload();
+        } else {
+            const data = await response.json();
+            alert(data.error || 'Failed to update worn status');
+            location.reload(); // Reload to reset checkbox state
+        }
+    } catch (error) {
+        alert('Failed to update worn status');
+        location.reload();
+    }
+}
+
+async function updateWornCount(packId, itemId, wornCount) {
+    await fetchCSRFToken();
+    
+    const formData = new FormData();
+    formData.append('worn_count', wornCount);
+    formData.append('csrf_token', csrfToken);
+
+    try {
+        const response = await fetch(`/packs/${packId}/items/${itemId}/worn-count`, {
+            method: 'PUT',
+            body: formData,
+            headers: {
+                'X-CSRF-Token': csrfToken
+            }
+        });
+
+        if (response.ok) {
+            location.reload();
+        } else {
+            const data = await response.json();
+            alert(data.error || 'Failed to update worn count');
+            location.reload(); // Reload to reset input value
+        }
+    } catch (error) {
+        alert('Failed to update worn count');
+        location.reload();
+    }
+}
+
+async function removeFromPack(packId, itemId) {
+    if (!confirm('Are you sure you want to remove this item from the pack?')) {
+        return;
+    }
+
+    await fetchCSRFToken();
+    
+    try {
+        const response = await fetch(`/packs/${packId}/items/${itemId}`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRF-Token': csrfToken
+            }
+        });
+
+        if (response.ok) {
+            location.reload();
+        } else {
+            const data = await response.json();
+            alert(data.error || 'Failed to remove item');
+        }
+    } catch (error) {
+        alert('Failed to remove item');
+    }
+}
+
+// Chart.js for weight visualization
+{{if .CategoryWeights}}
+const ctx = document.getElementById('weightChart').getContext('2d');
+const chartData = {
+    labels: [{{range $category, $weight := .CategoryWeights}}'{{$category}}',{{end}}],
+    datasets: [{
+        data: [{{range $category, $weight := .CategoryWeights}}{{$weight}},{{end}}],
+        backgroundColor: [
+            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'
+        ]
+    }]
+};
+
+new Chart(ctx, {
+    type: 'doughnut',
+    data: chartData,
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            },
+            title: {
+                display: true,
+                text: 'Weight Distribution by Category'
+            }
+        }
+    }
+});
+{{end}}
+
+</script>
+{{end}}

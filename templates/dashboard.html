@@ -1,0 +1,76 @@
+{{define "dashboard.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <header class="header">
+        <nav class="nav">
+            <div class="nav-brand">
+                <a href="/">Carryless</a>
+            </div>
+            <div class="nav-links">
+                {{if .User}}
+                    <a href="/dashboard">Dashboard</a>
+                    <a href="/inventory">Inventory</a>
+                    <a href="/categories">Categories</a>
+                    <a href="/packs">Packs</a>
+                    <a href="/account">Account</a>
+                    <form class="logout-form" action="/logout" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                        <button type="submit" class="btn btn-secondary">Logout</button>
+                    </form>
+                {{else}}
+                    <a href="/login">Login</a>
+                    <a href="/register">Register</a>
+                {{end}}
+            </div>
+        </nav>
+    </header>
+
+    <main class="main">
+        {{if .Error}}
+            <div class="alert alert-error">{{.Error}}</div>
+        {{end}}
+        
+        <div class="dashboard">
+            <h1>Welcome back, {{.User.Username}}!</h1>
+            
+            <div class="dashboard-stats">
+                <div class="stat-card">
+                    <h3>Quick Actions</h3>
+                    <div class="quick-actions">
+                        <a href="/inventory" class="btn btn-primary">Manage Inventory</a>
+                        <a href="/packs" class="btn btn-primary">View Packs</a>
+                        <a href="/categories" class="btn btn-secondary">Manage Categories</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dashboard-content">
+                <div class="getting-started">
+                    <h3>Getting Started</h3>
+                    <ol>
+                        <li>Create categories like "Sleeping", "Cooking", "Clothing"</li>
+                        <li>Add your gear items with weights and details</li>
+                        <li>Create packs and add items for specific trips</li>
+                        <li>Analyze weight distribution and share your packs</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>&copy; 2025 Carryless. Built for outdoor enthusiasts.</p>
+    </footer>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
+{{end}}

@@ -1,0 +1,83 @@
+{{define "edit_pack.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <header class="header">
+        <nav class="nav">
+            <div class="nav-brand">
+                <a href="/">Carryless</a>
+            </div>
+            <div class="nav-links">
+                {{if .User}}
+                    <a href="/dashboard">Dashboard</a>
+                    <a href="/inventory">Inventory</a>
+                    <a href="/categories">Categories</a>
+                    <a href="/packs">Packs</a>
+                    <a href="/account">Account</a>
+                    <form class="logout-form" action="/logout" method="POST">
+                        <button type="submit" class="btn btn-secondary">Logout</button>
+                    </form>
+                {{else}}
+                    <a href="/login">Login</a>
+                    <a href="/register">Register</a>
+                {{end}}
+            </div>
+        </nav>
+    </header>
+
+    <main class="main">
+        {{if .Error}}
+            <div class="alert alert-error">{{.Error}}</div>
+        {{end}}
+        
+        <div class="page-header">
+            <h1>Edit Pack</h1>
+            <a href="/packs" class="btn btn-secondary">Back to Packs</a>
+        </div>
+
+        {{if .Pack}}
+        <div class="form-container">
+            <form action="/packs/{{.Pack.ID}}" method="POST" class="form">
+                <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                <div class="form-group">
+                    <label for="name">Pack Name</label>
+                    <input type="text" id="name" name="name" value="{{.Pack.Name}}" required maxlength="200" placeholder="Enter pack name">
+                </div>
+                
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="is_public" value="true" {{if .Pack.IsPublic}}checked{{end}}>
+                        Make this pack public (allows sharing with others)
+                    </label>
+                </div>
+                
+                <div class="form-actions">
+                    <a href="/packs" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary">Update Pack</button>
+                </div>
+            </form>
+            
+            <div class="danger-zone">
+                <h3>Danger Zone</h3>
+                <p>Deleting a pack will permanently remove it and all its items.</p>
+                <form action="/packs/{{.Pack.ID}}/delete" method="POST" onsubmit="return confirm('Are you sure you want to delete this pack? This action cannot be undone.')">
+                    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                    <button type="submit" class="btn btn-danger">Delete Pack</button>
+                </form>
+            </div>
+        </div>
+        {{end}}
+    </main>
+
+    <footer class="footer">
+        <p>&copy; 2025 Carryless. Built for outdoor enthusiasts.</p>
+    </footer>
+</body>
+</html>
+{{end}}

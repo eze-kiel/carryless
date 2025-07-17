@@ -1,0 +1,102 @@
+{{define "edit_item.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <header class="header">
+        <nav class="nav">
+            <div class="nav-brand">
+                <a href="/">Carryless</a>
+            </div>
+            <div class="nav-links">
+                {{if .User}}
+                    <a href="/dashboard">Dashboard</a>
+                    <a href="/inventory">Inventory</a>
+                    <a href="/categories">Categories</a>
+                    <a href="/packs">Packs</a>
+                    <a href="/account">Account</a>
+                    <form class="logout-form" action="/logout" method="POST">
+                        <button type="submit" class="btn btn-secondary">Logout</button>
+                    </form>
+                {{else}}
+                    <a href="/login">Login</a>
+                    <a href="/register">Register</a>
+                {{end}}
+            </div>
+        </nav>
+    </header>
+
+    <main class="main">
+        {{if .Error}}
+            <div class="alert alert-error">{{.Error}}</div>
+        {{end}}
+        
+        <div class="page-header">
+            <h1>Edit Item</h1>
+            <a href="/inventory" class="btn btn-secondary">Back to Inventory</a>
+        </div>
+
+        {{if .Item}}
+        <div class="form-container">
+            <form action="/inventory/items/{{.Item.ID}}" method="POST" class="form">
+                <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                <div class="form-group">
+                    <label for="name">Item Name *</label>
+                    <input type="text" id="name" name="name" value="{{.Item.Name}}" required maxlength="200" placeholder="Enter item name">
+                </div>
+                
+                <div class="form-group">
+                    <label for="category_id">Category *</label>
+                    <select id="category_id" name="category_id" required>
+                        <option value="">Select a category</option>
+                        {{range .Categories}}
+                            <option value="{{.ID}}" {{if eq .ID $.Item.CategoryID}}selected{{end}}>{{.Name}}</option>
+                        {{end}}
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="weight_grams">Weight (grams) *</label>
+                    <input type="number" id="weight_grams" name="weight_grams" value="{{.Item.WeightGrams}}" required min="0" placeholder="Enter weight in grams">
+                </div>
+                
+                <div class="form-group">
+                    <label for="price">Price (optional)</label>
+                    <input type="number" id="price" name="price" value="{{if .Item.Price}}{{.Item.Price}}{{end}}" step="0.01" min="0" placeholder="Enter price">
+                </div>
+                
+                
+                <div class="form-group">
+                    <label for="note">Notes (optional)</label>
+                    <textarea id="note" name="note" rows="3" placeholder="Add any notes about this item">{{.Item.Note}}</textarea>
+                </div>
+                
+                <div class="form-actions">
+                    <a href="/inventory" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary">Update Item</button>
+                </div>
+            </form>
+            
+            <div class="danger-zone">
+                <h3>Danger Zone</h3>
+                <p>Deleting an item will remove it from all packs that contain it.</p>
+                <form action="/inventory/items/{{.Item.ID}}/delete" method="POST" onsubmit="return confirm('Are you sure you want to delete this item? This action cannot be undone.')">
+                    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                    <button type="submit" class="btn btn-danger">Delete Item</button>
+                </form>
+            </div>
+        </div>
+        {{end}}
+    </main>
+
+    <footer class="footer">
+        <p>&copy; 2025 Carryless. Built for outdoor enthusiasts.</p>
+    </footer>
+</body>
+</html>
+{{end}}

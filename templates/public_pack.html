@@ -1,0 +1,202 @@
+{{define "public_pack.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <header class="header">
+        <nav class="nav">
+            <div class="nav-brand">
+                <a href="/">Carryless</a>
+            </div>
+            <div class="nav-links">
+                {{if .User}}
+                    <a href="/dashboard">Dashboard</a>
+                    <a href="/inventory">Inventory</a>
+                    <a href="/categories">Categories</a>
+                    <a href="/packs">Packs</a>
+                    <a href="/account">Account</a>
+                    <form class="logout-form" action="/logout" method="POST">
+                        {{if .CSRFToken}}<input type="hidden" name="csrf_token" value="{{.CSRFToken}}">{{end}}
+                        <button type="submit" class="btn btn-secondary">Logout</button>
+                    </form>
+                {{else}}
+                    <a href="/login">Login</a>
+                    <a href="/register">Register</a>
+                {{end}}
+            </div>
+        </nav>
+    </header>
+
+    <main class="main">
+        {{if .Error}}
+            <div class="alert alert-error">{{.Error}}</div>
+        {{end}}
+        
+        <div class="pack-detail">
+            <div class="pack-header">
+                <h1>{{.Pack.Name}} <span class="badge">Public Pack</span></h1>
+                
+                <div class="pack-stats">
+                    <div class="stat">
+                        <div class="stat-value">{{.TotalWeight}}g</div>
+                        <div class="stat-label">Pack Weight</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value">{{.TotalWornWeight}}g</div>
+                        <div class="stat-label">Worn Weight</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value">{{add .TotalWeight .TotalWornWeight}}g</div>
+                        <div class="stat-label">Total Weight</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value">{{len .Pack.Items}}</div>
+                        <div class="stat-label">Items</div>
+                    </div>
+                </div>
+
+                {{if .CategoryWeights}}
+                    <div class="chart-container">
+                        <canvas id="weightChart"></canvas>
+                    </div>
+                {{end}}
+            </div>
+
+            {{if .Pack.Items}}
+                {{$categoryWeights := .CategoryWeights}}
+                {{$categoryWornWeights := .CategoryWornWeights}}
+                {{range $category, $items := (groupByCategory .Pack.Items)}}
+                    <div class="category-section">
+                        <h3>{{$category}} 
+                            ({{index $categoryWeights $category}}g
+                            {{if index $categoryWornWeights $category}}
+                                + {{index $categoryWornWeights $category}}g worn
+                            {{end}})
+                        </h3>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Weight</th>
+                                    <th>Note</th>
+                                    <th>Worn</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {{range $items}}
+                                    <tr {{if .IsWorn}}class="worn-item"{{end}}>
+                                        <td>{{.Item.Name}}</td>
+                                        <td>{{.Item.WeightGrams}}g</td>
+                                        <td>{{.Item.Note}}</td>
+                                        <td>{{if .IsWorn}}✓{{end}}</td>
+                                    </tr>
+                                {{end}}
+                            </tbody>
+                        </table>
+                    </div>
+                {{end}}
+            {{else}}
+                <div class="empty-state">
+                    <p>This pack has no items.</p>
+                </div>
+            {{end}}
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>&copy; 2025 Carryless. Built for outdoor enthusiasts.</p>
+    </footer>
+
+    <script src="/static/js/app.js"></script>
+    <script>
+    // Chart.js for weight visualization
+    {{if .CategoryWeights}}
+    const ctx = document.getElementById('weightChart').getContext('2d');
+    const chartData = {
+        labels: [{{range $category, $weight := .CategoryWeights}}'{{$category}}',{{end}}],
+        datasets: [{
+            data: [{{range $category, $weight := .CategoryWeights}}{{$weight}},{{end}}],
+            backgroundColor: [
+                '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'
+            ]
+        }]
+    };
+
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: chartData,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                },
+                title: {
+                    display: true,
+                    text: 'Weight Distribution by Category'
+                }
+            }
+        }
+    });
+    {{end}}
+    </script>
+
+    <style>
+    .badge {
+        background: #007bff;
+        color: white;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: normal;
+    }
+
+    .worn-item {
+        background-color: #f8f9fa;
+        font-style: italic;
+    }
+
+    .category-section {
+        background: white;
+        margin: 1rem 0;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+
+    .category-section h3 {
+        background: #f8f9fa;
+        padding: 1rem;
+        margin: 0;
+        color: #2c3e50;
+        border-bottom: 1px solid #e9ecef;
+    }
+
+    .category-section table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .category-section th,
+    .category-section td {
+        padding: 1rem;
+        text-align: left;
+        border-bottom: 1px solid #e9ecef;
+    }
+
+    .category-section th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+        color: #495057;
+    }
+    </style>
+</body>
+</html>
+{{end}}

@@ -1,0 +1,28 @@
+{{template "base.html" .}}
+
+{{define "content"}}
+<div class="error-page">
+    <h1>403 - Access Denied</h1>
+    <p>You don't have permission to access this resource.</p>
+    <a href="/" class="btn btn-primary">Go Home</a>
+</div>
+
+<style>
+.error-page {
+    text-align: center;
+    padding: 4rem 0;
+}
+
+.error-page h1 {
+    font-size: 3rem;
+    color: #dc3545;
+    margin-bottom: 1rem;
+}
+
+.error-page p {
+    font-size: 1.2rem;
+    color: #6c757d;
+    margin-bottom: 2rem;
+}
+</style>
+{{end}}

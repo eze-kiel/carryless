@@ -1,0 +1,156 @@
+{{define "account.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <header class="header">
+        <nav class="nav">
+            <div class="nav-brand">
+                <a href="/">Carryless</a>
+            </div>
+            <div class="nav-links">
+                {{if .User}}
+                    <a href="/dashboard">Dashboard</a>
+                    <a href="/inventory">Inventory</a>
+                    <a href="/categories">Categories</a>
+                    <a href="/packs">Packs</a>
+                    <a href="/account">Account</a>
+                    <form class="logout-form" action="/logout" method="POST">
+                        <button type="submit" class="btn btn-secondary">Logout</button>
+                    </form>
+                {{else}}
+                    <a href="/login">Login</a>
+                    <a href="/register">Register</a>
+                {{end}}
+            </div>
+        </nav>
+    </header>
+
+    <main class="main">
+        {{if .Error}}
+            <div class="alert alert-error">{{.Error}}</div>
+        {{end}}
+        
+        <div class="page-header">
+            <h1>Account Settings</h1>
+        </div>
+
+        {{if .Success}}
+            <div class="alert alert-success">{{.Success}}</div>
+        {{end}}
+
+        <div class="account-sections">
+            <!-- Change Password Section -->
+            <div class="account-section">
+                <h2>Change Password</h2>
+                <div class="form-container">
+                    <form action="/account/password" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                        
+                        <div class="form-group">
+                            <label for="current_password">Current Password</label>
+                            <input type="password" id="current_password" name="current_password" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="new_password">New Password</label>
+                            <input type="password" id="new_password" name="new_password" required minlength="6">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="confirm_password">Confirm New Password</label>
+                            <input type="password" id="confirm_password" name="confirm_password" required minlength="6">
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">Update Password</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Currency Settings Section -->
+            <div class="account-section">
+                <h2>Currency Settings</h2>
+                <div class="form-container">
+                    <form action="/account/currency" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                        
+                        <div class="form-group">
+                            <label for="currency">Currency Symbol</label>
+                            <select id="currency" name="currency" required>
+                                <option value="$" {{if eq .User.Currency "$"}}selected{{end}}>$ - US Dollar</option>
+                                <option value="€" {{if eq .User.Currency "€"}}selected{{end}}>€ - Euro</option>
+                                <option value="¥" {{if eq .User.Currency "¥"}}selected{{end}}>¥ - Japanese Yen</option>
+                                <option value="£" {{if eq .User.Currency "£"}}selected{{end}}>£ - British Pound</option>
+                                <option value="₹" {{if eq .User.Currency "₹"}}selected{{end}}>₹ - Indian Rupee</option>
+                                <option value="₩" {{if eq .User.Currency "₩"}}selected{{end}}>₩ - Korean Won</option>
+                                <option value="¢" {{if eq .User.Currency "¢"}}selected{{end}}>¢ - Cents</option>
+                                <option value="R" {{if eq .User.Currency "R"}}selected{{end}}>R - South African Rand</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">Update Currency</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>&copy; 2025 Carryless. Built for outdoor enthusiasts.</p>
+    </footer>
+</body>
+</html>
+
+<style>
+.account-sections {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+.account-section {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 2rem;
+}
+
+.account-section h2 {
+    font-size: 1.25rem;
+    color: #333;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 0.5rem;
+}
+
+.alert-success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 4px;
+}
+
+@media (max-width: 768px) {
+    .account-sections {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .account-section {
+        padding: 1.5rem;
+    }
+}
+</style>
+{{end}}

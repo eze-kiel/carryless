@@ -1,0 +1,91 @@
+{{define "new_item.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <header class="header">
+        <nav class="nav">
+            <div class="nav-brand">
+                <a href="/">Carryless</a>
+            </div>
+            <div class="nav-links">
+                {{if .User}}
+                    <a href="/dashboard">Dashboard</a>
+                    <a href="/inventory">Inventory</a>
+                    <a href="/categories">Categories</a>
+                    <a href="/packs">Packs</a>
+                    <a href="/account">Account</a>
+                    <form class="logout-form" action="/logout" method="POST">
+                        <button type="submit" class="btn btn-secondary">Logout</button>
+                    </form>
+                {{else}}
+                    <a href="/login">Login</a>
+                    <a href="/register">Register</a>
+                {{end}}
+            </div>
+        </nav>
+    </header>
+
+    <main class="main">
+        {{if .Error}}
+            <div class="alert alert-error">{{.Error}}</div>
+        {{end}}
+        
+        <div class="page-header">
+            <h1>New Item</h1>
+            <a href="/inventory" class="btn btn-secondary">Back to Inventory</a>
+        </div>
+
+        <div class="form-container">
+            <form action="/inventory/items" method="POST" class="form">
+                <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                <div class="form-group">
+                    <label for="name">Item Name *</label>
+                    <input type="text" id="name" name="name" required maxlength="200" placeholder="Enter item name">
+                </div>
+                
+                <div class="form-group">
+                    <label for="category_id">Category *</label>
+                    <select id="category_id" name="category_id" required>
+                        <option value="">Select a category</option>
+                        {{range .Categories}}
+                            <option value="{{.ID}}">{{.Name}}</option>
+                        {{end}}
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="weight_grams">Weight (grams) *</label>
+                    <input type="number" id="weight_grams" name="weight_grams" required min="0" placeholder="Enter weight in grams">
+                </div>
+                
+                <div class="form-group">
+                    <label for="price">Price (optional)</label>
+                    <input type="number" id="price" name="price" step="0.01" min="0" placeholder="Enter price">
+                </div>
+                
+                
+                <div class="form-group">
+                    <label for="note">Notes (optional)</label>
+                    <textarea id="note" name="note" rows="3" placeholder="Add any notes about this item"></textarea>
+                </div>
+                
+                <div class="form-actions">
+                    <a href="/inventory" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary">Create Item</button>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>&copy; 2025 Carryless. Built for outdoor enthusiasts.</p>
+    </footer>
+</body>
+</html>
+{{end}}
