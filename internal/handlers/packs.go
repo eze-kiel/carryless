@@ -148,11 +148,13 @@ func handlePackDetail(c *gin.Context) {
 
 	categoryWeights := make(map[string]int)
 	categoryWornWeights := make(map[string]int)
+	itemsInPack := make(map[int]bool)
 	totalWeight := 0
 	totalWornWeight := 0
 
 	for _, packItem := range pack.Items {
 		categoryName := packItem.Item.Category.Name
+		itemsInPack[packItem.Item.ID] = true
 		packWeight := packItem.Item.WeightGrams * (packItem.Count - packItem.WornCount)
 		wornWeight := packItem.Item.WeightGrams * packItem.WornCount
 		
@@ -171,6 +173,7 @@ func handlePackDetail(c *gin.Context) {
 		"User":                user,
 		"Pack":                pack,
 		"Items":               items,
+		"ItemsInPack":         itemsInPack,
 		"CategoryWeights":     categoryWeights,
 		"CategoryWornWeights": categoryWornWeights,
 		"TotalWeight":         totalWeight,

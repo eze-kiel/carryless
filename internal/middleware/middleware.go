@@ -41,7 +41,7 @@ func RateLimit() gin.HandlerFunc {
 			}
 		} else {
 			clients[ip] = &rateLimiter{
-				limiter:  rate.NewLimiter(rate.Every(time.Minute), 60),
+				limiter:  rate.NewLimiter(rate.Every(time.Second), 200),
 				lastSeen: time.Now(),
 			}
 		}

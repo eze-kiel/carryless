@@ -618,6 +618,12 @@ tr:hover {
     
     .pack-stats {
         grid-template-columns: 1fr;
+        gap: 0.1rem;
+        margin: 0.5rem 0;
+    }
+    
+    .pack-stats .stat {
+        padding: 0.5rem;
     }
     
     .chart-container {

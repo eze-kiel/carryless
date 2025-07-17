@@ -119,7 +119,7 @@
     {{if .CategoryWeights}}
     const ctx = document.getElementById('weightChart').getContext('2d');
     const chartData = {
-        labels: [{{range $category, $weight := .CategoryWeights}}'{{$category}}',{{end}}],
+        labels: [{{range $category, $weight := .CategoryWeights}}'{{$category}} ({{$weight}}g)',{{end}}],
         datasets: [{
             data: [{{range $category, $weight := .CategoryWeights}}{{$weight}},{{end}}],
             backgroundColor: [

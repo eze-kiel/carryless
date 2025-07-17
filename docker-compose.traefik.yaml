@@ -1,0 +1,33 @@
+version: '3'
+
+services:
+  carryless:
+    image: carryless:latest
+    container_name: carryless-app
+    restart: unless-stopped
+    environment:
+      - PORT=8080
+      - DATABASE_PATH=/data/carryless.db
+    volumes:
+      - carryless_data:/data
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.carryless.rule=Host(`carryless.plop.name`)"
+      - "traefik.http.routers.carryless.entrypoints=websecure"
+      - "traefik.http.routers.carryless.tls.certresolver=letsencrypt"
+      - "traefik.http.services.carryless.loadbalancer.server.port=8080"
+      - "traefik.http.routers.carryless-http.rule=Host(`carryless.plop.name`)"
+      - "traefik.http.routers.carryless-http.entrypoints=web"
+      - "traefik.http.routers.carryless-http.middlewares=carryless-redirect"
+      - "traefik.http.middlewares.carryless-redirect.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.carryless-redirect.redirectscheme.permanent=true"
+    networks:
+      - web
+
+volumes:
+  carryless_data:
+    driver: local
+
+networks:
+  web:
+    external: true
