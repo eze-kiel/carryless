@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{.Title}}</title>
     <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <header class="header">
@@ -89,13 +90,8 @@
                 <p>No categories yet. Create your first category to organize your gear.</p>
             </div>
         {{end}}
-    </main>
 
-    <footer class="footer">
-        <p>&copy; 2025 Carryless. Built for outdoor enthusiasts.</p>
-    </footer>
-
-    <script>
+<script>
         // Close other dropdowns when one is opened
         document.addEventListener('click', function(event) {
             if (event.target.closest('summary')) {
@@ -108,6 +104,13 @@
             }
         });
     </script>
+    </main>
+
+    <footer class="footer">
+        <p>&copy; 2025 Carryless. Built for outdoor enthusiasts.</p>
+    </footer>
+
+    <script src="/static/js/app.js"></script>
 </body>
 </html>
 {{end}}

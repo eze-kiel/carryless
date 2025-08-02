@@ -1,6 +1,44 @@
-{{template "base.html" .}}
+{{define "403.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <header class="header">
+        <nav class="nav">
+            <div class="nav-brand">
+                <a href="/">Carryless</a>
+            </div>
+            <div class="nav-links">
+                {{if .User}}
+                    <a href="/dashboard">Dashboard</a>
+                    <a href="/inventory">Inventory</a>
+                    <a href="/categories">Categories</a>
+                    <a href="/packs">Packs</a>
+                    {{if .User.IsAdmin}}
+                        <a href="/admin">Admin</a>
+                    {{end}}
+                    <a href="/account">Account</a>
+                    <form class="logout-form" action="/logout" method="POST">
+                        <button type="submit" class="btn btn-secondary">Logout</button>
+                    </form>
+                {{else}}
+                    <a href="/login">Login</a>
+                    <a href="/register">Register</a>
+                {{end}}
+            </div>
+        </nav>
+    </header>
 
-{{define "content"}}
+    <main class="main">
+        {{if .Error}}
+            <div class="alert alert-error">{{.Error}}</div>
+        {{end}}
 <div class="error-page">
     <h1>403 - Access Denied</h1>
     <p>You don't have permission to access this resource.</p>
@@ -25,4 +63,13 @@
     margin-bottom: 2rem;
 }
 </style>
+    </main>
+
+    <footer class="footer">
+        <p>&copy; 2025 Carryless. Built for outdoor enthusiasts.</p>
+    </footer>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
 {{end}}

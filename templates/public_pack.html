@@ -25,7 +25,6 @@
                     {{end}}
                     <a href="/account">Account</a>
                     <form class="logout-form" action="/logout" method="POST">
-                        {{if .CSRFToken}}<input type="hidden" name="csrf_token" value="{{.CSRFToken}}">{{end}}
                         <button type="submit" class="btn btn-secondary">Logout</button>
                     </form>
                 {{else}}
@@ -110,14 +109,8 @@
                 </div>
             {{end}}
         </div>
-    </main>
 
-    <footer class="footer">
-        <p>&copy; 2025 Carryless. Built for outdoor enthusiasts.</p>
-    </footer>
-
-    <script src="/static/js/app.js"></script>
-    <script>
+<script>
     // Chart.js for weight visualization
     {{if .CategoryWeights}}
     const ctx = document.getElementById('weightChart').getContext('2d');
@@ -151,7 +144,7 @@
     {{end}}
     </script>
 
-    <style>
+<style>
     .badge {
         background: #007bff;
         color: white;
@@ -200,6 +193,13 @@
         color: #495057;
     }
     </style>
+    </main>
+
+    <footer class="footer">
+        <p>&copy; 2025 Carryless. Built for outdoor enthusiasts.</p>
+    </footer>
+
+    <script src="/static/js/app.js"></script>
 </body>
 </html>
 {{end}}

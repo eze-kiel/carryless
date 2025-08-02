@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{.Title}}</title>
     <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <header class="header">
@@ -38,8 +39,7 @@
         {{if .Error}}
             <div class="alert alert-error">{{.Error}}</div>
         {{end}}
-        
-        <div class="page-header">
+<div class="page-header">
             <h1>Packs</h1>
             <a href="/packs/new" class="btn btn-primary">Create Pack</a>
         </div>
@@ -109,25 +109,27 @@
                 <p>No packs yet. Create your first pack to start planning your trips.</p>
             </div>
         {{end}}
+
+<script>
+// Close other dropdowns when one is opened
+document.addEventListener('click', function(event) {
+    if (event.target.closest('summary')) {
+        // Close all other open details elements
+        document.querySelectorAll('details[open]').forEach(details => {
+            if (!details.contains(event.target)) {
+                details.removeAttribute('open');
+            }
+        });
+    }
+});
+</script>
     </main>
 
     <footer class="footer">
         <p>&copy; 2025 Carryless. Built for outdoor enthusiasts.</p>
     </footer>
 
-    <script>
-        // Close other dropdowns when one is opened
-        document.addEventListener('click', function(event) {
-            if (event.target.closest('summary')) {
-                // Close all other open details elements
-                document.querySelectorAll('details[open]').forEach(details => {
-                    if (!details.contains(event.target)) {
-                        details.removeAttribute('open');
-                    }
-                });
-            }
-        });
-    </script>
+    <script src="/static/js/app.js"></script>
 </body>
 </html>
 {{end}}

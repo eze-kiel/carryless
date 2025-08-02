@@ -109,14 +109,8 @@
                 </div>
             </div>
         </div>
-    </main>
 
-    <footer class="footer">
-        <p>&copy; 2025 Carryless. Built for outdoor enthusiasts.</p>
-    </footer>
-
-    <script src="/static/js/app.js"></script>
-    <script>
+<script>
         // Close other dropdowns when one is opened
         document.addEventListener('click', function(event) {
             if (event.target.closest('summary')) {
@@ -190,8 +184,6 @@
             }
         }
     </script>
-</body>
-</html>
 
 <style>
 .admin-stats {
@@ -231,7 +223,7 @@
 }
 
 .table-container {
-    overflow-x: auto;
+    overflow: visible; /* Changed from overflow-x: auto to allow dropdowns */
     margin-top: 1rem;
     position: relative;
 }
@@ -241,7 +233,7 @@
     border-collapse: collapse;
     background: white;
     border-radius: 8px;
-    overflow: hidden;
+    overflow: visible; /* Changed from hidden to allow dropdowns */
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
@@ -283,4 +275,13 @@
     }
 }
 </style>
+    </main>
+
+    <footer class="footer">
+        <p>&copy; 2025 Carryless. Built for outdoor enthusiasts.</p>
+    </footer>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
 {{end}}
