@@ -87,8 +87,8 @@
                         <tr>
                             <th>Count</th>
                             <th>Item</th>
+                            <th>Description</th>
                             <th>Weight</th>
-                            <th>Note</th>
                             <th>Worn</th>
                             <th>Actions</th>
                         </tr>
@@ -98,8 +98,8 @@
                             <tr>
                                 <td>{{.Count}}</td>
                                 <td>{{.Item.Name}}</td>
-                                <td>{{.Item.WeightGrams}}g</td>
                                 <td>{{.Item.Note}}</td>
+                                <td>{{.Item.WeightGrams}}g</td>
                                 <td>
                                     {{if eq .Count 1}}
                                         <input type="checkbox" {{if .IsWorn}}checked{{end}} 

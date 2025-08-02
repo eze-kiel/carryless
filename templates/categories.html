@@ -39,6 +39,36 @@
         {{if .Error}}
             <div class="alert alert-error">{{.Error}}</div>
         {{end}}
+        <!-- Category deletion feedback messages -->
+        <script>
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('success') === 'deleted') {
+                document.addEventListener('DOMContentLoaded', function() {
+                    const alert = document.createElement('div');
+                    alert.className = 'alert alert-success';
+                    alert.textContent = 'Category successfully deleted!';
+                    document.querySelector('.page-header').after(alert);
+                });
+            }
+            
+            const error = urlParams.get('error');
+            if (error) {
+                document.addEventListener('DOMContentLoaded', function() {
+                    const alert = document.createElement('div');
+                    alert.className = 'alert alert-error';
+                    let message = '';
+                    switch(error) {
+                        case 'invalid_id': message = 'Delete failed. Invalid category ID.'; break;
+                        case 'category_has_items': message = 'Cannot delete category. It contains items that must be deleted or moved first.'; break;
+                        case 'category_not_found': message = 'Delete failed. Category not found.'; break;
+                        case 'delete_failed': message = 'Delete failed. Could not delete category.'; break;
+                        default: message = 'An error occurred.';
+                    }
+                    alert.textContent = message;
+                    document.querySelector('.page-header').after(alert);
+                });
+            }
+        </script>
         
         <div class="page-header">
             <h1>Categories</h1>

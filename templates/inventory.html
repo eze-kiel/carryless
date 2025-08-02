@@ -51,21 +51,34 @@
                 });
             }
             
+            if (urlParams.get('success') === 'deleted') {
+                document.addEventListener('DOMContentLoaded', function() {
+                    const alert = document.createElement('div');
+                    alert.className = 'alert alert-success';
+                    alert.textContent = 'Item successfully deleted!';
+                    document.querySelector('.page-header').after(alert);
+                });
+            }
+            
             const error = urlParams.get('error');
             if (error) {
                 document.addEventListener('DOMContentLoaded', function() {
                     const alert = document.createElement('div');
                     alert.className = 'alert alert-error';
-                    let message = 'Import failed. ';
+                    let message = '';
                     switch(error) {
-                        case 'no_file': message += 'No file was selected.'; break;
-                        case 'invalid_file': message += 'Invalid file format or content.'; break;
-                        case 'parse_error': message += 'Could not parse CSV file.'; break;
-                        case 'database_error': message += 'Database error occurred.'; break;
-                        case 'delete_error': message += 'Could not clear existing inventory.'; break;
-                        case 'import_error': message += 'Could not import items.'; break;
-                        case 'commit_error': message += 'Could not complete import.'; break;
-                        default: message += 'Unknown error occurred.';
+                        case 'no_file': message = 'Import failed. No file was selected.'; break;
+                        case 'invalid_file': message = 'Import failed. Invalid file format or content.'; break;
+                        case 'parse_error': message = 'Import failed. Could not parse CSV file.'; break;
+                        case 'database_error': message = 'Import failed. Database error occurred.'; break;
+                        case 'delete_error': message = 'Import failed. Could not clear existing inventory.'; break;
+                        case 'import_error': message = 'Import failed. Could not import items.'; break;
+                        case 'commit_error': message = 'Import failed. Could not complete import.'; break;
+                        case 'invalid_id': message = 'Delete failed. Invalid item ID.'; break;
+                        case 'item_in_use': message = 'Cannot delete item. It is currently used in one or more packs.'; break;
+                        case 'item_not_found': message = 'Delete failed. Item not found.'; break;
+                        case 'delete_failed': message = 'Delete failed. Could not delete item.'; break;
+                        default: message = 'An error occurred.';
                     }
                     alert.textContent = message;
                     document.querySelector('.page-header').after(alert);
@@ -88,10 +101,10 @@
                     <thead>
                         <tr>
                             <th>Name</th>
+                            <th>Description</th>
                             <th>Category</th>
                             <th>Weight (g)</th>
-                            <th>Price</th>
-                            <th>Note</th>
+                            <th>Price ({{.User.Currency}})</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -99,10 +112,10 @@
                         {{range .Items}}
                             <tr class="item-row" data-id="{{.ID}}" data-item-name="{{.Name}}" data-item-category="{{.Category.Name}}">
                                 <td>{{.Name}}</td>
+                                <td>{{.Note}}</td>
                                 <td>{{.Category.Name}}</td>
                                 <td>{{.WeightGrams}}g</td>
-                                <td>{{$.User.Currency}}{{printf "%.2f" .Price}}</td>
-                                <td>{{.Note}}</td>
+                                <td>{{printf "%.2f" .Price}}</td>
                                 <td>
                                     <div class="dropdown">
                                         <details>
@@ -117,8 +130,7 @@
                                                 <form action="/inventory/items/{{.ID}}/edit" method="GET">
                                                     <button type="submit" class="dropdown-item">Edit</button>
                                                 </form>
-                                                <form action="/inventory/items/{{.ID}}/delete" method="POST" onsubmit="return confirm('Are you sure you want to delete this item?')">
-                                                    <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                                                <form onsubmit="return handleDeleteItem(event, {{.ID}}, '{{$.CSRFToken}}')">
                                                     <button type="submit" class="dropdown-item dropdown-item-danger">Delete</button>
                                                 </form>
                                             </div>
@@ -151,7 +163,7 @@
                     <div class="form-group">
                         <label for="csvFile">Select CSV file:</label>
                         <input type="file" id="csvFile" name="csvFile" accept=".csv,text/csv" required>
-                        <small>CSV format: Name,Category,Weight (grams),Price,Note</small>
+                        <small>CSV format: Name,Category,Weight (grams),Price,Description</small>
                         <small>Note: Categories that don't exist will be created automatically.</small>
                     </div>
                     <div class="form-actions">
@@ -159,6 +171,20 @@
                         <button type="submit" class="btn btn-danger">Replace Inventory</button>
                     </div>
                 </form>
+            </div>
+        </div>
+
+        <!-- Delete Confirmation Modal -->
+        <div id="deleteModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <h3>Delete Item</h3>
+                <div id="deleteModalContent">
+                    <!-- Content will be populated by JavaScript -->
+                </div>
+                <div class="form-actions">
+                    <button type="button" onclick="hideDeleteModal()" class="btn btn-secondary">Cancel</button>
+                    <button type="button" id="confirmDeleteBtn" onclick="confirmDelete()" class="btn btn-danger">Delete</button>
+                </div>
             </div>
         </div>
 
@@ -209,6 +235,95 @@
         function hideImportModal() {
             document.getElementById('importModal').style.display = 'none';
             document.getElementById('importForm').reset();
+        }
+
+        function showDeleteModal() {
+            document.getElementById('deleteModal').style.display = 'flex';
+        }
+
+        function hideDeleteModal() {
+            document.getElementById('deleteModal').style.display = 'none';
+        }
+
+        let deleteItemId = null;
+        let deleteCSRFToken = null;
+        let forceDelete = false;
+
+        async function handleDeleteItem(event, itemId, csrfToken) {
+            event.preventDefault();
+            
+            deleteItemId = itemId;
+            deleteCSRFToken = csrfToken;
+            
+            try {
+                // Check if item is used in packs
+                const response = await fetch(`/inventory/items/${itemId}/packs`);
+                const data = await response.json();
+                
+                const modalContent = document.getElementById('deleteModalContent');
+                const confirmBtn = document.getElementById('confirmDeleteBtn');
+                
+                if (data.packs && data.packs.length > 0) {
+                    // Item is in packs - show warning
+                    modalContent.innerHTML = `
+                        <div class="alert alert-warning">
+                            <strong>Warning:</strong> This item is currently used in the following pack(s):
+                        </div>
+                        <ul style="margin: var(--space-3) 0; padding-left: var(--space-5);">
+                            ${data.packs.map(pack => `<li>${pack}</li>`).join('')}
+                        </ul>
+                        <p>Deleting this item will also remove it from all these packs. This action cannot be undone.</p>
+                    `;
+                    confirmBtn.textContent = 'Delete and Remove from Packs';
+                    confirmBtn.className = 'btn btn-danger';
+                    forceDelete = true;
+                } else {
+                    // Item not in packs - simple confirmation
+                    modalContent.innerHTML = `
+                        <p>Are you sure you want to delete this item? This action cannot be undone.</p>
+                    `;
+                    confirmBtn.textContent = 'Delete';
+                    confirmBtn.className = 'btn btn-danger';
+                    forceDelete = false;
+                }
+                
+                showDeleteModal();
+            } catch (error) {
+                console.error('Error checking item packs:', error);
+                // Fallback to simple confirmation
+                if (confirm('Are you sure you want to delete this item?')) {
+                    deleteItemNow(false);
+                }
+            }
+            
+            return false;
+        }
+
+        function confirmDelete() {
+            deleteItemNow(forceDelete);
+        }
+
+        function deleteItemNow(force) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `/inventory/items/${deleteItemId}/delete`;
+            
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrf_token';
+            csrfInput.value = deleteCSRFToken;
+            form.appendChild(csrfInput);
+            
+            if (force) {
+                const forceInput = document.createElement('input');
+                forceInput.type = 'hidden';
+                forceInput.name = 'force';
+                forceInput.value = 'true';
+                form.appendChild(forceInput);
+            }
+            
+            document.body.appendChild(form);
+            form.submit();
         }
 
         // Setup search input event listener

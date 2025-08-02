@@ -3,17 +3,39 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"strings"
+	"unicode"
 
 	"carryless/internal/models"
 )
 
+// normalizeCategoryName converts category name to title case (first letter uppercase, rest lowercase)
+func normalizeCategoryName(name string) string {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return ""
+	}
+	
+	// Convert to lowercase first
+	name = strings.ToLower(name)
+	
+	// Capitalize the first letter
+	runes := []rune(name)
+	runes[0] = unicode.ToUpper(runes[0])
+	
+	return string(runes)
+}
+
 func CreateCategory(db *sql.DB, userID int, name string) (*models.Category, error) {
+	// Normalize the category name to title case
+	normalizedName := normalizeCategoryName(name)
+	
 	query := `
 		INSERT INTO categories (user_id, name)
 		VALUES (?, ?)
 	`
 
-	result, err := db.Exec(query, userID, name)
+	result, err := db.Exec(query, userID, normalizedName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create category: %w", err)
 	}
@@ -26,7 +48,7 @@ func CreateCategory(db *sql.DB, userID int, name string) (*models.Category, erro
 	category := &models.Category{
 		ID:     int(id),
 		UserID: userID,
-		Name:   name,
+		Name:   normalizedName,
 	}
 
 	return category, nil
@@ -153,13 +175,16 @@ func DeleteCategory(db *sql.DB, userID, categoryID int) error {
 }
 
 func GetOrCreateCategory(db *sql.DB, userID int, name string) (*models.Category, error) {
-	// First try to get existing category
-	query := `SELECT id, user_id, name FROM categories WHERE user_id = ? AND name = ?`
+	// Normalize the input name for consistent searching and creation
+	normalizedName := normalizeCategoryName(name)
+	
+	// First try to get existing category (case-insensitive)
+	query := `SELECT id, user_id, name FROM categories WHERE user_id = ? AND LOWER(name) = LOWER(?)`
 	var category models.Category
-	err := db.QueryRow(query, userID, name).Scan(&category.ID, &category.UserID, &category.Name)
+	err := db.QueryRow(query, userID, normalizedName).Scan(&category.ID, &category.UserID, &category.Name)
 	
 	if err == nil {
-		// Category exists, return it
+		// Category exists, return the existing one
 		return &category, nil
 	}
 	
@@ -168,6 +193,6 @@ func GetOrCreateCategory(db *sql.DB, userID int, name string) (*models.Category,
 		return nil, fmt.Errorf("failed to query category: %w", err)
 	}
 	
-	// Category doesn't exist, create it
-	return CreateCategory(db, userID, name)
+	// Category doesn't exist, create it with normalized case (Title case)
+	return CreateCategory(db, userID, normalizedName)
 }

@@ -85,8 +85,8 @@
                             <thead>
                                 <tr>
                                     <th>Item</th>
+                                    <th>Description</th>
                                     <th>Weight</th>
-                                    <th>Note</th>
                                     <th>Worn</th>
                                 </tr>
                             </thead>
@@ -94,8 +94,8 @@
                                 {{range $items}}
                                     <tr {{if .IsWorn}}class="worn-item"{{end}}>
                                         <td>{{.Item.Name}}</td>
-                                        <td>{{.Item.WeightGrams}}g</td>
                                         <td>{{.Item.Note}}</td>
+                                        <td>{{.Item.WeightGrams}}g</td>
                                         <td>{{if .IsWorn}}✓{{end}}</td>
                                     </tr>
                                 {{end}}

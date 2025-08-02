@@ -10,22 +10,27 @@ import (
 )
 
 func CreatePack(db *sql.DB, userID int, name string) (*models.Pack, error) {
+	return CreatePackWithPublic(db, userID, name, false)
+}
+
+func CreatePackWithPublic(db *sql.DB, userID int, name string, isPublic bool) (*models.Pack, error) {
 	packID := uuid.New().String()
 
 	query := `
-		INSERT INTO packs (id, user_id, name)
-		VALUES (?, ?, ?)
+		INSERT INTO packs (id, user_id, name, is_public)
+		VALUES (?, ?, ?, ?)
 	`
 
-	_, err := db.Exec(query, packID, userID, name)
+	_, err := db.Exec(query, packID, userID, name, isPublic)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create pack: %w", err)
 	}
 
 	pack := &models.Pack{
-		ID:     packID,
-		UserID: userID,
-		Name:   name,
+		ID:       packID,
+		UserID:   userID,
+		Name:     name,
+		IsPublic: isPublic,
 	}
 
 	return pack, nil

@@ -101,7 +101,7 @@ func handleCreateItem(c *gin.Context) {
 
 	name := strings.TrimSpace(c.PostForm("name"))
 	note := strings.TrimSpace(c.PostForm("note"))
-	categoryIDStr := c.PostForm("category_id")
+	categoryName := strings.TrimSpace(c.PostForm("category_name"))
 	weightStr := c.PostForm("weight_grams")
 	priceStr := c.PostForm("price")
 	categories, _ := database.GetCategories(db, userID)
@@ -115,9 +115,11 @@ func handleCreateItem(c *gin.Context) {
 		errors["name"] = "Item name must be less than 200 characters"
 	}
 
-	categoryID, err := strconv.Atoi(categoryIDStr)
-	if err != nil {
-		errors["category_id"] = "Invalid category"
+	if categoryName == "" {
+		errors["category_name"] = "Category is required"
+	}
+	if len(categoryName) > 100 {
+		errors["category_name"] = "Category name must be less than 100 characters"
 	}
 
 	weightGrams, err := strconv.Atoi(weightStr)
@@ -148,19 +150,20 @@ func handleCreateItem(c *gin.Context) {
 		return
 	}
 
-	_, err = database.GetCategory(db, userID, categoryID)
+	// Get or create the category
+	category, err := database.GetOrCreateCategory(db, userID, categoryName)
 	if err != nil {
 		c.HTML(http.StatusBadRequest, "new_item.html", gin.H{
 			"Title":      "New Item - Carryless",
 			"User":       user,
 			"Categories": categories,
-			"Error":      "Category not found",
+			"Error":      "Failed to create or find category",
 		})
 		return
 	}
 
 	item := models.Item{
-		CategoryID:   categoryID,
+		CategoryID:   category.ID,
 		Name:         name,
 		Note:         note,
 		WeightGrams:  weightGrams,
@@ -254,7 +257,7 @@ func handleUpdateItem(c *gin.Context) {
 
 	name := strings.TrimSpace(c.PostForm("name"))
 	note := strings.TrimSpace(c.PostForm("note"))
-	categoryIDStr := c.PostForm("category_id")
+	categoryName := strings.TrimSpace(c.PostForm("category_name"))
 	weightStr := c.PostForm("weight_grams")
 	priceStr := c.PostForm("price")
 
@@ -270,9 +273,11 @@ func handleUpdateItem(c *gin.Context) {
 		errors["name"] = "Item name must be less than 200 characters"
 	}
 
-	categoryID, err := strconv.Atoi(categoryIDStr)
-	if err != nil {
-		errors["category_id"] = "Invalid category"
+	if categoryName == "" {
+		errors["category_name"] = "Category is required"
+	}
+	if len(categoryName) > 100 {
+		errors["category_name"] = "Category name must be less than 100 characters"
 	}
 
 	weightGrams, err := strconv.Atoi(weightStr)
@@ -305,20 +310,21 @@ func handleUpdateItem(c *gin.Context) {
 		return
 	}
 
-	_, err = database.GetCategory(db, userID, categoryID)
+	// Get or create the category
+	category, err := database.GetOrCreateCategory(db, userID, categoryName)
 	if err != nil {
 		c.HTML(http.StatusBadRequest, "edit_item.html", gin.H{
 			"Title":      "Edit Item - Carryless",
 			"User":       user,
 			"Item":       currentItem,
 			"Categories": categories,
-			"Error":      "Category not found",
+			"Error":      "Failed to create or find category",
 		})
 		return
 	}
 
 	item := models.Item{
-		CategoryID:   categoryID,
+		CategoryID:   category.ID,
 		Name:         name,
 		Note:         note,
 		WeightGrams:  weightGrams,
@@ -354,17 +360,70 @@ func handleDeleteItem(c *gin.Context) {
 	itemIDStr := c.Param("id")
 	itemID, err := strconv.Atoi(itemIDStr)
 	if err != nil {
-		c.Redirect(http.StatusFound, "/inventory")
+		fmt.Printf("[DEBUG] Delete item failed - Invalid ID: %s, error: %v\n", itemIDStr, err)
+		c.Redirect(http.StatusFound, "/inventory?error=invalid_id")
 		return
 	}
 
+	// Check if this is a force delete request
+	force := c.PostForm("force") == "true"
+	
+	fmt.Printf("[DEBUG] Attempting to delete item ID: %d for user ID: %d (force: %v)\n", itemID, userID, force)
+
+	if force {
+		// Force delete - remove from packs and delete item
+		err = database.DeleteItemWithForce(db, userID, itemID, true)
+		if err != nil {
+			fmt.Printf("[DEBUG] Force delete item failed - ID: %d, error: %v\n", itemID, err)
+			if strings.Contains(err.Error(), "item not found") {
+				c.Redirect(http.StatusFound, "/inventory?error=item_not_found")
+			} else {
+				c.Redirect(http.StatusFound, "/inventory?error=delete_failed")
+			}
+			return
+		}
+		fmt.Printf("[DEBUG] Successfully force deleted item ID: %d\n", itemID)
+		c.Redirect(http.StatusFound, "/inventory?success=deleted")
+		return
+	}
+
+	// Regular delete - check for packs first
 	err = database.DeleteItem(db, userID, itemID)
 	if err != nil {
-		c.Redirect(http.StatusFound, "/inventory")
+		fmt.Printf("[DEBUG] Delete item failed - ID: %d, error: %v\n", itemID, err)
+		if strings.Contains(err.Error(), "cannot delete item used in") {
+			c.Redirect(http.StatusFound, "/inventory?error=item_in_use")
+		} else if strings.Contains(err.Error(), "item not found") {
+			c.Redirect(http.StatusFound, "/inventory?error=item_not_found")
+		} else {
+			c.Redirect(http.StatusFound, "/inventory?error=delete_failed")
+		}
 		return
 	}
 
-	c.Redirect(http.StatusFound, "/inventory")
+	fmt.Printf("[DEBUG] Successfully deleted item ID: %d\n", itemID)
+	c.Redirect(http.StatusFound, "/inventory?success=deleted")
+}
+
+func handleCheckItemPacks(c *gin.Context) {
+	userID := c.MustGet("user_id").(int)
+	db := c.MustGet("db").(*sql.DB)
+
+	itemIDStr := c.Param("id")
+	itemID, err := strconv.Atoi(itemIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid item ID"})
+		return
+	}
+
+	// Get packs using this item
+	packNames, err := database.GetPacksUsingItem(db, userID, itemID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check packs"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"packs": packNames})
 }
 
 func handleExportInventory(c *gin.Context) {
@@ -382,7 +441,7 @@ func handleExportInventory(c *gin.Context) {
 	writer := csv.NewWriter(&buf)
 	
 	// Write header
-	header := []string{"Name", "Category", "Weight (grams)", "Price", "Note"}
+	header := []string{"Name", "Category", "Weight (grams)", "Price", "Description"}
 	if err := writer.Write(header); err != nil {
 		c.String(http.StatusInternalServerError, "Failed to generate CSV")
 		return

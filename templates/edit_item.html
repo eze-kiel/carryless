@@ -55,13 +55,18 @@
                 </div>
                 
                 <div class="form-group">
-                    <label for="category_id">Category *</label>
-                    <select id="category_id" name="category_id" required>
-                        <option value="">Select a category</option>
-                        {{range .Categories}}
-                            <option value="{{.ID}}" {{if eq .ID $.Item.CategoryID}}selected{{end}}>{{.Name}}</option>
-                        {{end}}
-                    </select>
+                    <label for="note">Description</label>
+                    <textarea id="note" name="note" rows="3" placeholder="Add a description for this item">{{.Item.Note}}</textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="category_name">Category *</label>
+                    <div class="autocomplete-container">
+                        <input type="text" id="category_name" name="category_name" required maxlength="100" 
+                               placeholder="Type category name..." autocomplete="off" value="{{.Item.Category.Name}}">
+                        <div id="category-suggestions" class="autocomplete-suggestions"></div>
+                    </div>
+                    <small class="form-help">Type to search existing categories or create a new one</small>
                 </div>
                 
                 <div class="form-group">
@@ -72,12 +77,6 @@
                 <div class="form-group">
                     <label for="price">Price (optional)</label>
                     <input type="number" id="price" name="price" value="{{if .Item.Price}}{{.Item.Price}}{{end}}" step="0.01" min="0" placeholder="Enter price">
-                </div>
-                
-                
-                <div class="form-group">
-                    <label for="note">Notes (optional)</label>
-                    <textarea id="note" name="note" rows="3" placeholder="Add any notes about this item">{{.Item.Note}}</textarea>
                 </div>
                 
                 <div class="form-actions">
@@ -103,6 +102,198 @@
     </footer>
 
     <script src="/static/js/app.js"></script>
+    
+    <style>
+    /* Autocomplete Styles */
+    .autocomplete-container {
+        position: relative;
+    }
+    
+    .autocomplete-suggestions {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: var(--color-white);
+        border: 1px solid var(--color-gray-300);
+        border-top: none;
+        border-radius: 0 0 var(--radius-md) var(--radius-md);
+        box-shadow: var(--shadow-lg);
+        max-height: 200px;
+        overflow-y: auto;
+        z-index: 1000;
+        display: none;
+    }
+    
+    .autocomplete-suggestions.show {
+        display: block;
+    }
+    
+    .suggestion-item {
+        padding: var(--space-3);
+        cursor: pointer;
+        transition: background-color var(--transition-fast);
+        font-size: var(--font-size-sm);
+    }
+    
+    .suggestion-item:hover,
+    .suggestion-item.highlighted {
+        background: var(--color-gray-50);
+    }
+    
+    .suggestion-item.new-category {
+        color: var(--color-primary);
+        font-style: italic;
+    }
+    
+    .suggestion-item.new-category:hover {
+        background: var(--color-primary-light);
+    }
+    
+    .form-help {
+        display: block;
+        margin-top: var(--space-1);
+        font-size: var(--font-size-xs);
+        color: var(--color-gray-500);
+    }
+    </style>
+    
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const categoryInput = document.getElementById('category_name');
+        const suggestionsContainer = document.getElementById('category-suggestions');
+        
+        // Categories data from server
+        const categories = [
+            {{range .Categories}}
+            {id: {{.ID}}, name: "{{.Name}}"},
+            {{end}}
+        ];
+        
+        let currentHighlight = -1;
+        
+        function showSuggestions(query) {
+            if (!query) {
+                hideSuggestions();
+                return;
+            }
+            
+            const filtered = categories.filter(cat => 
+                cat.name.toLowerCase().includes(query.toLowerCase())
+            );
+            
+            let html = '';
+            
+            // Add existing matching categories
+            filtered.forEach(cat => {
+                html += `<div class="suggestion-item" data-category-name="${cat.name}">${cat.name}</div>`;
+            });
+            
+            // Add "Create new category" option if no case-insensitive match
+            const exactMatch = filtered.find(cat => 
+                cat.name.toLowerCase() === query.toLowerCase()
+            );
+            
+            if (!exactMatch && query.trim()) {
+                html += `<div class="suggestion-item new-category" data-category-name="${query}">Create "${query}"</div>`;
+            }
+            
+            if (html) {
+                suggestionsContainer.innerHTML = html;
+                suggestionsContainer.classList.add('show');
+                currentHighlight = -1;
+                
+                // Add click handlers
+                suggestionsContainer.querySelectorAll('.suggestion-item').forEach(item => {
+                    item.addEventListener('click', () => {
+                        selectCategory(item.dataset.categoryName);
+                    });
+                });
+            } else {
+                hideSuggestions();
+            }
+        }
+        
+        function hideSuggestions() {
+            suggestionsContainer.classList.remove('show');
+            currentHighlight = -1;
+        }
+        
+        function selectCategory(categoryName) {
+            categoryInput.value = categoryName;
+            hideSuggestions();
+            categoryInput.focus();
+        }
+        
+        function highlightSuggestion(direction) {
+            const items = suggestionsContainer.querySelectorAll('.suggestion-item');
+            if (items.length === 0) return;
+            
+            // Remove current highlight
+            if (currentHighlight >= 0 && currentHighlight < items.length) {
+                items[currentHighlight].classList.remove('highlighted');
+            }
+            
+            // Update highlight index
+            if (direction === 'down') {
+                currentHighlight = (currentHighlight + 1) % items.length;
+            } else if (direction === 'up') {
+                currentHighlight = currentHighlight <= 0 ? items.length - 1 : currentHighlight - 1;
+            }
+            
+            // Add new highlight
+            if (currentHighlight >= 0 && currentHighlight < items.length) {
+                items[currentHighlight].classList.add('highlighted');
+            }
+        }
+        
+        // Event listeners
+        categoryInput.addEventListener('input', (e) => {
+            showSuggestions(e.target.value);
+        });
+        
+        categoryInput.addEventListener('keydown', (e) => {
+            const isOpen = suggestionsContainer.classList.contains('show');
+            
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (isOpen) {
+                    highlightSuggestion('down');
+                } else {
+                    showSuggestions(categoryInput.value);
+                }
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (isOpen) {
+                    highlightSuggestion('up');
+                }
+            } else if (e.key === 'Enter') {
+                if (isOpen && currentHighlight >= 0) {
+                    e.preventDefault();
+                    const items = suggestionsContainer.querySelectorAll('.suggestion-item');
+                    if (items[currentHighlight]) {
+                        selectCategory(items[currentHighlight].dataset.categoryName);
+                    }
+                }
+            } else if (e.key === 'Escape') {
+                hideSuggestions();
+            }
+        });
+        
+        // Hide suggestions when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!categoryInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
+                hideSuggestions();
+            }
+        });
+        
+        categoryInput.addEventListener('focus', () => {
+            if (categoryInput.value) {
+                showSuggestions(categoryInput.value);
+            }
+        });
+    });
+    </script>
 </body>
 </html>
 {{end}}

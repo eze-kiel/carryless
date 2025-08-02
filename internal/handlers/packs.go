@@ -72,6 +72,7 @@ func handleCreatePack(c *gin.Context) {
 	user := c.MustGet("user")
 
 	name := strings.TrimSpace(c.PostForm("name"))
+	isPublicStr := c.PostForm("is_public")
 
 	if name == "" {
 		c.HTML(http.StatusBadRequest, "new_pack.html", gin.H{
@@ -91,7 +92,9 @@ func handleCreatePack(c *gin.Context) {
 		return
 	}
 
-	_, err := database.CreatePack(db, userID, name)
+	isPublic := isPublicStr == "true" || isPublicStr == "1"
+
+	_, err := database.CreatePackWithPublic(db, userID, name, isPublic)
 	if err != nil {
 		c.HTML(http.StatusInternalServerError, "new_pack.html", gin.H{
 			"Title": "New Pack - Carryless",

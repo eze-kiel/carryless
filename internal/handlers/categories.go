@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"database/sql"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -225,15 +226,25 @@ func handleDeleteCategory(c *gin.Context) {
 	categoryIDStr := c.Param("id")
 	categoryID, err := strconv.Atoi(categoryIDStr)
 	if err != nil {
-		c.Redirect(http.StatusFound, "/categories")
+		fmt.Printf("[DEBUG] Delete category failed - Invalid ID: %s, error: %v\n", categoryIDStr, err)
+		c.Redirect(http.StatusFound, "/categories?error=invalid_id")
 		return
 	}
 
+	fmt.Printf("[DEBUG] Attempting to delete category ID: %d for user ID: %d\n", categoryID, userID)
 	err = database.DeleteCategory(db, userID, categoryID)
 	if err != nil {
-		c.Redirect(http.StatusFound, "/categories")
+		fmt.Printf("[DEBUG] Delete category failed - ID: %d, error: %v\n", categoryID, err)
+		if strings.Contains(err.Error(), "cannot delete category with") {
+			c.Redirect(http.StatusFound, "/categories?error=category_has_items")
+		} else if strings.Contains(err.Error(), "category not found") {
+			c.Redirect(http.StatusFound, "/categories?error=category_not_found")
+		} else {
+			c.Redirect(http.StatusFound, "/categories?error=delete_failed")
+		}
 		return
 	}
 
-	c.Redirect(http.StatusFound, "/categories")
+	fmt.Printf("[DEBUG] Successfully deleted category ID: %d\n", categoryID)
+	c.Redirect(http.StatusFound, "/categories?success=deleted")
 }

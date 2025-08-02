@@ -142,6 +142,10 @@ func UpdateItem(db *sql.DB, userID, itemID int, updatedItem models.Item) error {
 }
 
 func DeleteItem(db *sql.DB, userID, itemID int) error {
+	return DeleteItemWithForce(db, userID, itemID, false)
+}
+
+func DeleteItemWithForce(db *sql.DB, userID, itemID int, force bool) error {
 	var packCount int
 	countQuery := `SELECT COUNT(*) FROM pack_items WHERE item_id = ?`
 	err := db.QueryRow(countQuery, itemID).Scan(&packCount)
@@ -149,8 +153,17 @@ func DeleteItem(db *sql.DB, userID, itemID int) error {
 		return fmt.Errorf("failed to check item usage in packs: %w", err)
 	}
 
-	if packCount > 0 {
+	if packCount > 0 && !force {
 		return fmt.Errorf("cannot delete item used in %d pack(s)", packCount)
+	}
+
+	// If force is true and item is in packs, remove it from all packs first
+	if force && packCount > 0 {
+		removeQuery := `DELETE FROM pack_items WHERE item_id = ?`
+		_, err := db.Exec(removeQuery, itemID)
+		if err != nil {
+			return fmt.Errorf("failed to remove item from packs: %w", err)
+		}
 	}
 
 	query := `
@@ -173,6 +186,37 @@ func DeleteItem(db *sql.DB, userID, itemID int) error {
 	}
 
 	return nil
+}
+
+func GetPacksUsingItem(db *sql.DB, userID, itemID int) ([]string, error) {
+	query := `
+		SELECT p.name 
+		FROM packs p 
+		JOIN pack_items pi ON p.id = pi.pack_id 
+		WHERE pi.item_id = ? AND p.user_id = ?
+		ORDER BY p.name
+	`
+	
+	rows, err := db.Query(query, itemID, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query packs using item: %w", err)
+	}
+	defer rows.Close()
+
+	var packNames []string
+	for rows.Next() {
+		var packName string
+		if err := rows.Scan(&packName); err != nil {
+			return nil, fmt.Errorf("failed to scan pack name: %w", err)
+		}
+		packNames = append(packNames, packName)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating pack names: %w", err)
+	}
+
+	return packNames, nil
 }
 
 func GetItemsByCategory(db *sql.DB, userID, categoryID int) ([]models.Item, error) {
