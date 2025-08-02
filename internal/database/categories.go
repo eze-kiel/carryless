@@ -141,6 +141,10 @@ func UpdateCategory(db *sql.DB, userID, categoryID int, name string) error {
 }
 
 func DeleteCategory(db *sql.DB, userID, categoryID int) error {
+	return DeleteCategoryWithForce(db, userID, categoryID, false)
+}
+
+func DeleteCategoryWithForce(db *sql.DB, userID, categoryID int, force bool) error {
 	var itemCount int
 	countQuery := `SELECT COUNT(*) FROM items WHERE category_id = ? AND user_id = ?`
 	err := db.QueryRow(countQuery, categoryID, userID).Scan(&itemCount)
@@ -148,8 +152,28 @@ func DeleteCategory(db *sql.DB, userID, categoryID int) error {
 		return fmt.Errorf("failed to check items in category: %w", err)
 	}
 
-	if itemCount > 0 {
+	if itemCount > 0 && !force {
 		return fmt.Errorf("cannot delete category with %d items", itemCount)
+	}
+
+	// If force is true and category has items, delete all items first
+	if force && itemCount > 0 {
+		// First remove items from any packs
+		removeFromPacksQuery := `
+			DELETE FROM pack_items 
+			WHERE item_id IN (SELECT id FROM items WHERE category_id = ? AND user_id = ?)
+		`
+		_, err := db.Exec(removeFromPacksQuery, categoryID, userID)
+		if err != nil {
+			return fmt.Errorf("failed to remove items from packs: %w", err)
+		}
+
+		// Then delete all items in the category
+		deleteItemsQuery := `DELETE FROM items WHERE category_id = ? AND user_id = ?`
+		_, err = db.Exec(deleteItemsQuery, categoryID, userID)
+		if err != nil {
+			return fmt.Errorf("failed to delete items in category: %w", err)
+		}
 	}
 
 	query := `
@@ -172,6 +196,36 @@ func DeleteCategory(db *sql.DB, userID, categoryID int) error {
 	}
 
 	return nil
+}
+
+func GetItemsInCategory(db *sql.DB, userID, categoryID int) ([]string, error) {
+	query := `
+		SELECT name 
+		FROM items 
+		WHERE category_id = ? AND user_id = ?
+		ORDER BY name
+	`
+	
+	rows, err := db.Query(query, categoryID, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query items in category: %w", err)
+	}
+	defer rows.Close()
+
+	var itemNames []string
+	for rows.Next() {
+		var itemName string
+		if err := rows.Scan(&itemName); err != nil {
+			return nil, fmt.Errorf("failed to scan item name: %w", err)
+		}
+		itemNames = append(itemNames, itemName)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating item names: %w", err)
+	}
+
+	return itemNames, nil
 }
 
 func GetOrCreateCategory(db *sql.DB, userID int, name string) (*models.Category, error) {

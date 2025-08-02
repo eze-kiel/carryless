@@ -231,7 +231,29 @@ func handleDeleteCategory(c *gin.Context) {
 		return
 	}
 
-	fmt.Printf("[DEBUG] Attempting to delete category ID: %d for user ID: %d\n", categoryID, userID)
+	// Check if this is a force delete request
+	force := c.PostForm("force") == "true"
+	
+	fmt.Printf("[DEBUG] Attempting to delete category ID: %d for user ID: %d (force: %v)\n", categoryID, userID, force)
+
+	if force {
+		// Force delete - remove all items and delete category
+		err = database.DeleteCategoryWithForce(db, userID, categoryID, true)
+		if err != nil {
+			fmt.Printf("[DEBUG] Force delete category failed - ID: %d, error: %v\n", categoryID, err)
+			if strings.Contains(err.Error(), "category not found") {
+				c.Redirect(http.StatusFound, "/categories?error=category_not_found")
+			} else {
+				c.Redirect(http.StatusFound, "/categories?error=delete_failed")
+			}
+			return
+		}
+		fmt.Printf("[DEBUG] Successfully force deleted category ID: %d\n", categoryID)
+		c.Redirect(http.StatusFound, "/categories?success=deleted")
+		return
+	}
+
+	// Regular delete - check for items first
 	err = database.DeleteCategory(db, userID, categoryID)
 	if err != nil {
 		fmt.Printf("[DEBUG] Delete category failed - ID: %d, error: %v\n", categoryID, err)
@@ -247,4 +269,25 @@ func handleDeleteCategory(c *gin.Context) {
 
 	fmt.Printf("[DEBUG] Successfully deleted category ID: %d\n", categoryID)
 	c.Redirect(http.StatusFound, "/categories?success=deleted")
+}
+
+func handleCheckCategoryItems(c *gin.Context) {
+	userID := c.MustGet("user_id").(int)
+	db := c.MustGet("db").(*sql.DB)
+
+	categoryIDStr := c.Param("id")
+	categoryID, err := strconv.Atoi(categoryIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid category ID"})
+		return
+	}
+
+	// Get items in this category
+	itemNames, err := database.GetItemsInCategory(db, userID, categoryID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check items"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"items": itemNames})
 }

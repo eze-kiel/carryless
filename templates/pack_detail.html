@@ -85,10 +85,10 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>Count</th>
                             <th>Item</th>
                             <th>Description</th>
                             <th>Weight</th>
+                            <th>Qty</th>
                             <th>Worn</th>
                             <th>Actions</th>
                         </tr>
@@ -96,10 +96,10 @@
                     <tbody>
                         {{range $items}}
                             <tr>
-                                <td>{{.Count}}</td>
                                 <td>{{.Item.Name}}</td>
                                 <td>{{.Item.Note}}</td>
                                 <td>{{.Item.WeightGrams}}g</td>
+                                <td>{{.Count}}</td>
                                 <td>
                                     {{if eq .Count 1}}
                                         <input type="checkbox" {{if .IsWorn}}checked{{end}} 
@@ -111,8 +111,21 @@
                                     {{end}}
                                 </td>
                                 <td>
-                                    <button class="btn btn-small btn-danger" 
-                                            onclick="removeFromPack(packId, {{.Item.ID}})">Remove</button>
+                                    <div class="dropdown">
+                                        <details>
+                                            <summary>
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <circle cx="12" cy="12" r="1"></circle>
+                                                    <circle cx="12" cy="5" r="1"></circle>
+                                                    <circle cx="12" cy="19" r="1"></circle>
+                                                </svg>
+                                            </summary>
+                                            <div class="dropdown-menu">
+                                                <button type="button" class="dropdown-item dropdown-item-danger" 
+                                                        onclick="removeFromPack(packId, {{.Item.ID}})">Remove</button>
+                                            </div>
+                                        </details>
+                                    </div>
                                 </td>
                             </tr>
                         {{end}}
@@ -130,7 +143,7 @@
     <div class="available-items-section">
         <h2>Available Items</h2>
         <div class="search-container">
-            <input type="text" id="itemSearch" placeholder="Search available items..." autocomplete="off">
+            <input type="text" id="itemSearch" placeholder="Search items by name, description, or category..." autocomplete="off">
         </div>
         
         <div class="available-items-table">
@@ -138,6 +151,7 @@
                 <thead>
                     <tr>
                         <th>Item</th>
+                        <th>Description</th>
                         <th>Weight</th>
                         <th>Category</th>
                         <th>Action</th>
@@ -145,8 +159,9 @@
                 </thead>
                 <tbody id="availableItemsBody">
                     {{range .Items}}
-                        <tr class="available-item-row" data-item-id="{{.ID}}" data-item-name="{{.Name}}" data-item-category="{{.Category.Name}}">
+                        <tr class="available-item-row" data-item-id="{{.ID}}" data-item-name="{{.Name}}" data-item-category="{{.Category.Name}}" data-item-description="{{.Note}}">
                             <td>{{.Name}}</td>
+                            <td>{{.Note}}</td>
                             <td>{{.WeightGrams}}g</td>
                             <td>{{.Category.Name}}</td>
                             <td>
@@ -184,9 +199,10 @@ function filterAvailableItems(query) {
     rows.forEach(row => {
         const itemName = row.dataset.itemName.toLowerCase();
         const itemCategory = row.dataset.itemCategory.toLowerCase();
+        const itemDescription = row.dataset.itemDescription.toLowerCase();
         const searchQuery = query.toLowerCase();
         
-        if (itemName.includes(searchQuery) || itemCategory.includes(searchQuery)) {
+        if (itemName.includes(searchQuery) || itemCategory.includes(searchQuery) || itemDescription.includes(searchQuery)) {
             row.style.display = '';
         } else {
             row.style.display = 'none';

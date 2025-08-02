@@ -102,8 +102,7 @@
                                                 <form action="/categories/{{.ID}}/edit" method="GET">
                                                     <button type="submit" class="dropdown-item">Edit</button>
                                                 </form>
-                                                <form action="/categories/{{.ID}}/delete" method="POST" onsubmit="return confirm('Are you sure you want to delete this category?')">
-                                                    <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                                                <form onsubmit="return handleDeleteCategory(event, {{.ID}}, '{{$.CSRFToken}}')">
                                                     <button type="submit" class="dropdown-item dropdown-item-danger">Delete</button>
                                                 </form>
                                             </div>
@@ -121,6 +120,20 @@
             </div>
         {{end}}
 
+        <!-- Delete Confirmation Modal -->
+        <div id="deleteCategoryModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <h3>Delete Category</h3>
+                <div id="deleteCategoryModalContent">
+                    <!-- Content will be populated by JavaScript -->
+                </div>
+                <div class="form-actions">
+                    <button type="button" onclick="hideCategoryDeleteModal()" class="btn btn-secondary">Cancel</button>
+                    <button type="button" id="confirmCategoryDeleteBtn" onclick="confirmCategoryDelete()" class="btn btn-danger">Delete</button>
+                </div>
+            </div>
+        </div>
+
 <script>
         // Close other dropdowns when one is opened
         document.addEventListener('click', function(event) {
@@ -133,6 +146,96 @@
                 });
             }
         });
+
+        function showCategoryDeleteModal() {
+            document.getElementById('deleteCategoryModal').style.display = 'flex';
+        }
+
+        function hideCategoryDeleteModal() {
+            document.getElementById('deleteCategoryModal').style.display = 'none';
+        }
+
+        let deleteCategoryId = null;
+        let deleteCategoryCSRFToken = null;
+        let forceCategoryDelete = false;
+
+        async function handleDeleteCategory(event, categoryId, csrfToken) {
+            event.preventDefault();
+            
+            deleteCategoryId = categoryId;
+            deleteCategoryCSRFToken = csrfToken;
+            
+            try {
+                // Check if category has items
+                const response = await fetch(`/categories/${categoryId}/items`);
+                const data = await response.json();
+                
+                const modalContent = document.getElementById('deleteCategoryModalContent');
+                const confirmBtn = document.getElementById('confirmCategoryDeleteBtn');
+                
+                if (data.items && data.items.length > 0) {
+                    // Category has items - show warning
+                    modalContent.innerHTML = `
+                        <div class="alert alert-warning">
+                            <strong>Warning:</strong> This category contains the following items:
+                        </div>
+                        <ul style="margin: var(--space-3) 0; padding-left: var(--space-5); max-height: 200px; overflow-y: auto;">
+                            ${data.items.map(item => `<li>${item}</li>`).join('')}
+                        </ul>
+                        <p><strong>Deleting this category will permanently delete all ${data.items.length} item(s) above and remove them from any packs.</strong></p>
+                        <p>This action cannot be undone.</p>
+                    `;
+                    confirmBtn.textContent = 'Delete Category and All Items';
+                    confirmBtn.className = 'btn btn-danger';
+                    forceCategoryDelete = true;
+                } else {
+                    // Category has no items - simple confirmation
+                    modalContent.innerHTML = `
+                        <p>Are you sure you want to delete this category? This action cannot be undone.</p>
+                    `;
+                    confirmBtn.textContent = 'Delete Category';
+                    confirmBtn.className = 'btn btn-danger';
+                    forceCategoryDelete = false;
+                }
+                
+                showCategoryDeleteModal();
+            } catch (error) {
+                console.error('Error checking category items:', error);
+                // Fallback to simple confirmation
+                if (confirm('Are you sure you want to delete this category?')) {
+                    deleteCategoryNow(false);
+                }
+            }
+            
+            return false;
+        }
+
+        function confirmCategoryDelete() {
+            deleteCategoryNow(forceCategoryDelete);
+        }
+
+        function deleteCategoryNow(force) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `/categories/${deleteCategoryId}/delete`;
+            
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrf_token';
+            csrfInput.value = deleteCategoryCSRFToken;
+            form.appendChild(csrfInput);
+            
+            if (force) {
+                const forceInput = document.createElement('input');
+                forceInput.type = 'hidden';
+                forceInput.name = 'force';
+                forceInput.value = 'true';
+                form.appendChild(forceInput);
+            }
+            
+            document.body.appendChild(form);
+            form.submit();
+        }
     </script>
     </main>
 

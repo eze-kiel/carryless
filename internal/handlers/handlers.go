@@ -43,6 +43,7 @@ func SetupRoutes(r *gin.Engine, db *sql.DB) {
 		protected.POST("/categories", handleCreateCategory)
 		protected.GET("/categories/:id/edit", handleEditCategoryPage)
 		protected.POST("/categories/:id", handleUpdateCategory)
+		protected.GET("/categories/:id/items", handleCheckCategoryItems)
 		protected.POST("/categories/:id/delete", handleDeleteCategory)
 		
 		protected.GET("/packs", handlePacks)

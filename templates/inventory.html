@@ -92,7 +92,7 @@
         </div>
 
         <div class="search-container">
-            <input type="text" id="itemSearch" placeholder="Search items by name or category..." autocomplete="off">
+            <input type="text" id="itemSearch" placeholder="Search items by name, description, or category..." autocomplete="off">
         </div>
 
         {{if .Items}}
@@ -110,7 +110,7 @@
                     </thead>
                     <tbody>
                         {{range .Items}}
-                            <tr class="item-row" data-id="{{.ID}}" data-item-name="{{.Name}}" data-item-category="{{.Category.Name}}">
+                            <tr class="item-row" data-id="{{.ID}}" data-item-name="{{.Name}}" data-item-category="{{.Category.Name}}" data-item-description="{{.Note}}">
                                 <td>{{.Name}}</td>
                                 <td>{{.Note}}</td>
                                 <td>{{.Category.Name}}</td>
@@ -196,9 +196,10 @@
             rows.forEach(row => {
                 const itemName = row.dataset.itemName.toLowerCase();
                 const itemCategory = row.dataset.itemCategory.toLowerCase();
+                const itemDescription = row.dataset.itemDescription.toLowerCase();
                 const searchQuery = query.toLowerCase();
                 
-                if (itemName.includes(searchQuery) || itemCategory.includes(searchQuery)) {
+                if (itemName.includes(searchQuery) || itemCategory.includes(searchQuery) || itemDescription.includes(searchQuery)) {
                     row.style.display = '';
                 } else {
                     row.style.display = 'none';
