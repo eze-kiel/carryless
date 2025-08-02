@@ -10,6 +10,7 @@ type User struct {
 	Email        string    `json:"email" db:"email"`
 	PasswordHash string    `json:"-" db:"password_hash"`
 	Currency     string    `json:"currency" db:"currency"`
+	IsAdmin      bool      `json:"is_admin" db:"is_admin"`
 	CreatedAt    time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at" db:"updated_at"`
 }

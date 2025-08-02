@@ -119,6 +119,11 @@ func Migrate(db *sql.DB) error {
 		return fmt.Errorf("failed to remove purchase_date column: %w", err)
 	}
 
+	// Add is_admin column to users table if it doesn't exist
+	if err := addUserIsAdminColumn(db); err != nil {
+		return fmt.Errorf("failed to add is_admin column: %w", err)
+	}
+
 	return nil
 }
 
@@ -277,6 +282,38 @@ func updatePackItemsSchema(db *sql.DB) error {
 			if _, err := db.Exec(migration); err != nil {
 				return err
 			}
+		}
+	}
+
+	return nil
+}
+
+func addUserIsAdminColumn(db *sql.DB) error {
+	// Check if is_admin column exists
+	rows, err := db.Query("PRAGMA table_info(users)")
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	hasIsAdmin := false
+	for rows.Next() {
+		var cid int
+		var name, dataType, notNull, defaultValue, pk string
+		err := rows.Scan(&cid, &name, &dataType, &notNull, &defaultValue, &pk)
+		if err != nil {
+			continue
+		}
+		if name == "is_admin" {
+			hasIsAdmin = true
+			break
+		}
+	}
+
+	if !hasIsAdmin {
+		_, err = db.Exec("ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT FALSE")
+		if err != nil {
+			return err
 		}
 	}
 

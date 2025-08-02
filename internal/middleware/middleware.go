@@ -202,3 +202,33 @@ func TrimSpaces() gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+func AdminRequired(db *sql.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		sessionCookie, err := c.Cookie("session_id")
+		if err != nil {
+			c.Redirect(http.StatusFound, "/login")
+			c.Abort()
+			return
+		}
+
+		user, err := database.ValidateSession(db, sessionCookie)
+		if err != nil {
+			c.SetCookie("session_id", "", -1, "/", "", false, true)
+			c.Redirect(http.StatusFound, "/login")
+			c.Abort()
+			return
+		}
+
+		if !user.IsAdmin {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Admin access required"})
+			c.Abort()
+			return
+		}
+
+		c.Set("user", user)
+		c.Set("user_id", user.ID)
+		c.Set("db", db)
+		c.Next()
+	}
+}

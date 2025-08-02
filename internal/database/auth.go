@@ -18,12 +18,21 @@ func CreateUser(db *sql.DB, username, email, password string) (*models.User, err
 		return nil, fmt.Errorf("failed to hash password: %w", err)
 	}
 
+	// Check if this is the first user
+	var userCount int
+	err = db.QueryRow("SELECT COUNT(*) FROM users").Scan(&userCount)
+	if err != nil {
+		return nil, fmt.Errorf("failed to count users: %w", err)
+	}
+
+	isAdmin := userCount == 0 // First user becomes admin
+
 	query := `
-		INSERT INTO users (username, email, password_hash)
-		VALUES (?, ?, ?)
+		INSERT INTO users (username, email, password_hash, is_admin)
+		VALUES (?, ?, ?, ?)
 	`
 
-	result, err := db.Exec(query, username, email, string(hashedPassword))
+	result, err := db.Exec(query, username, email, string(hashedPassword), isAdmin)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
@@ -38,6 +47,7 @@ func CreateUser(db *sql.DB, username, email, password string) (*models.User, err
 		Username:     username,
 		Email:        email,
 		PasswordHash: string(hashedPassword),
+		IsAdmin:      isAdmin,
 		CreatedAt:    time.Now(),
 		UpdatedAt:    time.Now(),
 	}
@@ -48,7 +58,7 @@ func CreateUser(db *sql.DB, username, email, password string) (*models.User, err
 func AuthenticateUser(db *sql.DB, email, password string) (*models.User, error) {
 	user := &models.User{}
 	query := `
-		SELECT id, username, email, password_hash, created_at, updated_at
+		SELECT id, username, email, password_hash, COALESCE(is_admin, false), created_at, updated_at
 		FROM users
 		WHERE email = ?
 	`
@@ -58,6 +68,7 @@ func AuthenticateUser(db *sql.DB, email, password string) (*models.User, error) 
 		&user.Username,
 		&user.Email,
 		&user.PasswordHash,
+		&user.IsAdmin,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	)
@@ -107,7 +118,7 @@ func CreateSession(db *sql.DB, userID int) (*models.Session, error) {
 func ValidateSession(db *sql.DB, sessionID string) (*models.User, error) {
 	user := &models.User{}
 	query := `
-		SELECT u.id, u.username, u.email, COALESCE(u.currency, '$'), u.created_at, u.updated_at
+		SELECT u.id, u.username, u.email, COALESCE(u.currency, '$'), COALESCE(u.is_admin, false), u.created_at, u.updated_at
 		FROM users u
 		INNER JOIN sessions s ON u.id = s.user_id
 		WHERE s.id = ? AND s.expires_at > CURRENT_TIMESTAMP
@@ -118,6 +129,7 @@ func ValidateSession(db *sql.DB, sessionID string) (*models.User, error) {
 		&user.Username,
 		&user.Email,
 		&user.Currency,
+		&user.IsAdmin,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	)

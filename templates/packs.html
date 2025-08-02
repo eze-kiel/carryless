@@ -19,6 +19,9 @@
                     <a href="/inventory">Inventory</a>
                     <a href="/categories">Categories</a>
                     <a href="/packs">Packs</a>
+                    {{if .User.IsAdmin}}
+                        <a href="/admin">Admin</a>
+                    {{end}}
                     <a href="/account">Account</a>
                     <form class="logout-form" action="/logout" method="POST">
                         <button type="submit" class="btn btn-secondary">Logout</button>
@@ -67,31 +70,33 @@
                                 <td>{{.CreatedAt.Format "Jan 2, 2006"}}</td>
                                 <td>
                                     <div class="dropdown">
-                                        <button class="dropdown-toggle" onclick="toggleDropdown(event, '{{.ID}}')">
-                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                <circle cx="12" cy="12" r="1"></circle>
-                                                <circle cx="12" cy="5" r="1"></circle>
-                                                <circle cx="12" cy="19" r="1"></circle>
-                                            </svg>
-                                        </button>
-                                        <div class="dropdown-menu" id="dropdown-{{.ID}}">
-                                            <form action="/packs/{{.ID}}/edit" method="GET">
-                                                <button type="submit" class="dropdown-item">Edit</button>
-                                            </form>
-                                            <form action="/packs/{{.ID}}/duplicate" method="POST">
-                                                <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
-                                                <button type="submit" class="dropdown-item">Duplicate</button>
-                                            </form>
-                                            {{if .IsPublic}}
-                                                <form action="/public/packs/{{.ID}}" method="GET" target="_blank">
-                                                    <button type="submit" class="dropdown-item">View Public</button>
+                                        <details>
+                                            <summary>
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <circle cx="12" cy="12" r="1"></circle>
+                                                    <circle cx="12" cy="5" r="1"></circle>
+                                                    <circle cx="12" cy="19" r="1"></circle>
+                                                </svg>
+                                            </summary>
+                                            <div class="dropdown-menu">
+                                                <form action="/packs/{{.ID}}/edit" method="GET">
+                                                    <button type="submit" class="dropdown-item">Edit</button>
                                                 </form>
-                                            {{end}}
-                                            <form action="/packs/{{.ID}}/delete" method="POST" onsubmit="return confirm('Are you sure you want to delete this pack?')">
-                                                <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
-                                                <button type="submit" class="dropdown-item dropdown-item-danger">Delete</button>
-                                            </form>
-                                        </div>
+                                                <form action="/packs/{{.ID}}/duplicate" method="POST">
+                                                    <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                                                    <button type="submit" class="dropdown-item">Duplicate</button>
+                                                </form>
+                                                {{if .IsPublic}}
+                                                    <form action="/public/packs/{{.ID}}" method="GET" target="_blank">
+                                                        <button type="submit" class="dropdown-item">View Public</button>
+                                                    </form>
+                                                {{end}}
+                                                <form action="/packs/{{.ID}}/delete" method="POST" onsubmit="return confirm('Are you sure you want to delete this pack?')">
+                                                    <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                                                    <button type="submit" class="dropdown-item dropdown-item-danger">Delete</button>
+                                                </form>
+                                            </div>
+                                        </details>
                                     </div>
                                 </td>
                             </tr>
@@ -111,26 +116,14 @@
     </footer>
 
     <script>
-        function toggleDropdown(event, itemId) {
-            event.stopPropagation();
-            
-            // Close all other dropdowns
-            document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
-                if (menu.id !== `dropdown-${itemId}`) {
-                    menu.classList.remove('show');
-                }
-            });
-            
-            // Toggle current dropdown
-            const dropdown = document.getElementById(`dropdown-${itemId}`);
-            dropdown.classList.toggle('show');
-        }
-
-        // Close dropdowns when clicking outside
+        // Close other dropdowns when one is opened
         document.addEventListener('click', function(event) {
-            if (!event.target.closest('.dropdown')) {
-                document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
-                    menu.classList.remove('show');
+            if (event.target.closest('summary')) {
+                // Close all other open details elements
+                document.querySelectorAll('details[open]').forEach(details => {
+                    if (!details.contains(event.target)) {
+                        details.removeAttribute('open');
+                    }
                 });
             }
         });

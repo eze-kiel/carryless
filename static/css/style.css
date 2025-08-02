@@ -9,6 +9,7 @@
 
 html {
     font-size: 16px;
+    height: 100%;
 }
 
 body {
@@ -16,6 +17,9 @@ body {
     line-height: 1.5;
     color: #333;
     background: #f8f9fa;
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
 }
 
 /* Layout */
@@ -61,6 +65,7 @@ body {
     max-width: 1200px;
     margin: 0 auto;
     padding: 2rem 1rem;
+    flex: 1;
 }
 
 .footer {
@@ -68,7 +73,8 @@ body {
     padding: 2rem;
     color: #666;
     border-top: 1px solid #ddd;
-    margin-top: 3rem;
+    margin-top: auto;
+    background: #fff;
 }
 
 /* Page Header */
@@ -146,6 +152,45 @@ body {
     padding: 2rem;
     border-radius: 8px;
     border: 1px solid #ddd;
+}
+
+/* Auth Forms */
+.auth-container {
+    max-width: 400px;
+    margin: 0 auto;
+    padding: 2rem 0;
+}
+
+.auth-form {
+    background: #fff;
+    padding: 2rem;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+}
+
+.auth-form h2 {
+    text-align: center;
+    margin-bottom: 2rem;
+    color: #333;
+}
+
+.auth-link {
+    text-align: center;
+    margin-top: 1.5rem;
+    color: #666;
+}
+
+.auth-link a {
+    color: #007bff;
+    text-decoration: none;
+}
+
+.auth-link a:hover {
+    text-decoration: underline;
+}
+
+.btn-full {
+    width: 100%;
 }
 
 .form-group {
@@ -231,6 +276,11 @@ tr:hover {
     background: #f8f9fa;
 }
 
+/* Ensure table rows allow dropdown positioning */
+tr {
+    position: relative;
+}
+
 .table-actions {
     display: flex;
     gap: 0.5rem;
@@ -291,7 +341,7 @@ tr:hover {
     background: #fff;
     border: 1px solid #ddd;
     border-radius: 8px;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .category-section h3 {
@@ -408,6 +458,32 @@ tr:hover {
     justify-content: center;
 }
 
+/* Features Section */
+.features {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2rem;
+    margin-top: 3rem;
+}
+
+.feature {
+    text-align: center;
+    padding: 2rem;
+    background: #fff;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+}
+
+.feature h3 {
+    margin-bottom: 1rem;
+    color: #333;
+}
+
+.feature p {
+    color: #666;
+    line-height: 1.6;
+}
+
 /* Dashboard */
 .dashboard h1 {
     font-size: 2rem;
@@ -477,13 +553,17 @@ tr:hover {
     color: #555;
 }
 
-/* Dropdown Menu */
+/* Dropdown Menu using native details/summary */
 .dropdown {
     position: relative;
     display: inline-block;
 }
 
-.dropdown-toggle {
+.dropdown details {
+    position: relative;
+}
+
+.dropdown summary {
     background: none;
     border: none;
     cursor: pointer;
@@ -494,9 +574,19 @@ tr:hover {
     justify-content: center;
     color: #666;
     transition: background-color 0.2s, color 0.2s;
+    list-style: none;
+    position: relative;
 }
 
-.dropdown-toggle:hover {
+.dropdown summary::-webkit-details-marker {
+    display: none;
+}
+
+.dropdown summary::marker {
+    content: none;
+}
+
+.dropdown summary:hover {
     background: #f8f9fa;
     color: #333;
 }
@@ -508,14 +598,20 @@ tr:hover {
     background: #fff;
     border: 1px solid #ddd;
     border-radius: 4px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    z-index: 9999;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 999;
     min-width: 120px;
-    display: none;
+    margin-top: 2px;
 }
 
-.dropdown-menu.show {
-    display: block;
+/* Ensure dropdown appears above everything when open */
+.dropdown details[open] {
+    z-index: 1000;
+}
+
+/* Ensure dropdown container doesn't get clipped */
+.dropdown details[open] .dropdown-menu {
+    z-index: 1001;
 }
 
 .dropdown-item {
@@ -707,6 +803,16 @@ tr:hover {
     .hero-actions .btn {
         width: 100%;
         max-width: 280px;
+    }
+    
+    .features {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+    
+    .feature {
+        padding: 1.5rem;
     }
     
     .stat-card,

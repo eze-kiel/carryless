@@ -65,16 +65,16 @@
                                 <td>
                                     {{if eq .Count 1}}
                                         <input type="checkbox" {{if .IsWorn}}checked{{end}} 
-                                               onchange="toggleWorn('{{$.Pack.ID}}', {{.Item.ID}}, this.checked)">
+                                               onchange="toggleWorn(packId, {{.Item.ID}}, this.checked)">
                                     {{else}}
                                         <input type="number" min="0" max="{{.Count}}" value="{{.WornCount}}" 
-                                               onchange="updateWornCount('{{$.Pack.ID}}', {{.Item.ID}}, this.value)"
+                                               onchange="updateWornCount(packId, {{.Item.ID}}, this.value)"
                                                style="width: 60px;">
                                     {{end}}
                                 </td>
                                 <td>
                                     <button class="btn btn-small btn-danger" 
-                                            onclick="removeFromPack('{{$.Pack.ID}}', {{.Item.ID}})">Remove</button>
+                                            onclick="removeFromPack(packId, {{.Item.ID}})">Remove</button>
                                 </td>
                             </tr>
                         {{end}}
@@ -128,6 +128,7 @@
 
 <script>
 let csrfToken = '';
+const packId = '{{.Pack.ID}}';
 
 async function fetchCSRFToken() {
     try {
@@ -163,7 +164,7 @@ async function addItemToPack(itemId) {
     formData.append('csrf_token', csrfToken);
 
     try {
-        const response = await fetch(`/packs/{{.Pack.ID}}/items`, {
+        const response = await fetch(`/packs/${packId}/items`, {
             method: 'POST',
             body: formData,
             headers: {

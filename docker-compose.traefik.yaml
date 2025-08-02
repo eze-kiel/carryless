@@ -2,7 +2,7 @@ version: '3'
 
 services:
   carryless:
-    image: carryless:latest
+    image: ez3kiel/splitr:latest
     container_name: carryless-app
     restart: unless-stopped
     environment:
@@ -12,11 +12,10 @@ services:
       - carryless_data:/data
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.carryless.rule=Host(`carryless.plop.name`)"
+      - "traefik.http.routers.carryless.rule=Host(`caryless.plop.name`)"
       - "traefik.http.routers.carryless.entrypoints=websecure"
-      - "traefik.http.routers.carryless.tls.certresolver=letsencrypt"
       - "traefik.http.services.carryless.loadbalancer.server.port=8080"
-      - "traefik.http.routers.carryless-http.rule=Host(`carryless.plop.name`)"
+      - "traefik.http.routers.carryless-http.rule=Host(`caryless.plop.name`)"
       - "traefik.http.routers.carryless-http.entrypoints=web"
       - "traefik.http.routers.carryless-http.middlewares=carryless-redirect"
       - "traefik.http.middlewares.carryless-redirect.redirectscheme.scheme=https"

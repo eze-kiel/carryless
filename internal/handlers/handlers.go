@@ -64,6 +64,15 @@ func SetupRoutes(r *gin.Engine, db *sql.DB) {
 		protected.GET("/api/csrf-token", handleCSRFToken)
 	}
 
+	// Admin routes
+	admin := r.Group("/admin")
+	admin.Use(middleware.AdminRequired(db))
+	{
+		admin.GET("/", handleAdminPanel)
+		admin.POST("/users/:id/toggle-admin", handleToggleUserAdmin)
+		admin.POST("/users/:id/ban", handleBanUser)
+	}
+
 	r.GET("/public/packs/:id", middleware.AuthOptional(db), handlePublicPack)
 }
 

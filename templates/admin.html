@@ -1,0 +1,286 @@
+{{define "admin.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <header class="header">
+        <nav class="nav">
+            <div class="nav-brand">
+                <a href="/">Carryless</a>
+            </div>
+            <div class="nav-links">
+                {{if .User}}
+                    <a href="/dashboard">Dashboard</a>
+                    <a href="/inventory">Inventory</a>
+                    <a href="/categories">Categories</a>
+                    <a href="/packs">Packs</a>
+                    {{if .User.IsAdmin}}
+                        <a href="/admin">Admin</a>
+                    {{end}}
+                    <a href="/account">Account</a>
+                    <form class="logout-form" action="/logout" method="POST">
+                        <button type="submit" class="btn btn-secondary">Logout</button>
+                    </form>
+                {{else}}
+                    <a href="/login">Login</a>
+                    <a href="/register">Register</a>
+                {{end}}
+            </div>
+        </nav>
+    </header>
+
+    <main class="main">
+        {{if .Error}}
+            <div class="alert alert-error">{{.Error}}</div>
+        {{end}}
+        
+        <div class="container">
+            <h1>Admin Panel</h1>
+            
+            <div class="admin-stats">
+                <h2>Statistics</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>Total Users</h3>
+                        <p class="stat-number">{{.Stats.TotalUsers}}</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Total Packs</h3>
+                        <p class="stat-number">{{.Stats.TotalPacks}}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="admin-users">
+                <h2>All Users</h2>
+                <div class="table-container">
+                    <table class="users-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Username</th>
+                                <th>Email</th>
+                                <th>Admin</th>
+                                <th>Packs</th>
+                                <th>Created At</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{range .Users}}
+                            <tr>
+                                <td>{{.ID}}</td>
+                                <td>{{.Username}}</td>
+                                <td>{{.Email}}</td>
+                                <td>{{if .IsAdmin}}Yes{{else}}No{{end}}</td>
+                                <td>{{.PackCount}}</td>
+                                <td>{{.CreatedAt.Format "2006-01-02 15:04:05"}}</td>
+                                <td>
+                                    <div class="dropdown">
+                                        <details>
+                                            <summary>
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <circle cx="12" cy="12" r="1"></circle>
+                                                    <circle cx="12" cy="5" r="1"></circle>
+                                                    <circle cx="12" cy="19" r="1"></circle>
+                                                </svg>
+                                            </summary>
+                                            <div class="dropdown-menu">
+                                                <a href="#" class="dropdown-item" onclick="toggleAdmin({{.ID}})">
+                                                    {{if .IsAdmin}}Remove Admin{{else}}Make Admin{{end}}
+                                                </a>
+                                                <a href="#" class="dropdown-item dropdown-item-danger" onclick="banUser({{.ID}}, '{{.Username}}')">
+                                                    Ban User
+                                                </a>
+                                            </div>
+                                        </details>
+                                    </div>
+                                </td>
+                            </tr>
+                            {{end}}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>&copy; 2025 Carryless. Built for outdoor enthusiasts.</p>
+    </footer>
+
+    <script src="/static/js/app.js"></script>
+    <script>
+        // Close other dropdowns when one is opened
+        document.addEventListener('click', function(event) {
+            if (event.target.closest('summary')) {
+                // Close all other open details elements
+                document.querySelectorAll('details[open]').forEach(details => {
+                    if (!details.contains(event.target)) {
+                        details.removeAttribute('open');
+                    }
+                });
+            }
+        });
+
+        // Close dropdown when clicking on dropdown items
+        document.addEventListener('click', function(event) {
+            if (event.target.classList.contains('dropdown-item')) {
+                const dropdown = event.target.closest('details');
+                if (dropdown) {
+                    dropdown.removeAttribute('open');
+                }
+            }
+        });
+
+        // Admin actions
+        function toggleAdmin(userId) {
+            if (confirm('Are you sure you want to toggle admin status for this user?')) {
+                fetch(`/admin/users/${userId}/toggle-admin`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': '{{.CSRFToken}}'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert('Error: ' + data.error);
+                    } else {
+                        alert(data.message);
+                        location.reload();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while toggling admin status');
+                });
+            }
+        }
+
+        function banUser(userId, username) {
+            if (confirm(`Are you sure you want to ban user "${username}"? This will permanently delete their account and all their data. This action cannot be undone.`)) {
+                fetch(`/admin/users/${userId}/ban`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': '{{.CSRFToken}}'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert('Error: ' + data.error);
+                    } else {
+                        alert(data.message);
+                        location.reload();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while banning the user');
+                });
+            }
+        }
+    </script>
+</body>
+</html>
+
+<style>
+.admin-stats {
+    margin-bottom: 2rem;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.stat-card {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 8px;
+    text-align: center;
+    border: 1px solid #dee2e6;
+}
+
+.stat-card h3 {
+    margin: 0 0 0.5rem 0;
+    color: #495057;
+    font-size: 1rem;
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #28a745;
+    margin: 0;
+}
+
+.admin-users {
+    margin-top: 2rem;
+}
+
+.table-container {
+    overflow-x: auto;
+    margin-top: 1rem;
+    position: relative;
+}
+
+.users-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.users-table th,
+.users-table td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.users-table th {
+    background: #f8f9fa;
+    font-weight: 600;
+    color: #495057;
+}
+
+.users-table tr:hover {
+    background: #f8f9fa;
+}
+
+.users-table tr:last-child td {
+    border-bottom: none;
+}
+
+/* Admin dropdown uses same styles as other dropdowns - no overrides needed */
+
+@media (max-width: 768px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .users-table {
+        font-size: 0.875rem;
+    }
+    
+    .users-table th,
+    .users-table td {
+        padding: 0.5rem;
+    }
+}
+</style>
+{{end}}

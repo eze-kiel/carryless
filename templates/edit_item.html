@@ -19,6 +19,9 @@
                     <a href="/inventory">Inventory</a>
                     <a href="/categories">Categories</a>
                     <a href="/packs">Packs</a>
+                    {{if .User.IsAdmin}}
+                        <a href="/admin">Admin</a>
+                    {{end}}
                     <a href="/account">Account</a>
                     <form class="logout-form" action="/logout" method="POST">
                         <button type="submit" class="btn btn-secondary">Logout</button>
