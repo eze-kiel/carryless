@@ -198,9 +198,9 @@ func DeleteCategoryWithForce(db *sql.DB, userID, categoryID int, force bool) err
 	return nil
 }
 
-func GetItemsInCategory(db *sql.DB, userID, categoryID int) ([]string, error) {
+func GetItemsInCategory(db *sql.DB, userID, categoryID int) ([]models.ItemInfo, error) {
 	query := `
-		SELECT name 
+		SELECT name, note 
 		FROM items 
 		WHERE category_id = ? AND user_id = ?
 		ORDER BY name
@@ -212,20 +212,20 @@ func GetItemsInCategory(db *sql.DB, userID, categoryID int) ([]string, error) {
 	}
 	defer rows.Close()
 
-	var itemNames []string
+	var items []models.ItemInfo
 	for rows.Next() {
-		var itemName string
-		if err := rows.Scan(&itemName); err != nil {
-			return nil, fmt.Errorf("failed to scan item name: %w", err)
+		var item models.ItemInfo
+		if err := rows.Scan(&item.Name, &item.Description); err != nil {
+			return nil, fmt.Errorf("failed to scan item: %w", err)
 		}
-		itemNames = append(itemNames, itemName)
+		items = append(items, item)
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating item names: %w", err)
+		return nil, fmt.Errorf("error iterating items: %w", err)
 	}
 
-	return itemNames, nil
+	return items, nil
 }
 
 func GetOrCreateCategory(db *sql.DB, userID int, name string) (*models.Category, error) {

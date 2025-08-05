@@ -76,6 +76,14 @@
         {{end}}
     </div>
 
+    <!-- Add Item Search -->
+    <div class="add-item-search">
+        <div class="search-container">
+            <input type="text" id="addItemSearch" placeholder="Search and add items to pack..." autocomplete="off">
+            <div id="itemSuggestions" class="autocomplete-suggestions"></div>
+        </div>
+    </div>
+
     {{if .Pack.Items}}
         {{$categoryWeights := .CategoryWeights}}
         {{$categoryWornWeights := .CategoryWornWeights}}
@@ -135,48 +143,10 @@
         {{end}}
     {{else}}
         <div class="empty-state">
-            <p>No items in this pack yet. Add some items from the available items below.</p>
+            <p>No items in this pack yet. Use the search above to add items.</p>
         </div>
     {{end}}
 
-    <!-- Available Items Section -->
-    <div class="available-items-section">
-        <h2>Available Items</h2>
-        <div class="search-container">
-            <input type="text" id="itemSearch" placeholder="Search items by name, description, or category..." autocomplete="off">
-        </div>
-        
-        <div class="available-items-table">
-            <table id="availableItemsTable">
-                <thead>
-                    <tr>
-                        <th>Item</th>
-                        <th>Description</th>
-                        <th>Weight</th>
-                        <th>Category</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody id="availableItemsBody">
-                    {{range .Items}}
-                        <tr class="available-item-row" data-item-id="{{.ID}}" data-item-name="{{.Name}}" data-item-category="{{.Category.Name}}" data-item-description="{{.Note}}">
-                            <td>{{.Name}}</td>
-                            <td>{{.Note}}</td>
-                            <td>{{.WeightGrams}}g</td>
-                            <td>{{.Category.Name}}</td>
-                            <td>
-                                {{if index $.ItemsInPack .ID}}
-                                    <button class="btn btn-small btn-primary" onclick="addItemToPack({{.ID}})">Add again</button>
-                                {{else}}
-                                    <button class="btn btn-small btn-primary" onclick="addItemToPack({{.ID}})">Add</button>
-                                {{end}}
-                            </td>
-                        </tr>
-                    {{end}}
-                </tbody>
-            </table>
-        </div>
-    </div>
 </div>
 
 <script>
@@ -193,21 +163,75 @@ async function fetchCSRFToken() {
     }
 }
 
-function filterAvailableItems(query) {
-    const rows = document.querySelectorAll('.available-item-row');
+// Available items data for autocomplete
+const availableItems = [
+    {{range .Items}}
+    {
+        id: {{.ID}},
+        name: "{{.Name}}",
+        description: "{{.Note}}",
+        category: "{{.Category.Name}}",
+        weight: {{.WeightGrams}},
+        inPack: {{if index $.ItemsInPack .ID}}true{{else}}false{{end}}
+    },
+    {{end}}
+];
+
+function setupItemSearch() {
+    const searchInput = document.getElementById('addItemSearch');
+    const suggestionsDiv = document.getElementById('itemSuggestions');
     
-    rows.forEach(row => {
-        const itemName = row.dataset.itemName.toLowerCase();
-        const itemCategory = row.dataset.itemCategory.toLowerCase();
-        const itemDescription = row.dataset.itemDescription.toLowerCase();
-        const searchQuery = query.toLowerCase();
+    if (!searchInput || !suggestionsDiv) return;
+    
+    searchInput.addEventListener('input', function(e) {
+        const query = e.target.value.toLowerCase().trim();
         
-        if (itemName.includes(searchQuery) || itemCategory.includes(searchQuery) || itemDescription.includes(searchQuery)) {
-            row.style.display = '';
-        } else {
-            row.style.display = 'none';
+        if (query.length < 2) {
+            suggestionsDiv.style.display = 'none';
+            return;
+        }
+        
+        const matches = availableItems.filter(item => 
+            item.name.toLowerCase().includes(query) || 
+            item.description.toLowerCase().includes(query)
+        ).slice(0, 8); // Limit to 8 suggestions
+        
+        if (matches.length === 0) {
+            suggestionsDiv.style.display = 'none';
+            return;
+        }
+        
+        suggestionsDiv.innerHTML = matches.map(item => `
+            <div class="suggestion-item" onclick="addItemToPack(${item.id}); clearSearch();">
+                <div class="suggestion-main">
+                    <span class="suggestion-name">${item.name}</span>
+                    <span class="suggestion-weight">${item.weight}g</span>
+                </div>
+                <div class="suggestion-meta">
+                    <span class="suggestion-category">${item.category}</span>
+                    ${item.description ? `<span class="suggestion-description">${item.description}</span>` : ''}
+                    ${item.inPack ? '<span class="suggestion-status">Already in pack</span>' : ''}
+                </div>
+            </div>
+        `).join('');
+        
+        suggestionsDiv.style.display = 'block';
+    });
+    
+    // Hide suggestions when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+            suggestionsDiv.style.display = 'none';
         }
     });
+}
+
+function clearSearch() {
+    const searchInput = document.getElementById('addItemSearch');
+    const suggestionsDiv = document.getElementById('itemSuggestions');
+    
+    if (searchInput) searchInput.value = '';
+    if (suggestionsDiv) suggestionsDiv.style.display = 'none';
 }
 
 async function addItemToPack(itemId) {
@@ -237,14 +261,8 @@ async function addItemToPack(itemId) {
     }
 }
 
-// Setup search input event listener
 document.addEventListener('DOMContentLoaded', function() {
-    const searchInput = document.getElementById('itemSearch');
-    if (searchInput) {
-        searchInput.addEventListener('input', (e) => {
-            filterAvailableItems(e.target.value);
-        });
-    }
+    setupItemSearch();
 });
 
 async function toggleWorn(packId, itemId, isWorn) {

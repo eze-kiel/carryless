@@ -71,3 +71,8 @@ type CSRFToken struct {
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 }
 
+type ItemInfo struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+

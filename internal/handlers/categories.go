@@ -283,11 +283,11 @@ func handleCheckCategoryItems(c *gin.Context) {
 	}
 
 	// Get items in this category
-	itemNames, err := database.GetItemsInCategory(db, userID, categoryID)
+	items, err := database.GetItemsInCategory(db, userID, categoryID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check items"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"items": itemNames})
+	c.JSON(http.StatusOK, gin.H{"items": items})
 }
