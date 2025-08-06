@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"html/template"
 	"log"
+	"strings"
 
 	"carryless/internal/config"
 	"carryless/internal/database"
@@ -52,6 +53,24 @@ func main() {
 				groups[category] = append(groups[category], item)
 			}
 			return groups
+		},
+		"redactEmail": func(email string) string {
+			parts := strings.Split(email, "@")
+			if len(parts) != 2 {
+				return email // Return original if not a valid email format
+			}
+			
+			prefix := parts[0]
+			domain := parts[1]
+			
+			if len(prefix) <= 2 {
+				return email // Return original if prefix too short to redact
+			}
+			
+			// Create redacted prefix: first letter + *** + last letter
+			redactedPrefix := string(prefix[0]) + "***" + string(prefix[len(prefix)-1])
+			
+			return redactedPrefix + "@" + domain
 		},
 	}
 

@@ -77,7 +77,7 @@
                             <tr>
                                 <td>{{.ID}}</td>
                                 <td>{{.Username}}</td>
-                                <td>{{.Email}}</td>
+                                <td>{{redactEmail .Email}}</td>
                                 <td>{{if .IsAdmin}}Yes{{else}}No{{end}}</td>
                                 <td>{{.PackCount}}</td>
                                 <td>{{.CreatedAt.Format "2006-01-02 15:04:05"}}</td>
