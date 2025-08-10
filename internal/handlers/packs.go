@@ -154,12 +154,14 @@ func handlePackDetail(c *gin.Context) {
 	itemsInPack := make(map[int]bool)
 	totalWeight := 0
 	totalWornWeight := 0
+	totalItemCount := 0
 
 	for _, packItem := range pack.Items {
 		categoryName := packItem.Item.Category.Name
 		itemsInPack[packItem.Item.ID] = true
 		packWeight := packItem.Item.WeightGrams * (packItem.Count - packItem.WornCount)
 		wornWeight := packItem.Item.WeightGrams * packItem.WornCount
+		totalItemCount += packItem.Count
 		
 		if packWeight > 0 {
 			categoryWeights[categoryName] += packWeight
@@ -181,6 +183,7 @@ func handlePackDetail(c *gin.Context) {
 		"CategoryWornWeights": categoryWornWeights,
 		"TotalWeight":         totalWeight,
 		"TotalWornWeight":     totalWornWeight,
+		"TotalItemCount":      totalItemCount,
 	})
 }
 
@@ -219,11 +222,13 @@ func handlePublicPack(c *gin.Context) {
 	categoryWornWeights := make(map[string]int)
 	totalWeight := 0
 	totalWornWeight := 0
+	totalItemCount := 0
 
 	for _, packItem := range pack.Items {
 		categoryName := packItem.Item.Category.Name
 		packWeight := packItem.Item.WeightGrams * (packItem.Count - packItem.WornCount)
 		wornWeight := packItem.Item.WeightGrams * packItem.WornCount
+		totalItemCount += packItem.Count
 		
 		if packWeight > 0 {
 			categoryWeights[categoryName] += packWeight
@@ -250,6 +255,7 @@ func handlePublicPack(c *gin.Context) {
 		"CategoryWornWeights": categoryWornWeights,
 		"TotalWeight":         totalWeight,
 		"TotalWornWeight":     totalWornWeight,
+		"TotalItemCount":      totalItemCount,
 		"CSRFToken":           csrfToken,
 	})
 }

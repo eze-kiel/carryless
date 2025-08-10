@@ -240,10 +240,66 @@
     </main>
 
     <footer class="footer">
-        <p>&copy; 2025 Carryless. Built for outdoor enthusiasts.</p>
+        <div class="footer-content">
+            <p>&copy; 2025 Carryless. Built for outdoor enthusiasts.</p>
+            <div class="weight-unit-selector">
+                <label for="weightUnitSelector">Units:</label>
+                <select id="weightUnitSelector" onchange="changeWeightUnit(this.value)">
+                    <option value="g">Grams</option>
+                    <option value="oz">Ounces</option>
+                </select>
+            </div>
+        </div>
     </footer>
 
     <script src="/static/js/app.js"></script>
+
+<script>
+// Weight unit cookie management (for consistency across pages)
+function setCookie(name, value, days = 365) {
+    const expires = new Date();
+    expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
+    document.cookie = name + '=' + value + ';expires=' + expires.toUTCString() + ';path=/';
+}
+
+function getCookie(name) {
+    const nameEQ = name + "=";
+    const ca = document.cookie.split(';');
+    for (let i = 0; i < ca.length; i++) {
+        let c = ca[i];
+        while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+        if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+    }
+    return null;
+}
+
+function isValidWeightUnit(unit) {
+    return unit === 'g' || unit === 'oz';
+}
+
+function changeWeightUnit(unit) {
+    if (!isValidWeightUnit(unit)) {
+        console.warn('Invalid weight unit:', unit, 'Defaulting to grams');
+        unit = 'g';
+    }
+    setCookie('weightUnit', unit);
+}
+
+// Initialize unit preference on page load
+document.addEventListener('DOMContentLoaded', function() {
+    let savedUnit = getCookie('weightUnit') || 'g';
+    
+    if (!isValidWeightUnit(savedUnit)) {
+        savedUnit = 'g';
+        setCookie('weightUnit', 'g');
+    }
+    
+    const selector = document.getElementById('weightUnitSelector');
+    if (selector) {
+        selector.value = savedUnit;
+    }
+});
+</script>
 </body>
 </html>
 {{end}}

@@ -46,19 +46,19 @@
                 
                 <div class="pack-stats">
                     <div class="stat">
-                        <div class="stat-value">{{.TotalWeight}}g</div>
+                        <div class="stat-value" data-weight="{{.TotalWeight}}">{{.TotalWeight}}g</div>
                         <div class="stat-label">Pack Weight</div>
                     </div>
                     <div class="stat">
-                        <div class="stat-value">{{.TotalWornWeight}}g</div>
+                        <div class="stat-value" data-weight="{{.TotalWornWeight}}">{{.TotalWornWeight}}g</div>
                         <div class="stat-label">Worn Weight</div>
                     </div>
                     <div class="stat">
-                        <div class="stat-value">{{add .TotalWeight .TotalWornWeight}}g</div>
+                        <div class="stat-value" data-weight="{{add .TotalWeight .TotalWornWeight}}">{{add .TotalWeight .TotalWornWeight}}g</div>
                         <div class="stat-label">Total Weight</div>
                     </div>
                     <div class="stat">
-                        <div class="stat-value">{{len .Pack.Items}}</div>
+                        <div class="stat-value">{{.TotalItemCount}}</div>
                         <div class="stat-label">Items</div>
                     </div>
                 </div>
@@ -95,7 +95,7 @@
                                     <tr {{if .IsWorn}}class="worn-item"{{end}}>
                                         <td>{{.Item.Name}}</td>
                                         <td>{{.Item.Note}}</td>
-                                        <td>{{.Item.WeightGrams}}g</td>
+                                        <td><span data-weight="{{.Item.WeightGrams}}">{{.Item.WeightGrams}}g</span></td>
                                         <td>{{if .IsWorn}}✓{{end}}</td>
                                     </tr>
                                 {{end}}
@@ -113,35 +113,175 @@
 <script>
     // Chart.js for weight visualization
     {{if .CategoryWeights}}
-    const ctx = document.getElementById('weightChart').getContext('2d');
-    const chartData = {
-        labels: [{{range $category, $weight := .CategoryWeights}}'{{$category}} ({{$weight}}g)',{{end}}],
-        datasets: [{
-            data: [{{range $category, $weight := .CategoryWeights}}{{$weight}},{{end}}],
-            backgroundColor: [
-                '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'
-            ]
-        }]
+    let weightChart;
+    const categoryData = {
+        {{range $category, $weight := .CategoryWeights}}
+        '{{$category}}': {{$weight}},
+        {{end}}
     };
 
-    new Chart(ctx, {
-        type: 'doughnut',
-        data: chartData,
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom'
-                },
-                title: {
-                    display: true,
-                    text: 'Weight Distribution by Category'
+    function createWeightChart(unit = 'g') {
+        const ctx = document.getElementById('weightChart');
+        if (!ctx) return;
+        
+        // Destroy existing chart if it exists
+        if (weightChart) {
+            weightChart.destroy();
+        }
+        
+        const labels = [];
+        const data = [];
+        
+        for (const [category, grams] of Object.entries(categoryData)) {
+            labels.push(category + ' (' + formatWeightWithUnit(grams, unit) + ')');
+            data.push(grams);
+        }
+        
+        const chartData = {
+            labels: labels,
+            datasets: [{
+                data: data,
+                backgroundColor: [
+                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'
+                ]
+            }]
+        };
+
+        weightChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: chartData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    },
+                    title: {
+                        display: true,
+                        text: 'Weight Distribution by Category'
+                    }
                 }
             }
+        });
+    }
+    {{end}}
+    </script>
+
+    <script>
+    // Weight unit conversion functions
+    function gramsToOunces(grams) {
+        return (grams * 0.035274).toFixed(2);
+    }
+
+    function formatWeightWithUnit(grams, unit) {
+        if (unit === 'oz') {
+            const oz = gramsToOunces(grams);
+            return oz + 'oz';
+        }
+        return grams + 'g';
+    }
+
+    // Cookie management
+    function setCookie(name, value, days = 365) {
+        const expires = new Date();
+        expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
+        document.cookie = name + '=' + value + ';expires=' + expires.toUTCString() + ';path=/';
+    }
+
+    function getCookie(name) {
+        const nameEQ = name + "=";
+        const ca = document.cookie.split(';');
+        for (let i = 0; i < ca.length; i++) {
+            let c = ca[i];
+            while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+            if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+        }
+        return null;
+    }
+
+    // Weight unit conversion
+    function convertWeightDisplays(unit) {
+        // Convert all weight displays on the page
+        const weightElements = document.querySelectorAll('[data-weight]');
+        weightElements.forEach(element => {
+            const grams = parseInt(element.dataset.weight);
+            element.textContent = formatWeightWithUnit(grams, unit);
+        });
+        
+        // Convert statistics (using data-weight attributes for accurate conversion)
+        const statElements = document.querySelectorAll('.stat-value[data-weight]');
+        statElements.forEach(element => {
+            const grams = parseInt(element.dataset.weight);
+            if (!isNaN(grams)) {
+                element.textContent = formatWeightWithUnit(grams, unit);
+            }
+        });
+        
+        // Convert category headers
+        const categoryHeaders = document.querySelectorAll('.category-section h3');
+        categoryHeaders.forEach(header => {
+            const text = header.textContent;
+            const gramsMatch = text.match(/(\d+)g/g);
+            if (gramsMatch) {
+                let newText = text;
+                gramsMatch.forEach(match => {
+                    const grams = parseInt(match.replace('g', ''));
+                    const converted = formatWeightWithUnit(grams, unit);
+                    newText = newText.replace(match, converted);
+                });
+                header.textContent = newText;
+            }
+        });
+        
+        // Update chart if it exists
+        {{if .CategoryWeights}}
+        if (typeof createWeightChart === 'function') {
+            createWeightChart(unit);
+        }
+        {{end}}
+    }
+
+    // Validate weight unit value
+    function isValidWeightUnit(unit) {
+        return unit === 'g' || unit === 'oz';
+    }
+
+    function changeWeightUnit(unit) {
+        // Validate unit before setting
+        if (!isValidWeightUnit(unit)) {
+            console.warn('Invalid weight unit:', unit, 'Defaulting to grams');
+            unit = 'g';
+        }
+        
+        setCookie('weightUnit', unit);
+        convertWeightDisplays(unit);
+    }
+
+    // Initialize unit preference on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        let savedUnit = getCookie('weightUnit') || 'g';
+        
+        // Validate cookie value, default to grams if invalid
+        if (!isValidWeightUnit(savedUnit)) {
+            savedUnit = 'g';
+            setCookie('weightUnit', 'g'); // Reset cookie to valid value
+        }
+        
+        const selector = document.getElementById('weightUnitSelector');
+        if (selector) {
+            selector.value = savedUnit;
+        }
+        
+        // Initialize chart and convert displays with correct unit
+        {{if .CategoryWeights}}
+        createWeightChart(savedUnit);
+        {{end}}
+        
+        if (savedUnit === 'oz') {
+            convertWeightDisplays('oz');
         }
     });
-    {{end}}
     </script>
 
 <style>
@@ -196,7 +336,16 @@
     </main>
 
     <footer class="footer">
-        <p>&copy; 2025 Carryless. Built for outdoor enthusiasts.</p>
+        <div class="footer-content">
+            <p>&copy; 2025 Carryless. Built for outdoor enthusiasts.</p>
+            <div class="weight-unit-selector">
+                <label for="weightUnitSelector">Units:</label>
+                <select id="weightUnitSelector" onchange="changeWeightUnit(this.value)">
+                    <option value="g">Grams</option>
+                    <option value="oz">Ounces</option>
+                </select>
+            </div>
+        </div>
     </footer>
 
     <script src="/static/js/app.js"></script>
