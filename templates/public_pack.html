@@ -95,6 +95,15 @@
                                     </div>
                                     {{if .Item.Note}}<p class="item-description">{{.Item.Note}}</p>{{end}}
                                     {{if gt .Count 1}}<p class="item-quantity">Quantity: {{.Count}}</p>{{end}}
+                                    {{if .Labels}}
+                                        <div class="item-labels-public">
+                                            {{range .Labels}}
+                                                <span class="label-tag-public" style="background-color: {{.Color}};">
+                                                    {{.Name}}
+                                                </span>
+                                            {{end}}
+                                        </div>
+                                    {{end}}
                                 </div>
                             {{end}}
                         </div>
@@ -110,6 +119,7 @@
                                             <th>Weight</th>
                                             <th>Qty</th>
                                             <th>Worn</th>
+                                            <th>Labels</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -120,6 +130,17 @@
                                                 <td><span data-weight="{{.Item.WeightGrams}}">{{.Item.WeightGrams}}g</span></td>
                                                 <td>{{.Count}}</td>
                                                 <td>{{if .IsWorn}}✓{{end}}</td>
+                                                <td>
+                                                    <div class="item-labels-public">
+                                                        {{if .Labels}}
+                                                            {{range .Labels}}
+                                                                <span class="label-tag-public" style="background-color: {{.Color}};">
+                                                                    {{.Name}}
+                                                                </span>
+                                                            {{end}}
+                                                        {{end}}
+                                                    </div>
+                                                </td>
                                             </tr>
                                         {{end}}
                                     </tbody>
@@ -511,6 +532,38 @@
         
         .item-meta {
             align-self: flex-start;
+        }
+    }
+
+    /* Public pack labels styles */
+    .item-labels-public {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.25rem;
+        margin-top: 0.375rem;
+    }
+
+    .label-tag-public {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.15rem 0.35rem;
+        border-radius: 10px;
+        font-size: 0.7rem;
+        font-weight: 500;
+        color: white;
+        text-shadow: 0 1px 1px rgba(0,0,0,0.2);
+        white-space: nowrap;
+    }
+
+    /* For mobile cards */
+    .pack-item-card .item-labels-public {
+        margin-top: 0.5rem;
+    }
+
+    /* For desktop table */
+    @media (min-width: 768px) {
+        .item-labels-public {
+            margin-top: 0;
         }
     }
     </style>

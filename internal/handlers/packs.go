@@ -523,3 +523,179 @@ func handleDuplicatePack(c *gin.Context) {
 
 	c.Redirect(http.StatusFound, "/packs")
 }
+
+func handleCreatePackLabel(c *gin.Context) {
+	userID := c.MustGet("user_id").(int)
+	db := c.MustGet("db").(*sql.DB)
+	packID := c.Param("id")
+
+	name := c.PostForm("name")
+	color := c.PostForm("color")
+	if color == "" {
+		color = "#6b7280" // Default gray color
+	}
+
+	if strings.TrimSpace(name) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Label name is required"})
+		return
+	}
+
+	_, err := database.CreatePackLabel(db, packID, strings.TrimSpace(name), color, userID)
+	if err != nil {
+		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Label name already exists"})
+			return
+		}
+		if strings.Contains(err.Error(), "unauthorized") {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create label"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Label created successfully"})
+}
+
+func handleUpdatePackLabel(c *gin.Context) {
+	userID := c.MustGet("user_id").(int)
+	db := c.MustGet("db").(*sql.DB)
+	
+	labelID, err := strconv.Atoi(c.Param("label_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid label ID"})
+		return
+	}
+
+	name := c.PostForm("name")
+	color := c.PostForm("color")
+	if color == "" {
+		color = "#6b7280" // Default gray color
+	}
+
+	if strings.TrimSpace(name) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Label name is required"})
+		return
+	}
+
+	err = database.UpdatePackLabel(db, labelID, strings.TrimSpace(name), color, userID)
+	if err != nil {
+		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Label name already exists"})
+			return
+		}
+		if strings.Contains(err.Error(), "unauthorized") {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			return
+		}
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Label not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update label"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Label updated successfully"})
+}
+
+func handleDeletePackLabel(c *gin.Context) {
+	userID := c.MustGet("user_id").(int)
+	db := c.MustGet("db").(*sql.DB)
+	
+	labelID, err := strconv.Atoi(c.Param("label_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid label ID"})
+		return
+	}
+
+	err = database.DeletePackLabel(db, labelID, userID)
+	if err != nil {
+		if strings.Contains(err.Error(), "unauthorized") {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			return
+		}
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Label not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete label"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Label deleted successfully"})
+}
+
+func handleAssignLabelToItem(c *gin.Context) {
+	userID := c.MustGet("user_id").(int)
+	db := c.MustGet("db").(*sql.DB)
+	
+	packItemID, err := strconv.Atoi(c.Param("item_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid item ID"})
+		return
+	}
+
+	labelID, err := strconv.Atoi(c.PostForm("label_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid label ID"})
+		return
+	}
+
+	err = database.AssignLabelToPackItem(db, packItemID, labelID, userID)
+	if err != nil {
+		if strings.Contains(err.Error(), "unauthorized") {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			return
+		}
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Item or label not found"})
+			return
+		}
+		if strings.Contains(err.Error(), "same pack") {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Label does not belong to the same pack"})
+			return
+		}
+		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Label already assigned to this item"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to assign label"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Label assigned successfully"})
+}
+
+func handleRemoveLabelFromItem(c *gin.Context) {
+	userID := c.MustGet("user_id").(int)
+	db := c.MustGet("db").(*sql.DB)
+	
+	packItemID, err := strconv.Atoi(c.Param("item_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid item ID"})
+		return
+	}
+
+	labelID, err := strconv.Atoi(c.Param("label_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid label ID"})
+		return
+	}
+
+	err = database.RemoveLabelFromPackItem(db, packItemID, labelID, userID)
+	if err != nil {
+		if strings.Contains(err.Error(), "unauthorized") {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			return
+		}
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Label assignment not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove label"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Label removed successfully"})
+}

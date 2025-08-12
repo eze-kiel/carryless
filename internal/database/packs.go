@@ -106,6 +106,13 @@ func GetPackWithItems(db *sql.DB, packID string) (*models.Pack, error) {
 		return nil, err
 	}
 
+	// Get pack labels
+	labels, err := GetPackLabels(db, packID, pack.UserID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get pack labels: %w", err)
+	}
+	pack.Labels = labels
+
 	query := `
 		SELECT pi.id, pi.pack_id, pi.item_id, pi.is_worn, pi.count, COALESCE(pi.worn_count, 0), pi.created_at,
 		       i.id, i.user_id, i.category_id, i.name, i.note, i.weight_grams, i.price, i.created_at, i.updated_at,
@@ -152,8 +159,15 @@ func GetPackWithItems(db *sql.DB, packID string) (*models.Pack, error) {
 			return nil, fmt.Errorf("failed to scan pack item: %w", err)
 		}
 
+		// Get labels for this pack item
+		itemLabels, err := GetPackItemLabels(db, packItem.ID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get pack item labels: %w", err)
+		}
+
 		item.Category = &category
 		packItem.Item = &item
+		packItem.Labels = itemLabels
 		pack.Items = append(pack.Items, packItem)
 	}
 

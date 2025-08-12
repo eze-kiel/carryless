@@ -59,6 +59,12 @@ func SetupRoutes(r *gin.Engine, db *sql.DB) {
 		protected.PUT("/packs/:id/items/:item_id/worn", handleToggleWorn)
 		protected.PUT("/packs/:id/items/:item_id/worn-count", handleUpdateWornCount)
 		
+		protected.POST("/packs/:id/labels", handleCreatePackLabel)
+		protected.POST("/packs/:id/labels/:label_id", handleUpdatePackLabel)
+		protected.DELETE("/packs/:id/labels/:label_id", handleDeletePackLabel)
+		protected.POST("/packs/:id/items/:item_id/labels", handleAssignLabelToItem)
+		protected.DELETE("/packs/:id/items/:item_id/labels/:label_id", handleRemoveLabelFromItem)
+		
 		protected.GET("/account", handleAccountPage)
 		protected.POST("/account/password", handleChangePassword)
 		protected.POST("/account/currency", handleChangeCurrency)

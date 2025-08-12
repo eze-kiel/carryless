@@ -134,6 +134,11 @@ func Migrate(db *sql.DB) error {
 		return fmt.Errorf("failed to add weight_to_verify column: %w", err)
 	}
 
+	// Create labels tables if they don't exist
+	if err := createLabelsTable(db); err != nil {
+		return fmt.Errorf("failed to create labels tables: %w", err)
+	}
+
 	return nil
 }
 
@@ -376,6 +381,41 @@ func addItemWeightToVerifyColumn(db *sql.DB) error {
 	if !hasWeightToVerify {
 		_, err = db.Exec("ALTER TABLE items ADD COLUMN weight_to_verify BOOLEAN DEFAULT FALSE")
 		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func createLabelsTable(db *sql.DB) error {
+	migrations := []string{
+		`CREATE TABLE IF NOT EXISTS pack_labels (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			pack_id TEXT NOT NULL,
+			name TEXT NOT NULL,
+			color TEXT DEFAULT '#6b7280',
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (pack_id) REFERENCES packs(id) ON DELETE CASCADE,
+			UNIQUE(pack_id, name)
+		)`,
+		`CREATE TABLE IF NOT EXISTS item_labels (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			pack_item_id INTEGER NOT NULL,
+			pack_label_id INTEGER NOT NULL,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (pack_item_id) REFERENCES pack_items(id) ON DELETE CASCADE,
+			FOREIGN KEY (pack_label_id) REFERENCES pack_labels(id) ON DELETE CASCADE,
+			UNIQUE(pack_item_id, pack_label_id)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_pack_labels_pack_id ON pack_labels(pack_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_item_labels_pack_item_id ON item_labels(pack_item_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_item_labels_pack_label_id ON item_labels(pack_label_id)`,
+	}
+
+	for _, migration := range migrations {
+		if _, err := db.Exec(migration); err != nil {
 			return err
 		}
 	}

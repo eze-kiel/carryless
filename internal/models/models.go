@@ -45,6 +45,7 @@ type Pack struct {
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
 	Items     []PackItem `json:"items,omitempty"`
+	Labels    []PackLabel `json:"labels,omitempty"`
 }
 
 type PackItem struct {
@@ -56,6 +57,7 @@ type PackItem struct {
 	WornCount int  `json:"worn_count" db:"worn_count"`
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 	Item      *Item `json:"item,omitempty"`
+	Labels    []PackLabel `json:"labels,omitempty"`
 }
 
 type Session struct {
@@ -75,5 +77,22 @@ type CSRFToken struct {
 type ItemInfo struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
+}
+
+type PackLabel struct {
+	ID        int       `json:"id" db:"id"`
+	PackID    string    `json:"pack_id" db:"pack_id"`
+	Name      string    `json:"name" db:"name"`
+	Color     string    `json:"color" db:"color"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
+}
+
+type ItemLabel struct {
+	ID           int       `json:"id" db:"id"`
+	PackItemID   int       `json:"pack_item_id" db:"pack_item_id"`
+	PackLabelID  int       `json:"pack_label_id" db:"pack_label_id"`
+	CreatedAt    time.Time `json:"created_at" db:"created_at"`
+	PackLabel    *PackLabel `json:"pack_label,omitempty"`
 }
 
