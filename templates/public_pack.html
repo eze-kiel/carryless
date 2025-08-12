@@ -116,7 +116,7 @@
     let weightChart;
     const categoryData = {
         {{range $category, $weight := .CategoryWeights}}
-        '{{$category}}': {{$weight}},
+        "{{$category}}": {{$weight}},
         {{end}}
     };
 
@@ -166,9 +166,7 @@
         });
     }
     {{end}}
-    </script>
-
-    <script>
+    
     // Weight unit conversion functions
     function gramsToOunces(grams) {
         return (grams * 0.035274).toFixed(2);

@@ -397,7 +397,7 @@ async function decrementQuantity(packId, itemId, currentCount) {
 let weightChart;
 const categoryData = {
     {{range $category, $weight := .CategoryWeights}}
-    '{{$category}}': {{$weight}},
+    "{{$category}}": {{$weight}},
     {{end}}
 };
 
@@ -448,9 +448,6 @@ function createWeightChart(unit = 'g') {
 }
 {{end}}
 
-</script>
-
-<script>
 // Weight unit conversion functions
 function gramsToOunces(grams) {
     // 1 gram = 0.035274 ounces
