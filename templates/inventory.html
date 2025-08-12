@@ -95,6 +95,16 @@
             <input type="text" id="itemSearch" placeholder="Search items by name, description, or category..." autocomplete="off">
         </div>
 
+        <div class="filter-container">
+            <div class="filter-group">
+                <label class="filter-label">
+                    <input type="checkbox" id="verifyOnlyFilter"{{if .VerifyOnly}} checked{{end}}>
+                    <span class="checkbox-checkmark"></span>
+                    Show only items needing verification
+                </label>
+            </div>
+        </div>
+
         {{if .Items}}
             <div class="inventory-table">
                 <table>
@@ -110,7 +120,7 @@
                     </thead>
                     <tbody>
                         {{range .Items}}
-                            <tr class="item-row" data-id="{{.ID}}" data-item-name="{{.Name}}" data-item-category="{{.Category.Name}}" data-item-description="{{.Note}}">
+                            <tr class="item-row{{if .WeightToVerify}} item-needs-verification{{end}}" data-id="{{.ID}}" data-item-name="{{.Name}}" data-item-category="{{.Category.Name}}" data-item-description="{{.Note}}">
                                 <td>{{.Name}}</td>
                                 <td>{{.Note}}</td>
                                 <td>{{.Category.Name}}</td>
@@ -413,7 +423,96 @@
             convertWeightDisplays('oz');
         }
     });
+
+    // Filter functionality
+    document.getElementById('verifyOnlyFilter').addEventListener('change', function() {
+        const isChecked = this.checked;
+        const currentUrl = new URL(window.location);
+        
+        if (isChecked) {
+            currentUrl.searchParams.set('verify_only', 'true');
+        } else {
+            currentUrl.searchParams.delete('verify_only');
+        }
+        
+        window.location.href = currentUrl.toString();
+    });
 </script>
+
+<style>
+.filter-container {
+    margin-bottom: 1rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+}
+
+.filter-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.filter-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: #495057;
+}
+
+.item-needs-verification {
+    background-color: #fff3cd !important;
+}
+
+.item-needs-verification:hover {
+    background-color: #ffeaa7 !important;
+}
+
+.checkbox-group {
+    margin-bottom: 1rem;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-size: 0.95rem;
+}
+
+.checkbox-checkmark {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #dee2e6;
+    border-radius: 3px;
+    position: relative;
+    background: white;
+    transition: all 0.2s ease;
+}
+
+input[type="checkbox"]:checked + .checkbox-checkmark {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+input[type="checkbox"]:checked + .checkbox-checkmark::after {
+    content: "✓";
+    position: absolute;
+    top: -2px;
+    left: 2px;
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+input[type="checkbox"] {
+    display: none;
+}
+</style>
     </main>
 
     <footer class="footer">

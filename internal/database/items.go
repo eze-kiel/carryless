@@ -10,11 +10,11 @@ import (
 
 func CreateItem(db *sql.DB, userID int, item models.Item) (*models.Item, error) {
 	query := `
-		INSERT INTO items (user_id, category_id, name, note, weight_grams, price)
-		VALUES (?, ?, ?, ?, ?, ?)
+		INSERT INTO items (user_id, category_id, name, note, weight_grams, weight_to_verify, price)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
 	`
 
-	result, err := db.Exec(query, userID, item.CategoryID, item.Name, item.Note, item.WeightGrams, item.Price)
+	result, err := db.Exec(query, userID, item.CategoryID, item.Name, item.Note, item.WeightGrams, item.WeightToVerify, item.Price)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create item: %w", err)
 	}
@@ -34,7 +34,7 @@ func CreateItem(db *sql.DB, userID int, item models.Item) (*models.Item, error) 
 
 func GetItems(db *sql.DB, userID int) ([]models.Item, error) {
 	query := `
-		SELECT i.id, i.user_id, i.category_id, i.name, i.note, i.weight_grams, i.price, i.created_at, i.updated_at,
+		SELECT i.id, i.user_id, i.category_id, i.name, i.note, i.weight_grams, COALESCE(i.weight_to_verify, false), i.price, i.created_at, i.updated_at,
 		       c.id, c.name
 		FROM items i
 		LEFT JOIN categories c ON i.category_id = c.id
@@ -60,6 +60,7 @@ func GetItems(db *sql.DB, userID int) ([]models.Item, error) {
 			&item.Name,
 			&item.Note,
 			&item.WeightGrams,
+			&item.WeightToVerify,
 			&item.Price,
 			&item.CreatedAt,
 			&item.UpdatedAt,
@@ -86,7 +87,7 @@ func GetItem(db *sql.DB, userID, itemID int) (*models.Item, error) {
 	category := &models.Category{}
 
 	query := `
-		SELECT i.id, i.user_id, i.category_id, i.name, i.note, i.weight_grams, i.price, i.created_at, i.updated_at,
+		SELECT i.id, i.user_id, i.category_id, i.name, i.note, i.weight_grams, COALESCE(i.weight_to_verify, false), i.price, i.created_at, i.updated_at,
 		       c.id, c.name
 		FROM items i
 		LEFT JOIN categories c ON i.category_id = c.id
@@ -100,6 +101,7 @@ func GetItem(db *sql.DB, userID, itemID int) (*models.Item, error) {
 		&item.Name,
 		&item.Note,
 		&item.WeightGrams,
+		&item.WeightToVerify,
 		&item.Price,
 		&item.CreatedAt,
 		&item.UpdatedAt,
@@ -120,11 +122,11 @@ func GetItem(db *sql.DB, userID, itemID int) (*models.Item, error) {
 func UpdateItem(db *sql.DB, userID, itemID int, updatedItem models.Item) error {
 	query := `
 		UPDATE items
-		SET category_id = ?, name = ?, note = ?, weight_grams = ?, price = ?, updated_at = CURRENT_TIMESTAMP
+		SET category_id = ?, name = ?, note = ?, weight_grams = ?, weight_to_verify = ?, price = ?, updated_at = CURRENT_TIMESTAMP
 		WHERE id = ? AND user_id = ?
 	`
 
-	result, err := db.Exec(query, updatedItem.CategoryID, updatedItem.Name, updatedItem.Note, updatedItem.WeightGrams, updatedItem.Price, itemID, userID)
+	result, err := db.Exec(query, updatedItem.CategoryID, updatedItem.Name, updatedItem.Note, updatedItem.WeightGrams, updatedItem.WeightToVerify, updatedItem.Price, itemID, userID)
 	if err != nil {
 		return fmt.Errorf("failed to update item: %w", err)
 	}
@@ -221,7 +223,7 @@ func GetPacksUsingItem(db *sql.DB, userID, itemID int) ([]string, error) {
 
 func GetItemsByCategory(db *sql.DB, userID, categoryID int) ([]models.Item, error) {
 	query := `
-		SELECT i.id, i.user_id, i.category_id, i.name, i.note, i.weight_grams, i.price, i.created_at, i.updated_at,
+		SELECT i.id, i.user_id, i.category_id, i.name, i.note, i.weight_grams, COALESCE(i.weight_to_verify, false), i.price, i.created_at, i.updated_at,
 		       c.id, c.name
 		FROM items i
 		LEFT JOIN categories c ON i.category_id = c.id
@@ -247,6 +249,7 @@ func GetItemsByCategory(db *sql.DB, userID, categoryID int) ([]models.Item, erro
 			&item.Name,
 			&item.Note,
 			&item.WeightGrams,
+			&item.WeightToVerify,
 			&item.Price,
 			&item.CreatedAt,
 			&item.UpdatedAt,
@@ -287,4 +290,54 @@ func DeleteAllItems(db *sql.DB, userID int) error {
 	}
 
 	return nil
+}
+
+func GetItemsToVerify(db *sql.DB, userID int) ([]models.Item, error) {
+	query := `
+		SELECT i.id, i.user_id, i.category_id, i.name, i.note, i.weight_grams, i.weight_to_verify, i.price, i.created_at, i.updated_at,
+		       c.id, c.name
+		FROM items i
+		LEFT JOIN categories c ON i.category_id = c.id
+		WHERE i.user_id = ? AND i.weight_to_verify = true
+		ORDER BY c.name, i.name
+	`
+
+	rows, err := db.Query(query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query items to verify: %w", err)
+	}
+	defer rows.Close()
+
+	var items []models.Item
+	for rows.Next() {
+		var item models.Item
+		var category models.Category
+
+		err := rows.Scan(
+			&item.ID,
+			&item.UserID,
+			&item.CategoryID,
+			&item.Name,
+			&item.Note,
+			&item.WeightGrams,
+			&item.WeightToVerify,
+			&item.Price,
+			&item.CreatedAt,
+			&item.UpdatedAt,
+			&category.ID,
+			&category.Name,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan item: %w", err)
+		}
+
+		item.Category = &category
+		items = append(items, item)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating items to verify: %w", err)
+	}
+
+	return items, nil
 }

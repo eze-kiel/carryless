@@ -158,8 +158,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Auto-hide alerts after 5 seconds
-    const alerts = document.querySelectorAll('.alert');
+    // Auto-hide alerts after 5 seconds (except persistent ones)
+    const alerts = document.querySelectorAll('.alert:not(.alert-persistent)');
     alerts.forEach(alert => {
         setTimeout(() => {
             alert.style.opacity = '0';

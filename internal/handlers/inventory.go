@@ -22,7 +22,18 @@ func handleInventory(c *gin.Context) {
 	db := c.MustGet("db").(*sql.DB)
 	user := c.MustGet("user")
 
-	items, err := database.GetItems(db, userID)
+	// Check if filtering for verification items
+	verifyOnly := c.Query("verify_only") == "true"
+	
+	var items []models.Item
+	var err error
+	
+	if verifyOnly {
+		items, err = database.GetItemsToVerify(db, userID)
+	} else {
+		items, err = database.GetItems(db, userID)
+	}
+	
 	if err != nil {
 		c.HTML(http.StatusInternalServerError, "inventory.html", gin.H{
 			"Title": "Inventory - Carryless",
@@ -58,6 +69,7 @@ func handleInventory(c *gin.Context) {
 		"Items":      items,
 		"Categories": categories,
 		"CSRFToken":  csrfToken.Token,
+		"VerifyOnly": verifyOnly,
 	})
 }
 
@@ -104,6 +116,7 @@ func handleCreateItem(c *gin.Context) {
 	categoryName := strings.TrimSpace(c.PostForm("category_name"))
 	weightStr := c.PostForm("weight_grams")
 	priceStr := c.PostForm("price")
+	weightToVerify := c.PostForm("weight_to_verify") == "on"
 	categories, _ := database.GetCategories(db, userID)
 
 	errors := make(map[string]string)
@@ -163,11 +176,12 @@ func handleCreateItem(c *gin.Context) {
 	}
 
 	item := models.Item{
-		CategoryID:   category.ID,
-		Name:         name,
-		Note:         note,
-		WeightGrams:  weightGrams,
-		Price:        price,
+		CategoryID:     category.ID,
+		Name:           name,
+		Note:           note,
+		WeightGrams:    weightGrams,
+		WeightToVerify: weightToVerify,
+		Price:          price,
 	}
 
 	_, err = database.CreateItem(db, userID, item)
@@ -261,6 +275,7 @@ func handleUpdateItem(c *gin.Context) {
 	weightStr := c.PostForm("weight_grams")
 	priceStr := c.PostForm("price")
 
+	weightToVerify := c.PostForm("weight_to_verify") == "on"
 	categories, _ := database.GetCategories(db, userID)
 	currentItem, _ := database.GetItem(db, userID, itemID)
 
@@ -324,11 +339,12 @@ func handleUpdateItem(c *gin.Context) {
 	}
 
 	item := models.Item{
-		CategoryID:   category.ID,
-		Name:         name,
-		Note:         note,
-		WeightGrams:  weightGrams,
-		Price:        price,
+		CategoryID:     category.ID,
+		Name:           name,
+		Note:           note,
+		WeightGrams:    weightGrams,
+		WeightToVerify: weightToVerify,
+		Price:          price,
 	}
 
 	err = database.UpdateItem(db, userID, itemID, item)

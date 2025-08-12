@@ -74,6 +74,15 @@
                     <input type="number" id="weight_grams" name="weight_grams" value="{{.Item.WeightGrams}}" required min="0" placeholder="Enter weight in grams">
                 </div>
                 
+                <div class="form-group checkbox-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="weight_to_verify" name="weight_to_verify"{{if .Item.WeightToVerify}} checked{{end}}>
+                        <span class="checkbox-checkmark"></span>
+                        Weight needs verification
+                    </label>
+                    <small class="form-help">Check this if the weight is estimated and needs to be verified later</small>
+                </div>
+                
                 <div class="form-group">
                     <label for="price">Price (optional)</label>
                     <input type="number" id="price" name="price" value="{{if .Item.Price}}{{.Item.Price}}{{end}}" step="0.01" min="0" placeholder="Enter price">

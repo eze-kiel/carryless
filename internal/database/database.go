@@ -129,6 +129,11 @@ func Migrate(db *sql.DB) error {
 		return fmt.Errorf("failed to create system_settings table: %w", err)
 	}
 
+	// Add weight_to_verify column to items table if it doesn't exist
+	if err := addItemWeightToVerifyColumn(db); err != nil {
+		return fmt.Errorf("failed to add weight_to_verify column: %w", err)
+	}
+
 	return nil
 }
 
@@ -341,6 +346,38 @@ func createSystemSettingsTable(db *sql.DB) error {
 	insertQuery := `INSERT OR IGNORE INTO system_settings (key, value) VALUES ('registration_enabled', 'true')`
 	if _, err := db.Exec(insertQuery); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func addItemWeightToVerifyColumn(db *sql.DB) error {
+	// Check if weight_to_verify column exists
+	rows, err := db.Query("PRAGMA table_info(items)")
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	hasWeightToVerify := false
+	for rows.Next() {
+		var cid int
+		var name, dataType, notNull, defaultValue, pk string
+		err := rows.Scan(&cid, &name, &dataType, &notNull, &defaultValue, &pk)
+		if err != nil {
+			continue
+		}
+		if name == "weight_to_verify" {
+			hasWeightToVerify = true
+			break
+		}
+	}
+
+	if !hasWeightToVerify {
+		_, err = db.Exec("ALTER TABLE items ADD COLUMN weight_to_verify BOOLEAN DEFAULT FALSE")
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

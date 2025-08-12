@@ -24,16 +24,17 @@ type Category struct {
 }
 
 type Item struct {
-	ID            int       `json:"id" db:"id"`
-	UserID        int       `json:"user_id" db:"user_id"`
-	CategoryID    int       `json:"category_id" db:"category_id"`
-	Name          string    `json:"name" db:"name"`
-	Note          string    `json:"note" db:"note"`
-	WeightGrams   int       `json:"weight_grams" db:"weight_grams"`
-	Price         float64   `json:"price" db:"price"`
-	CreatedAt     time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at" db:"updated_at"`
-	Category      *Category `json:"category,omitempty"`
+	ID             int       `json:"id" db:"id"`
+	UserID         int       `json:"user_id" db:"user_id"`
+	CategoryID     int       `json:"category_id" db:"category_id"`
+	Name           string    `json:"name" db:"name"`
+	Note           string    `json:"note" db:"note"`
+	WeightGrams    int       `json:"weight_grams" db:"weight_grams"`
+	WeightToVerify bool      `json:"weight_to_verify" db:"weight_to_verify"`
+	Price          float64   `json:"price" db:"price"`
+	CreatedAt      time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at" db:"updated_at"`
+	Category       *Category `json:"category,omitempty"`
 }
 
 type Pack struct {
