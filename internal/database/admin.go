@@ -195,3 +195,24 @@ func BanUser(db *sql.DB, userID int) error {
 
 	return nil
 }
+
+func IsRegistrationEnabled(db *sql.DB) (bool, error) {
+	var value string
+	err := db.QueryRow("SELECT value FROM system_settings WHERE key = 'registration_enabled'").Scan(&value)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return true, nil // Default to enabled if setting doesn't exist
+		}
+		return false, fmt.Errorf("failed to query registration setting: %w", err)
+	}
+	return value == "true", nil
+}
+
+func ToggleRegistration(db *sql.DB) error {
+	query := `UPDATE system_settings SET value = CASE WHEN value = 'true' THEN 'false' ELSE 'true' END, updated_at = CURRENT_TIMESTAMP WHERE key = 'registration_enabled'`
+	_, err := db.Exec(query)
+	if err != nil {
+		return fmt.Errorf("failed to toggle registration setting: %w", err)
+	}
+	return nil
+}

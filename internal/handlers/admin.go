@@ -29,6 +29,13 @@ func handleAdminPanel(c *gin.Context) {
 		return
 	}
 	
+	// Check if registration is enabled
+	registrationEnabled, err := database.IsRegistrationEnabled(db)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get registration status"})
+		return
+	}
+	
 	// Generate CSRF token
 	csrfToken, err := database.CreateCSRFToken(db, user.ID)
 	if err != nil {
@@ -37,11 +44,12 @@ func handleAdminPanel(c *gin.Context) {
 	}
 	
 	c.HTML(http.StatusOK, "admin.html", gin.H{
-		"Title":      "Admin Panel - Carryless",
-		"User":       user,
-		"Stats":      stats,
-		"Users":      users,
-		"CSRFToken":  csrfToken.Token,
+		"Title":               "Admin Panel - Carryless",
+		"User":                user,
+		"Stats":               stats,
+		"Users":               users,
+		"RegistrationEnabled": registrationEnabled,
+		"CSRFToken":           csrfToken.Token,
 	})
 }
 
@@ -97,4 +105,16 @@ func handleBanUser(c *gin.Context) {
 	}
 	
 	c.JSON(http.StatusOK, gin.H{"message": "User banned successfully"})
+}
+
+func handleToggleRegistration(c *gin.Context) {
+	db := c.MustGet("db").(*sql.DB)
+	
+	err := database.ToggleRegistration(db)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to toggle registration"})
+		return
+	}
+	
+	c.JSON(http.StatusOK, gin.H{"message": "Registration setting toggled successfully"})
 }

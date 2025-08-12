@@ -69,10 +69,12 @@ func SetupRoutes(r *gin.Engine, db *sql.DB) {
 	// Admin routes
 	admin := r.Group("/admin")
 	admin.Use(middleware.AdminRequired(db))
+	admin.Use(middleware.CSRF())
 	{
 		admin.GET("/", handleAdminPanel)
 		admin.POST("/users/:id/toggle-admin", handleToggleUserAdmin)
 		admin.POST("/users/:id/ban", handleBanUser)
+		admin.POST("/toggle-registration", handleToggleRegistration)
 	}
 
 	r.GET("/public/packs/:id", middleware.AuthOptional(db), handlePublicPack)
@@ -101,8 +103,21 @@ func handleHome(c *gin.Context) {
 }
 
 func handleRegisterPage(c *gin.Context) {
+	db := c.MustGet("db").(*sql.DB)
+	
+	// Check if registration is enabled
+	registrationEnabled, err := database.IsRegistrationEnabled(db)
+	if err != nil {
+		c.HTML(http.StatusInternalServerError, "register.html", gin.H{
+			"Title": "Register - Carryless",
+			"Error": "Unable to check registration status",
+		})
+		return
+	}
+	
 	c.HTML(http.StatusOK, "register.html", gin.H{
-		"Title": "Register - Carryless",
+		"Title":               "Register - Carryless",
+		"RegistrationEnabled": registrationEnabled,
 	})
 }
 

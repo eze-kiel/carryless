@@ -124,6 +124,11 @@ func Migrate(db *sql.DB) error {
 		return fmt.Errorf("failed to add is_admin column: %w", err)
 	}
 
+	// Create system settings table if it doesn't exist
+	if err := createSystemSettingsTable(db); err != nil {
+		return fmt.Errorf("failed to create system_settings table: %w", err)
+	}
+
 	return nil
 }
 
@@ -315,6 +320,27 @@ func addUserIsAdminColumn(db *sql.DB) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+func createSystemSettingsTable(db *sql.DB) error {
+	query := `CREATE TABLE IF NOT EXISTS system_settings (
+		key TEXT PRIMARY KEY,
+		value TEXT NOT NULL,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	)`
+	
+	if _, err := db.Exec(query); err != nil {
+		return err
+	}
+
+	// Insert default value for registration enabled if it doesn't exist
+	insertQuery := `INSERT OR IGNORE INTO system_settings (key, value) VALUES ('registration_enabled', 'true')`
+	if _, err := db.Exec(insertQuery); err != nil {
+		return err
 	}
 
 	return nil

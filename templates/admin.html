@@ -57,6 +57,19 @@
                 </div>
             </div>
             
+            <div class="admin-settings">
+                <h2>System Settings</h2>
+                <div class="settings-grid">
+                    <div class="setting-card">
+                        <h3>User Registration</h3>
+                        <p class="setting-description">{{if .RegistrationEnabled}}Registration is currently enabled{{else}}Registration is currently disabled{{end}}</p>
+                        <button class="btn {{if .RegistrationEnabled}}btn-danger{{else}}btn-success{{end}}" onclick="toggleRegistration()">
+                            {{if .RegistrationEnabled}}Disable Registration{{else}}Enable Registration{{end}}
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
             <div class="admin-users">
                 <h2>All Users</h2>
                 <div class="table-container">
@@ -183,11 +196,66 @@
                 });
             }
         }
+
+        function toggleRegistration() {
+            if (confirm('Are you sure you want to toggle user registration?')) {
+                fetch('/admin/toggle-registration', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': '{{.CSRFToken}}'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert('Error: ' + data.error);
+                    } else {
+                        alert(data.message);
+                        location.reload();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while toggling registration');
+                });
+            }
+        }
     </script>
 
 <style>
 .admin-stats {
     margin-bottom: 2rem;
+}
+
+.admin-settings {
+    margin-bottom: 2rem;
+}
+
+.settings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.setting-card {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+}
+
+.setting-card h3 {
+    margin: 0 0 0.5rem 0;
+    color: #495057;
+    font-size: 1.1rem;
+}
+
+.setting-description {
+    margin: 0 0 1rem 0;
+    color: #6c757d;
+    font-size: 0.9rem;
 }
 
 .stats-grid {

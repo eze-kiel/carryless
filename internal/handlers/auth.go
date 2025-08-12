@@ -14,6 +14,27 @@ import (
 var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
 
 func handleRegister(c *gin.Context) {
+	db := c.MustGet("db").(*sql.DB)
+	
+	// Check if registration is enabled
+	registrationEnabled, err := database.IsRegistrationEnabled(db)
+	if err != nil {
+		c.HTML(http.StatusInternalServerError, "register.html", gin.H{
+			"Title": "Register - Carryless",
+			"Error": "Unable to check registration status",
+		})
+		return
+	}
+	
+	if !registrationEnabled {
+		c.HTML(http.StatusForbidden, "register.html", gin.H{
+			"Title":               "Register - Carryless",
+			"RegistrationEnabled": false,
+			"Error":               "Registration has been disabled by an administrator",
+		})
+		return
+	}
+
 	username := strings.TrimSpace(c.PostForm("username"))
 	email := strings.TrimSpace(c.PostForm("email"))
 	password := c.PostForm("password")
@@ -39,15 +60,14 @@ func handleRegister(c *gin.Context) {
 
 	if len(errors) > 0 {
 		c.HTML(http.StatusBadRequest, "register.html", gin.H{
-			"Title":   "Register - Carryless",
-			"Errors":  errors,
-			"Username": username,
-			"Email":   email,
+			"Title":               "Register - Carryless",
+			"Errors":              errors,
+			"Username":            username,
+			"Email":               email,
+			"RegistrationEnabled": true,
 		})
 		return
 	}
-
-	db := c.MustGet("db").(*sql.DB)
 
 	user, err := database.CreateUser(db, username, email, password)
 	if err != nil {
@@ -62,10 +82,11 @@ func handleRegister(c *gin.Context) {
 		}
 
 		c.HTML(http.StatusBadRequest, "register.html", gin.H{
-			"Title":   "Register - Carryless",
-			"Errors":  errors,
-			"Username": username,
-			"Email":   email,
+			"Title":               "Register - Carryless",
+			"Errors":              errors,
+			"Username":            username,
+			"Email":               email,
+			"RegistrationEnabled": true,
 		})
 		return
 	}

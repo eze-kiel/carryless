@@ -41,43 +41,54 @@
         {{end}}
         
         <div class="auth-container">
-            <form class="auth-form" action="/register" method="POST">
-                <h2>Create Account</h2>
-                
-                <div class="form-group">
-                    <label for="username">Username</label>
-                    <input type="text" id="username" name="username" value="{{.Username}}" required>
-                    {{if .Errors.username}}<span class="error">{{.Errors.username}}</span>{{end}}
+            {{if eq .RegistrationEnabled false}}
+                <div class="auth-form">
+                    <h2>Registration Disabled</h2>
+                    <div class="alert alert-info">
+                        <p>Registration has been disabled by an administrator.</p>
+                        <p>If you already have an account, you can <a href="/login">login here</a>.</p>
+                        <p>For assistance, please contact the site administrator.</p>
+                    </div>
                 </div>
+            {{else}}
+                <form class="auth-form" action="/register" method="POST">
+                    <h2>Create Account</h2>
+                    
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" name="username" value="{{.Username}}" required>
+                        {{if .Errors.username}}<span class="error">{{.Errors.username}}</span>{{end}}
+                    </div>
 
-                <div class="form-group">
-                    <label for="email">Email</label>
-                    <input type="email" id="email" name="email" value="{{.Email}}" required>
-                    {{if .Errors.email}}<span class="error">{{.Errors.email}}</span>{{end}}
-                </div>
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" name="email" value="{{.Email}}" required>
+                        {{if .Errors.email}}<span class="error">{{.Errors.email}}</span>{{end}}
+                    </div>
 
-                <div class="form-group">
-                    <label for="password">Password</label>
-                    <input type="password" id="password" name="password" required>
-                    {{if .Errors.password}}<span class="error">{{.Errors.password}}</span>{{end}}
-                </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" required>
+                        {{if .Errors.password}}<span class="error">{{.Errors.password}}</span>{{end}}
+                    </div>
 
-                <div class="form-group">
-                    <label for="confirm_password">Confirm Password</label>
-                    <input type="password" id="confirm_password" name="confirm_password" required>
-                    {{if .Errors.confirm_password}}<span class="error">{{.Errors.confirm_password}}</span>{{end}}
-                </div>
+                    <div class="form-group">
+                        <label for="confirm_password">Confirm Password</label>
+                        <input type="password" id="confirm_password" name="confirm_password" required>
+                        {{if .Errors.confirm_password}}<span class="error">{{.Errors.confirm_password}}</span>{{end}}
+                    </div>
 
-                {{if .Errors.general}}
-                    <div class="alert alert-error">{{.Errors.general}}</div>
-                {{end}}
+                    {{if .Errors.general}}
+                        <div class="alert alert-error">{{.Errors.general}}</div>
+                    {{end}}
 
-                <button type="submit" class="btn btn-primary btn-full">Create Account</button>
-                
-                <p class="auth-link">
-                    Already have an account? <a href="/login">Login here</a>
-                </p>
-            </form>
+                    <button type="submit" class="btn btn-primary btn-full">Create Account</button>
+                    
+                    <p class="auth-link">
+                        Already have an account? <a href="/login">Login here</a>
+                    </p>
+                </form>
+            {{end}}
         </div>
     </main>
 
