@@ -101,7 +101,7 @@
                                         <h4 class="item-name">{{.Item.Name}}</h4>
                                         <div class="item-meta">
                                             <span class="item-weight{{if .Item.WeightToVerify}} weight-to-verify{{end}}" data-weight="{{.Item.WeightGrams}}">{{.Item.WeightGrams}}g</span>
-                                            {{if .IsWorn}}<span class="worn-badge">Worn</span>{{end}}
+                                            {{if .WornCount}}<span class="worn-badge">Worn: {{.WornCount}}</span>{{end}}
                                         </div>
                                     </div>
                                     {{if .Item.Note}}<p class="item-description">{{.Item.Note}}</p>{{end}}
@@ -140,7 +140,7 @@
                                                 <td>{{.Item.Note}}</td>
                                                 <td><span class="{{if .Item.WeightToVerify}}weight-to-verify{{end}}" data-weight="{{.Item.WeightGrams}}">{{.Item.WeightGrams}}g</span></td>
                                                 <td>{{.Count}}</td>
-                                                <td>{{if .IsWorn}}✓{{end}}</td>
+                                                <td>{{.WornCount}}</td>
                                                 <td>
                                                     <div class="item-labels-public">
                                                         {{if .Labels}}
