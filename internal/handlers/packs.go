@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"database/sql"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -527,20 +528,27 @@ func handleDuplicatePack(c *gin.Context) {
 	db := c.MustGet("db").(*sql.DB)
 	packID := c.Param("id")
 
-	_, err := database.DuplicatePack(db, userID, packID)
+	log.Printf("[HANDLER] Duplicate pack request - UserID: %d, PackID: %s, IP: %s", userID, packID, c.ClientIP())
+
+	newPack, err := database.DuplicatePack(db, userID, packID)
 	if err != nil {
+		log.Printf("[HANDLER] Duplicate pack failed - UserID: %d, PackID: %s, Error: %v", userID, packID, err)
 		if strings.Contains(err.Error(), "not found") {
+			log.Printf("[HANDLER] Pack not found - redirecting to packs page")
 			c.Redirect(http.StatusFound, "/packs")
 			return
 		}
 		if strings.Contains(err.Error(), "unauthorized") {
+			log.Printf("[HANDLER] Unauthorized access attempt - redirecting to packs page")
 			c.Redirect(http.StatusFound, "/packs")
 			return
 		}
+		log.Printf("[HANDLER] Unknown error during duplication - redirecting to packs page")
 		c.Redirect(http.StatusFound, "/packs")
 		return
 	}
 
+	log.Printf("[HANDLER] Pack duplication successful - UserID: %d, OriginalPackID: %s, NewPackID: %s, NewPackName: '%s'", userID, packID, newPack.ID, newPack.Name)
 	c.Redirect(http.StatusFound, "/packs")
 }
 
