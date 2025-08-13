@@ -174,12 +174,10 @@ func handlePackDetail(c *gin.Context) {
 			totalWornWeight += wornWeight
 		}
 		
-		// Calculate label weights for non-worn items only
-		if packWeight > 0 {
-			for _, label := range packItem.Labels {
-				labelWeights[label.Name] += packWeight
-				labelColors[label.Name] = label.Color
-			}
+		// Calculate label weights using the actual label assignment counts
+		for _, itemLabel := range packItem.Labels {
+			labelWeights[itemLabel.PackLabel.Name] += packItem.Item.WeightGrams * itemLabel.Count
+			labelColors[itemLabel.PackLabel.Name] = itemLabel.PackLabel.Color
 		}
 	}
 
@@ -253,12 +251,10 @@ func handlePublicPack(c *gin.Context) {
 			totalWornWeight += wornWeight
 		}
 		
-		// Calculate label weights for non-worn items only
-		if packWeight > 0 {
-			for _, label := range packItem.Labels {
-				labelWeights[label.Name] += packWeight
-				labelColors[label.Name] = label.Color
-			}
+		// Calculate label weights using the actual label assignment counts
+		for _, itemLabel := range packItem.Labels {
+			labelWeights[itemLabel.PackLabel.Name] += packItem.Item.WeightGrams * itemLabel.Count
+			labelColors[itemLabel.PackLabel.Name] = itemLabel.PackLabel.Color
 		}
 	}
 

@@ -213,11 +213,27 @@ func AssignLabelToPackItem(db *sql.DB, packItemID, labelID int, userID int) erro
 		return fmt.Errorf("label does not belong to the same pack")
 	}
 
-	// Insert the assignment (will fail if already exists due to unique constraint)
-	query := `INSERT INTO item_labels (pack_item_id, pack_label_id) VALUES (?, ?)`
-	_, err = db.Exec(query, packItemID, labelID)
-	if err != nil {
-		return fmt.Errorf("failed to assign label to item: %w", err)
+	// Check if assignment already exists and increment count, or create new one
+	var existingCount int
+	countQuery := `SELECT COALESCE(count, 0) FROM item_labels WHERE pack_item_id = ? AND pack_label_id = ?`
+	err = db.QueryRow(countQuery, packItemID, labelID).Scan(&existingCount)
+	
+	if err == sql.ErrNoRows {
+		// Create new assignment
+		query := `INSERT INTO item_labels (pack_item_id, pack_label_id, count) VALUES (?, ?, 1)`
+		_, err = db.Exec(query, packItemID, labelID)
+		if err != nil {
+			return fmt.Errorf("failed to assign label to item: %w", err)
+		}
+	} else if err != nil {
+		return fmt.Errorf("failed to check existing assignment: %w", err)
+	} else {
+		// Increment existing count
+		query := `UPDATE item_labels SET count = count + 1 WHERE pack_item_id = ? AND pack_label_id = ?`
+		_, err = db.Exec(query, packItemID, labelID)
+		if err != nil {
+			return fmt.Errorf("failed to increment label count: %w", err)
+		}
 	}
 
 	return nil
@@ -245,27 +261,40 @@ func RemoveLabelFromPackItem(db *sql.DB, packItemID, labelID int, userID int) er
 		return fmt.Errorf("unauthorized")
 	}
 
-	query := `DELETE FROM item_labels WHERE pack_item_id = ? AND pack_label_id = ?`
-	result, err := db.Exec(query, packItemID, labelID)
+	// Check current count and decrement or delete
+	var currentCount int
+	countQuery := `SELECT count FROM item_labels WHERE pack_item_id = ? AND pack_label_id = ?`
+	err = db.QueryRow(countQuery, packItemID, labelID).Scan(&currentCount)
 	if err != nil {
-		return fmt.Errorf("failed to remove label from item: %w", err)
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("label assignment not found")
+		}
+		return fmt.Errorf("failed to check label count: %w", err)
 	}
 
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("failed to get rows affected: %w", err)
-	}
-
-	if rowsAffected == 0 {
-		return fmt.Errorf("label assignment not found")
+	if currentCount <= 1 {
+		// Delete the assignment if count is 1 or less
+		query := `DELETE FROM item_labels WHERE pack_item_id = ? AND pack_label_id = ?`
+		_, err = db.Exec(query, packItemID, labelID)
+		if err != nil {
+			return fmt.Errorf("failed to remove label from item: %w", err)
+		}
+	} else {
+		// Decrement the count
+		query := `UPDATE item_labels SET count = count - 1 WHERE pack_item_id = ? AND pack_label_id = ?`
+		_, err = db.Exec(query, packItemID, labelID)
+		if err != nil {
+			return fmt.Errorf("failed to decrement label count: %w", err)
+		}
 	}
 
 	return nil
 }
 
-func GetPackItemLabels(db *sql.DB, packItemID int) ([]models.PackLabel, error) {
+func GetPackItemLabels(db *sql.DB, packItemID int) ([]models.ItemLabel, error) {
 	query := `
-		SELECT pl.id, pl.pack_id, pl.name, pl.color, pl.created_at, pl.updated_at
+		SELECT il.id, il.pack_item_id, il.pack_label_id, il.count, il.created_at,
+		       pl.id, pl.pack_id, pl.name, pl.color, pl.created_at, pl.updated_at
 		FROM item_labels il
 		JOIN pack_labels pl ON il.pack_label_id = pl.id
 		WHERE il.pack_item_id = ?
@@ -278,26 +307,34 @@ func GetPackItemLabels(db *sql.DB, packItemID int) ([]models.PackLabel, error) {
 	}
 	defer rows.Close()
 
-	var labels []models.PackLabel
+	var itemLabels []models.ItemLabel
 	for rows.Next() {
-		var label models.PackLabel
+		var itemLabel models.ItemLabel
+		var packLabel models.PackLabel
 		err := rows.Scan(
-			&label.ID,
-			&label.PackID,
-			&label.Name,
-			&label.Color,
-			&label.CreatedAt,
-			&label.UpdatedAt,
+			&itemLabel.ID,
+			&itemLabel.PackItemID,
+			&itemLabel.PackLabelID,
+			&itemLabel.Count,
+			&itemLabel.CreatedAt,
+			&packLabel.ID,
+			&packLabel.PackID,
+			&packLabel.Name,
+			&packLabel.Color,
+			&packLabel.CreatedAt,
+			&packLabel.UpdatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan pack item label: %w", err)
 		}
-		labels = append(labels, label)
+		
+		itemLabel.PackLabel = &packLabel
+		itemLabels = append(itemLabels, itemLabel)
 	}
 
 	if err = rows.Err(); err != nil {
 		return nil, fmt.Errorf("error iterating pack item labels: %w", err)
 	}
 
-	return labels, nil
+	return itemLabels, nil
 }

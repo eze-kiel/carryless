@@ -420,5 +420,39 @@ func createLabelsTable(db *sql.DB) error {
 		}
 	}
 
+	// Check if count column exists in item_labels table
+	var hasCount bool
+	err := db.QueryRow("SELECT COUNT(*) FROM pragma_table_info('item_labels') WHERE name='count'").Scan(&hasCount)
+	if err != nil {
+		return err
+	}
+
+	if !hasCount {
+		// Drop the unique constraint by recreating the table with count column
+		migrations := []string{
+			`CREATE TABLE item_labels_new (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				pack_item_id INTEGER NOT NULL,
+				pack_label_id INTEGER NOT NULL,
+				count INTEGER DEFAULT 1,
+				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+				FOREIGN KEY (pack_item_id) REFERENCES pack_items(id) ON DELETE CASCADE,
+				FOREIGN KEY (pack_label_id) REFERENCES pack_labels(id) ON DELETE CASCADE
+			)`,
+			`INSERT INTO item_labels_new (id, pack_item_id, pack_label_id, count, created_at) 
+			 SELECT id, pack_item_id, pack_label_id, 1, created_at FROM item_labels`,
+			`DROP TABLE item_labels`,
+			`ALTER TABLE item_labels_new RENAME TO item_labels`,
+			`CREATE INDEX IF NOT EXISTS idx_item_labels_pack_item_id ON item_labels(pack_item_id)`,
+			`CREATE INDEX IF NOT EXISTS idx_item_labels_pack_label_id ON item_labels(pack_label_id)`,
+		}
+
+		for _, migration := range migrations {
+			if _, err := db.Exec(migration); err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
 }

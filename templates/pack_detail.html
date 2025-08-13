@@ -125,7 +125,7 @@
                         <div class="pack-item-card">
                             <div class="item-header">
                                 <h4 class="item-name">{{.Item.Name}}</h4>
-                                <span class="item-weight" data-weight="{{.Item.WeightGrams}}">{{.Item.WeightGrams}}g</span>
+                                <span class="item-weight{{if .Item.WeightToVerify}} weight-to-verify{{end}}" data-weight="{{.Item.WeightGrams}}">{{.Item.WeightGrams}}g</span>
                             </div>
                             {{if .Item.Note}}<p class="item-description">{{.Item.Note}}</p>{{end}}
                             <div class="item-controls">
@@ -155,9 +155,9 @@
                                 {{if .Labels}}
                                     {{$packItemID := .ID}}
                                     {{range .Labels}}
-                                        <span class="label-tag" style="background-color: {{.Color}};" 
-                                              onclick="removeLabelFromItem({{$packItemID}}, {{.ID}})">
-                                            {{.Name}} ×
+                                        <span class="label-tag" style="background-color: {{.PackLabel.Color}};" 
+                                              onclick="removeLabelFromItem({{$packItemID}}, {{.PackLabelID}})">
+                                            {{.PackLabel.Name}}{{if gt .Count 1}} ({{.Count}}){{end}} ×
                                         </span>
                                     {{end}}
                                 {{end}}
@@ -186,7 +186,7 @@
                                     <tr>
                                         <td>{{.Item.Name}}</td>
                                         <td>{{.Item.Note}}</td>
-                                        <td><span data-weight="{{.Item.WeightGrams}}">{{.Item.WeightGrams}}g</span></td>
+                                        <td><span class="{{if .Item.WeightToVerify}}weight-to-verify{{end}}" data-weight="{{.Item.WeightGrams}}">{{.Item.WeightGrams}}g</span></td>
                                         <td>
                                             <div class="quantity-controls">
                                                 <button type="button" class="qty-btn qty-minus" onclick="decrementQuantity(packId, {{.Item.ID}}, {{.Count}})">-</button>
@@ -209,9 +209,9 @@
                                                 {{if .Labels}}
                                                     {{$packItemID := .ID}}
                                                     {{range .Labels}}
-                                                        <span class="label-tag" style="background-color: {{.Color}};" 
-                                                              onclick="removeLabelFromItem({{$packItemID}}, {{.ID}})">
-                                                            {{.Name}} ×
+                                                        <span class="label-tag" style="background-color: {{.PackLabel.Color}};" 
+                                                              onclick="removeLabelFromItem({{$packItemID}}, {{.PackLabelID}})">
+                                                            {{.PackLabel.Name}}{{if gt .Count 1}} ({{.Count}}){{end}} ×
                                                         </span>
                                                     {{end}}
                                                 {{end}}
@@ -847,7 +847,7 @@ function createLabelChart(unit = 'g') {
     const colors = [];
     
     for (const [label, grams] of Object.entries(labelData)) {
-        labels.push(label);
+        labels.push(label + ' (' + formatWeightWithUnit(grams, unit) + ')');
         data.push(grams);
         colors.push(labelColorData[label] || '#6b7280'); // fallback to gray if no color
     }
@@ -1514,6 +1514,28 @@ document.addEventListener('DOMContentLoaded', function() {
     .charts-container .chart-single {
         height: 250px;
     }
+}
+
+/* Weight verification styling */
+.weight-to-verify {
+    color: #ffc107 !important;
+    font-weight: 600;
+}
+
+/* Table column width adjustments */
+.desktop-table table th:nth-child(1), /* Item */
+.desktop-table table td:nth-child(1) {
+    width: 22%;
+}
+
+.desktop-table table th:nth-child(2), /* Description */
+.desktop-table table td:nth-child(2) {
+    width: 22%;
+}
+
+.desktop-table table th:nth-child(6), /* Labels */
+.desktop-table table td:nth-child(6) {
+    width: 22%;
 }
 
 /* Button styles */

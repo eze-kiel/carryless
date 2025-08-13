@@ -57,7 +57,7 @@ type PackItem struct {
 	WornCount int  `json:"worn_count" db:"worn_count"`
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 	Item      *Item `json:"item,omitempty"`
-	Labels    []PackLabel `json:"labels,omitempty"`
+	Labels    []ItemLabel `json:"labels,omitempty"`
 }
 
 type Session struct {
@@ -92,6 +92,7 @@ type ItemLabel struct {
 	ID           int       `json:"id" db:"id"`
 	PackItemID   int       `json:"pack_item_id" db:"pack_item_id"`
 	PackLabelID  int       `json:"pack_label_id" db:"pack_label_id"`
+	Count        int       `json:"count" db:"count"`
 	CreatedAt    time.Time `json:"created_at" db:"created_at"`
 	PackLabel    *PackLabel `json:"pack_label,omitempty"`
 }

@@ -115,7 +115,7 @@ func GetPackWithItems(db *sql.DB, packID string) (*models.Pack, error) {
 
 	query := `
 		SELECT pi.id, pi.pack_id, pi.item_id, pi.is_worn, pi.count, COALESCE(pi.worn_count, 0), pi.created_at,
-		       i.id, i.user_id, i.category_id, i.name, i.note, i.weight_grams, i.price, i.created_at, i.updated_at,
+		       i.id, i.user_id, i.category_id, i.name, i.note, i.weight_grams, i.weight_to_verify, i.price, i.created_at, i.updated_at,
 		       c.id, c.name
 		FROM pack_items pi
 		INNER JOIN items i ON pi.item_id = i.id
@@ -149,6 +149,7 @@ func GetPackWithItems(db *sql.DB, packID string) (*models.Pack, error) {
 			&item.Name,
 			&item.Note,
 			&item.WeightGrams,
+			&item.WeightToVerify,
 			&item.Price,
 			&item.CreatedAt,
 			&item.UpdatedAt,
