@@ -124,7 +124,7 @@ The application uses SQLite with the following main tables:
 - `PUT /packs/:id/items/:item_id/worn` - Toggle worn status
 
 ### Public
-- `GET /public/packs/:id` - View public pack
+- `GET /p/packs/:id` - View public pack
 
 ## Testing
 
