@@ -125,7 +125,7 @@
                         <div class="pack-item-card">
                             <div class="item-header">
                                 <h4 class="item-name">{{.Item.Name}}</h4>
-                                <span class="item-weight{{if .Item.WeightToVerify}} weight-to-verify{{end}}" data-weight="{{.Item.WeightGrams}}">{{.Item.WeightGrams}}g</span>
+                                {{if .Item.WeightToVerify}}<abbr class="item-weight weight-to-verify" title="weight not verified" data-weight="{{.Item.WeightGrams}}">{{.Item.WeightGrams}}g</abbr>{{else}}<span class="item-weight" data-weight="{{.Item.WeightGrams}}">{{.Item.WeightGrams}}g</span>{{end}}
                             </div>
                             {{if .Item.Note}}<p class="item-description">{{.Item.Note}}</p>{{end}}
                             <div class="item-controls">
@@ -186,7 +186,7 @@
                                     <tr>
                                         <td>{{.Item.Name}}</td>
                                         <td>{{.Item.Note}}</td>
-                                        <td><span class="{{if .Item.WeightToVerify}}weight-to-verify{{end}}" data-weight="{{.Item.WeightGrams}}">{{.Item.WeightGrams}}g</span></td>
+                                        <td>{{if .Item.WeightToVerify}}<abbr class="weight-to-verify" title="weight not verified" data-weight="{{.Item.WeightGrams}}">{{.Item.WeightGrams}}g</abbr>{{else}}<span data-weight="{{.Item.WeightGrams}}">{{.Item.WeightGrams}}g</span>{{end}}</td>
                                         <td>
                                             <div class="quantity-controls">
                                                 <button type="button" class="qty-btn qty-minus" onclick="decrementQuantity(packId, {{.Item.ID}}, {{.Count}})">-</button>
@@ -1537,8 +1537,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 /* Weight verification styling */
 .weight-to-verify {
-    color: #ffc107 !important;
-    font-weight: 600;
+    cursor: help;
 }
 
 /* Table column width adjustments */

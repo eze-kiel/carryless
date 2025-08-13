@@ -95,7 +95,7 @@
                                     <div class="item-header">
                                         <h4 class="item-name">{{.Item.Name}}</h4>
                                         <div class="item-meta">
-                                            <span class="item-weight{{if .Item.WeightToVerify}} weight-to-verify{{end}}" data-weight="{{.Item.WeightGrams}}">{{.Item.WeightGrams}}g</span>
+                                            {{if .Item.WeightToVerify}}<abbr class="item-weight weight-to-verify" title="weight not verified" data-weight="{{.Item.WeightGrams}}">{{.Item.WeightGrams}}g</abbr>{{else}}<span class="item-weight" data-weight="{{.Item.WeightGrams}}">{{.Item.WeightGrams}}g</span>{{end}}
                                             {{if .WornCount}}<span class="worn-badge">Worn: {{.WornCount}}</span>{{end}}
                                         </div>
                                     </div>
@@ -133,7 +133,7 @@
                                             <tr {{if .IsWorn}}class="worn-item"{{end}}>
                                                 <td>{{.Item.Name}}</td>
                                                 <td>{{.Item.Note}}</td>
-                                                <td><span class="{{if .Item.WeightToVerify}}weight-to-verify{{end}}" data-weight="{{.Item.WeightGrams}}">{{.Item.WeightGrams}}g</span></td>
+                                                <td>{{if .Item.WeightToVerify}}<abbr class="weight-to-verify" title="weight not verified" data-weight="{{.Item.WeightGrams}}">{{.Item.WeightGrams}}g</abbr>{{else}}<span data-weight="{{.Item.WeightGrams}}">{{.Item.WeightGrams}}g</span>{{end}}</td>
                                                 <td>{{.Count}}</td>
                                                 <td>{{.WornCount}}</td>
                                                 <td>
@@ -479,8 +479,7 @@
 
     /* Weight verification styling */
     .weight-to-verify {
-        color: #ffc107 !important;
-        font-weight: 600;
+        cursor: help;
     }
 
     /* Table column width adjustments */
