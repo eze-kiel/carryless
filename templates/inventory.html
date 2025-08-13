@@ -347,15 +347,35 @@
             }
         });
 
-    // Weight unit conversion functions
+    // Use weight formatting functions from app.js
     function gramsToOunces(grams) {
-        return (grams * 0.035274).toFixed(2);
+        return grams * 0.035274;
     }
-
+    
     function formatWeightWithUnit(grams, unit) {
         if (unit === 'oz') {
             const oz = gramsToOunces(grams);
-            return oz + 'oz';
+            
+            // Auto-convert to lbs when oz >= 16 (1 pound = 16 ounces)
+            if (oz >= 16) {
+                const lbs = oz / 16;
+                if (lbs >= 10) {
+                    // Show whole lbs for large weights
+                    return Math.round(lbs) + ' lbs';
+                } else {
+                    // Show lbs with 1 decimal for smaller weights
+                    return lbs.toFixed(1) + ' lbs';
+                }
+            }
+            
+            // Show oz with appropriate precision
+            if (oz < 1) {
+                return oz.toFixed(3) + ' oz';
+            } else if (oz < 10) {
+                return oz.toFixed(2) + ' oz';
+            } else {
+                return oz.toFixed(1) + ' oz';
+            }
         }
         return grams + 'g';
     }

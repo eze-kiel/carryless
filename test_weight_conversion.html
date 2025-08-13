@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Weight Conversion Test</title>
+</head>
+<body>
+    <h1>Weight Conversion Test</h1>
+    
+    <div>
+        <h2>Test Cases:</h2>
+        <div id="test-results"></div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+    <script>
+        // Wait for Carryless to be available
+        setTimeout(() => {
+            const testResults = document.getElementById('test-results');
+            
+            const testCases = [
+                { grams: 28, expected: "1.00 oz" },      // 1 oz
+                { grams: 142, expected: "5.01 oz" },     // 5 oz  
+                { grams: 283, expected: "9.99 oz" },     // 10 oz
+                { grams: 454, expected: "1.0 lbs" },     // 1 lb (16 oz)
+                { grams: 907, expected: "2.0 lbs" },     // 2 lbs
+                { grams: 2268, expected: "5.0 lbs" },    // 5 lbs
+                { grams: 4536, expected: "10 lbs" },     // 10 lbs (should show whole number)
+                { grams: 9072, expected: "20 lbs" },     // 20 lbs
+            ];
+            
+            let html = '<table border="1"><tr><th>Grams</th><th>Expected</th><th>Actual</th><th>Status</th></tr>';
+            
+            testCases.forEach(test => {
+                const actual = window.Carryless.formatWeightWithUnit(test.grams, 'oz');
+                const status = actual === test.expected ? '✅ PASS' : '❌ FAIL';
+                html += `<tr><td>${test.grams}g</td><td>${test.expected}</td><td>${actual}</td><td>${status}</td></tr>`;
+            });
+            
+            html += '</table>';
+            testResults.innerHTML = html;
+        }, 100);
+    </script>
+</body>
+</html>

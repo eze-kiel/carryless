@@ -180,6 +180,115 @@ function formatWeight(grams) {
     return grams + ' g';
 }
 
+// Weight unit conversion functions
+function gramsToOunces(grams) {
+    return grams * 0.035274;
+}
+
+function ouncesToGrams(ounces) {
+    return Math.round(ounces / 0.035274);
+}
+
+// Enhanced weight formatting with auto-conversion to lbs when oz is too large
+function formatWeightWithUnit(grams, unit) {
+    if (unit === 'oz') {
+        const oz = gramsToOunces(grams);
+        
+        // Auto-convert to lbs when oz >= 16 (1 pound = 16 ounces)
+        if (oz >= 16) {
+            const lbs = oz / 16;
+            if (lbs >= 10) {
+                // Show whole lbs for large weights
+                return Math.round(lbs) + ' lbs';
+            } else {
+                // Show lbs with 1 decimal for smaller weights
+                return lbs.toFixed(1) + ' lbs';
+            }
+        }
+        
+        // Show oz with appropriate precision
+        if (oz < 1) {
+            return oz.toFixed(3) + ' oz';
+        } else if (oz < 10) {
+            return oz.toFixed(2) + ' oz';
+        } else {
+            return oz.toFixed(1) + ' oz';
+        }
+    }
+    return grams + ' g';
+}
+
+// Cookie management
+function setCookie(name, value, days = 365) {
+    const expires = new Date();
+    expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
+    document.cookie = name + '=' + value + ';expires=' + expires.toUTCString() + ';path=/';
+}
+
+function getCookie(name) {
+    const nameEQ = name + "=";
+    const ca = document.cookie.split(';');
+    for (let i = 0; i < ca.length; i++) {
+        let c = ca[i];
+        while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+        if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+    }
+    return null;
+}
+
+// Weight unit validation and conversion
+function isValidWeightUnit(unit) {
+    return unit === 'g' || unit === 'oz';
+}
+
+function convertWeightDisplays(unit) {
+    // Convert all weight displays on the page
+    const weightElements = document.querySelectorAll('[data-weight]');
+    weightElements.forEach(element => {
+        const grams = parseInt(element.dataset.weight);
+        element.textContent = formatWeightWithUnit(grams, unit);
+    });
+    
+    // Convert statistics (using data-weight attributes for accurate conversion)
+    const statElements = document.querySelectorAll('.stat-value[data-weight]');
+    statElements.forEach(element => {
+        const grams = parseInt(element.dataset.weight);
+        if (!isNaN(grams)) {
+            element.textContent = formatWeightWithUnit(grams, unit);
+        }
+    });
+    
+    // Convert category headers
+    const categoryHeaders = document.querySelectorAll('.category-section h3');
+    categoryHeaders.forEach(header => {
+        const text = header.textContent;
+        const gramsMatch = text.match(/(\d+)g/g);
+        if (gramsMatch) {
+            let newText = text;
+            gramsMatch.forEach(match => {
+                const grams = parseInt(match.replace('g', ''));
+                const converted = formatWeightWithUnit(grams, unit);
+                newText = newText.replace(match, converted);
+            });
+            header.textContent = newText;
+        }
+    });
+}
+
+function changeWeightUnit(unit) {
+    // Validate unit before setting
+    if (!isValidWeightUnit(unit)) {
+        console.warn('Invalid weight unit:', unit, 'Defaulting to grams');
+        unit = 'g';
+    }
+    
+    // Save preference to cookie
+    setCookie('weight_unit', unit);
+    
+    // Convert all weight displays on the page
+    convertWeightDisplays(unit);
+}
+
 // Date formatting helper
 function formatDate(dateString) {
     const date = new Date(dateString);
@@ -196,5 +305,13 @@ window.Carryless = {
     showToast,
     confirmAction,
     formatWeight,
-    formatDate
+    formatDate,
+    gramsToOunces,
+    ouncesToGrams,
+    formatWeightWithUnit,
+    setCookie,
+    getCookie,
+    isValidWeightUnit,
+    convertWeightDisplays,
+    changeWeightUnit
 };
