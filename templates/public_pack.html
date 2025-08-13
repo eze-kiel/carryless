@@ -91,16 +91,15 @@
                         <!-- Mobile-first card layout -->
                         <div class="mobile-cards">
                             {{range $items}}
-                                <div class="pack-item-card{{if .IsWorn}} worn-item{{end}}">
+                                <div class="pack-item-card">
                                     <div class="item-header">
                                         <h4 class="item-name">{{.Item.Name}}</h4>
                                         <div class="item-meta">
                                             {{if .Item.WeightToVerify}}<abbr class="item-weight weight-to-verify" title="weight not verified" data-weight="{{.Item.WeightGrams}}">{{.Item.WeightGrams}}g</abbr>{{else}}<span class="item-weight" data-weight="{{.Item.WeightGrams}}">{{.Item.WeightGrams}}g</span>{{end}}
-                                            {{if .WornCount}}<span class="worn-badge">Worn: {{.WornCount}}</span>{{end}}
                                         </div>
                                     </div>
                                     {{if .Item.Note}}<p class="item-description">{{.Item.Note}}</p>{{end}}
-                                    {{if gt .Count 1}}<p class="item-quantity">Quantity: {{.Count}}</p>{{end}}
+                                    <p class="item-quantity">Quantity: {{.Count}}{{if .WornCount}}, Worn: {{.WornCount}}{{end}}</p>
                                     {{if .Labels}}
                                         <div class="item-labels-public">
                                             {{range .Labels}}
@@ -130,7 +129,7 @@
                                     </thead>
                                     <tbody>
                                         {{range $items}}
-                                            <tr {{if .IsWorn}}class="worn-item"{{end}}>
+                                            <tr>
                                                 <td>{{.Item.Name}}</td>
                                                 <td>{{.Item.Note}}</td>
                                                 <td>{{if .Item.WeightToVerify}}<abbr class="weight-to-verify" title="weight not verified" data-weight="{{.Item.WeightGrams}}">{{.Item.WeightGrams}}g</abbr>{{else}}<span data-weight="{{.Item.WeightGrams}}">{{.Item.WeightGrams}}g</span>{{end}}</td>
@@ -507,10 +506,6 @@
         font-weight: normal;
     }
 
-    .worn-item {
-        background-color: #f8f9fa;
-        font-style: italic;
-    }
 
     .category-section {
         background: white;
@@ -563,10 +558,6 @@
         box-shadow: 0 1px 2px rgba(0,0,0,0.08);
     }
 
-    .pack-item-card.worn-item {
-        border-left: 3px solid #28a745;
-        background-color: #f8fff9;
-    }
 
     .item-header {
         display: flex;
@@ -604,15 +595,6 @@
         white-space: nowrap;
     }
 
-    .worn-badge {
-        background: #28a745;
-        color: white;
-        padding: 0.2rem 0.4rem;
-        border-radius: 3px;
-        font-size: 0.7rem;
-        font-weight: 500;
-        white-space: nowrap;
-    }
 
     .item-description {
         color: #6c757d;
