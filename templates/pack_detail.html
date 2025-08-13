@@ -70,8 +70,19 @@
         </div>
 
         {{if .CategoryWeights}}
-            <div class="chart-container">
-                <canvas id="weightChart"></canvas>
+            <div class="charts-container">
+                {{if .LabelWeights}}
+                    <div class="chart-item">
+                        <canvas id="weightChart"></canvas>
+                    </div>
+                    <div class="chart-item">
+                        <canvas id="labelChart"></canvas>
+                    </div>
+                {{else}}
+                    <div class="chart-single">
+                        <canvas id="weightChart"></canvas>
+                    </div>
+                {{end}}
             </div>
         {{end}}
     </div>
@@ -755,11 +766,25 @@ async function decrementQuantity(packId, itemId, currentCount) {
 // Chart.js for weight visualization
 {{if .CategoryWeights}}
 let weightChart;
+let labelChart;
 const categoryData = {
     {{range $category, $weight := .CategoryWeights}}
     "{{$category}}": {{$weight}},
     {{end}}
 };
+
+{{if .LabelWeights}}
+const labelData = {
+    {{range $label, $weight := .LabelWeights}}
+    "{{$label}}": {{$weight}},
+    {{end}}
+};
+const labelColorData = {
+    {{range $label, $color := .LabelColors}}
+    "{{$label}}": "{{$color}}",
+    {{end}}
+};
+{{end}}
 
 function createWeightChart(unit = 'g') {
     const ctx = document.getElementById('weightChart');
@@ -806,6 +831,67 @@ function createWeightChart(unit = 'g') {
         }
     });
 }
+
+{{if .LabelWeights}}
+function createLabelChart(unit = 'g') {
+    const ctx = document.getElementById('labelChart');
+    if (!ctx) return;
+    
+    // Destroy existing chart if it exists
+    if (labelChart) {
+        labelChart.destroy();
+    }
+    
+    const labels = [];
+    const data = [];
+    const colors = [];
+    
+    for (const [label, grams] of Object.entries(labelData)) {
+        labels.push(label);
+        data.push(grams);
+        colors.push(labelColorData[label] || '#6b7280'); // fallback to gray if no color
+    }
+    
+    const chartData = {
+        labels: labels,
+        datasets: [{
+            label: 'Weight',
+            data: data,
+            backgroundColor: colors,
+            borderColor: colors.map(color => color + '80'),
+            borderWidth: 1
+        }]
+    };
+
+    labelChart = new Chart(ctx, {
+        type: 'bar',
+        data: chartData,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                title: {
+                    display: true,
+                    text: 'Weight Distribution by Label'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return formatWeightWithUnit(value, unit);
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+{{end}}
 {{end}}
 
 // Weight unit conversion functions
@@ -878,11 +964,16 @@ function convertWeightDisplays(unit) {
         }
     });
     
-    // Update chart if it exists
+    // Update charts if they exist
     {{if .CategoryWeights}}
     if (typeof createWeightChart === 'function') {
         createWeightChart(unit);
     }
+    {{if .LabelWeights}}
+    if (typeof createLabelChart === 'function') {
+        createLabelChart(unit);
+    }
+    {{end}}
     {{end}}
 }
 
@@ -917,9 +1008,12 @@ document.addEventListener('DOMContentLoaded', function() {
         selector.value = savedUnit;
     }
     
-    // Initialize chart and convert displays with correct unit
+    // Initialize charts and convert displays with correct unit
     {{if .CategoryWeights}}
     createWeightChart(savedUnit);
+    {{if .LabelWeights}}
+    createLabelChart(savedUnit);
+    {{end}}
     {{end}}
     
     if (savedUnit === 'oz') {
@@ -1381,6 +1475,45 @@ document.addEventListener('DOMContentLoaded', function() {
     text-align: center;
     padding-top: 1rem;
     border-top: 1px solid #dee2e6;
+}
+
+/* Chart container styles */
+.charts-container {
+    margin-bottom: 2rem;
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.charts-container .chart-item {
+    flex: 1;
+    height: 300px;
+}
+
+.charts-container .chart-single {
+    display: flex;
+    justify-content: center;
+    height: 300px;
+    width: 100%;
+}
+
+.charts-container .chart-single canvas {
+    max-width: 500px;
+}
+
+@media (max-width: 768px) {
+    .charts-container {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .charts-container .chart-item {
+        height: 250px;
+    }
+    
+    .charts-container .chart-single {
+        height: 250px;
+    }
 }
 
 /* Button styles */

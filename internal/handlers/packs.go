@@ -151,6 +151,8 @@ func handlePackDetail(c *gin.Context) {
 
 	categoryWeights := make(map[string]int)
 	categoryWornWeights := make(map[string]int)
+	labelWeights := make(map[string]int)
+	labelColors := make(map[string]string)
 	itemsInPack := make(map[int]bool)
 	totalWeight := 0
 	totalWornWeight := 0
@@ -171,6 +173,14 @@ func handlePackDetail(c *gin.Context) {
 			categoryWornWeights[categoryName] += wornWeight
 			totalWornWeight += wornWeight
 		}
+		
+		// Calculate label weights for non-worn items only
+		if packWeight > 0 {
+			for _, label := range packItem.Labels {
+				labelWeights[label.Name] += packWeight
+				labelColors[label.Name] = label.Color
+			}
+		}
 	}
 
 	c.HTML(http.StatusOK, "pack_detail.html", gin.H{
@@ -181,6 +191,8 @@ func handlePackDetail(c *gin.Context) {
 		"ItemsInPack":         itemsInPack,
 		"CategoryWeights":     categoryWeights,
 		"CategoryWornWeights": categoryWornWeights,
+		"LabelWeights":        labelWeights,
+		"LabelColors":         labelColors,
 		"TotalWeight":         totalWeight,
 		"TotalWornWeight":     totalWornWeight,
 		"TotalItemCount":      totalItemCount,
@@ -220,6 +232,8 @@ func handlePublicPack(c *gin.Context) {
 
 	categoryWeights := make(map[string]int)
 	categoryWornWeights := make(map[string]int)
+	labelWeights := make(map[string]int)
+	labelColors := make(map[string]string)
 	totalWeight := 0
 	totalWornWeight := 0
 	totalItemCount := 0
@@ -238,6 +252,14 @@ func handlePublicPack(c *gin.Context) {
 			categoryWornWeights[categoryName] += wornWeight
 			totalWornWeight += wornWeight
 		}
+		
+		// Calculate label weights for non-worn items only
+		if packWeight > 0 {
+			for _, label := range packItem.Labels {
+				labelWeights[label.Name] += packWeight
+				labelColors[label.Name] = label.Color
+			}
+		}
 	}
 
 	var csrfToken string
@@ -253,6 +275,8 @@ func handlePublicPack(c *gin.Context) {
 		"Pack":                pack,
 		"CategoryWeights":     categoryWeights,
 		"CategoryWornWeights": categoryWornWeights,
+		"LabelWeights":        labelWeights,
+		"LabelColors":         labelColors,
 		"TotalWeight":         totalWeight,
 		"TotalWornWeight":     totalWornWeight,
 		"TotalItemCount":      totalItemCount,
