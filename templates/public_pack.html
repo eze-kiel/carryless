@@ -42,7 +42,12 @@
         
         <div class="pack-detail">
             <div class="pack-header">
-                <h1>{{.Pack.Name}} <span class="badge">Public Pack</span></h1>
+                <div class="page-header">
+                    <h1>{{.Pack.Name}} <span class="badge">Public Pack</span></h1>
+                    <div>
+                        <a href="/packs/{{.Pack.ID}}/checklist" class="btn btn-secondary" target="_blank">Prep Mode</a>
+                    </div>
+                </div>
                 
                 <div class="pack-stats">
                     <div class="stat">
@@ -683,6 +688,34 @@
         
         .item-meta {
             align-self: flex-start;
+        }
+    }
+
+    /* Page header styles */
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .page-header h1 {
+        margin: 0;
+        flex: 1;
+    }
+
+    .page-header > div {
+        display: flex;
+        gap: 0.5rem;
+        flex-shrink: 0;
+    }
+
+    @media (max-width: 768px) {
+        .page-header {
+            flex-direction: column;
+            align-items: flex-start;
         }
     }
 

@@ -727,3 +727,60 @@ func handleRemoveLabelFromItem(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Label removed successfully"})
 }
+
+func handlePackChecklist(c *gin.Context) {
+	packID := c.Param("id")
+	db := c.MustGet("db").(*sql.DB)
+	
+	user, hasUser := c.Get("user")
+	userID, hasUserID := c.Get("user_id")
+
+	pack, err := database.GetPackWithItems(db, packID)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			c.HTML(http.StatusNotFound, "404.html", gin.H{
+				"Title": "Pack Not Found - Carryless",
+				"User":  user,
+			})
+			return
+		}
+		c.HTML(http.StatusInternalServerError, "checklist.html", gin.H{
+			"Title": "Pack Checklist - Carryless",
+			"User":  user,
+			"Error": "Failed to load pack",
+		})
+		return
+	}
+
+	// Check access permissions
+	if !pack.IsPublic {
+		// Private pack - require auth and ownership
+		if !hasUser || !hasUserID {
+			c.HTML(http.StatusForbidden, "403.html", gin.H{
+				"Title": "Access Denied - Carryless",
+				"User":  user,
+			})
+			return
+		}
+		
+		if pack.UserID != userID.(int) {
+			c.HTML(http.StatusForbidden, "403.html", gin.H{
+				"Title": "Access Denied - Carryless",
+				"User":  user,
+			})
+			return
+		}
+	}
+
+	totalItems := 0
+	for _, packItem := range pack.Items {
+		totalItems += packItem.Count
+	}
+
+	c.HTML(http.StatusOK, "checklist.html", gin.H{
+		"Title":      pack.Name + " Checklist - Carryless",
+		"User":       user,
+		"Pack":       pack,
+		"TotalItems": totalItems,
+	})
+}

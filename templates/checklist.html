@@ -1,0 +1,583 @@
+{{define "checklist.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}}</title>
+    <style>
+        /* Reset and base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.4;
+            color: #333;
+            background: white;
+        }
+
+        /* Print-friendly styles */
+        @media print {
+            body {
+                font-size: 10pt;
+                line-height: 1.2;
+            }
+            
+            .no-print {
+                display: none !important;
+            }
+            
+            .page-break {
+                page-break-before: always;
+            }
+            
+            .checklist-container {
+                margin: 0;
+                padding: 0;
+            }
+            
+            .header {
+                border-bottom: 1.5pt solid #000;
+                margin-bottom: 12pt;
+                padding-bottom: 6pt;
+            }
+            
+            .pack-title {
+                font-size: 18pt !important;
+                margin-bottom: 4pt !important;
+            }
+            
+            .pack-subtitle {
+                font-size: 12pt !important;
+                margin-bottom: 8pt !important;
+            }
+            
+            .category-section {
+                break-inside: avoid;
+                margin-bottom: 10pt;
+            }
+            
+            .category-title {
+                font-size: 12pt;
+                font-weight: bold;
+                margin-bottom: 4pt;
+                border-bottom: 0.5pt solid #666;
+                padding-bottom: 2pt;
+            }
+            
+            .item-row {
+                break-inside: avoid;
+                margin-bottom: 2pt;
+                padding: 1pt 0;
+            }
+            
+            .checkbox {
+                width: 10pt;
+                height: 10pt;
+                border: 1pt solid #333;
+                margin-right: 6pt;
+                flex-shrink: 0;
+            }
+            
+            .item-name {
+                font-size: 10pt !important;
+            }
+            
+            .item-details {
+                font-size: 8pt !important;
+                gap: 8pt !important;
+            }
+            
+            .item-weight {
+                font-size: 7pt !important;
+                padding: 1pt 4pt !important;
+            }
+            
+            .label-tag {
+                font-size: 7pt !important;
+                padding: 1pt 3pt !important;
+            }
+            
+            .stats-summary {
+                font-size: 8pt;
+                color: #666;
+                margin-bottom: 8pt;
+                gap: 8pt !important;
+            }
+            
+            .stat-value {
+                font-size: 12pt !important;
+            }
+            
+            .stat-label {
+                font-size: 7pt !important;
+            }
+            
+            /* Keep colors for printing */
+            .label-tag {
+                -webkit-print-color-adjust: exact;
+                color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            
+            .item-weight {
+                -webkit-print-color-adjust: exact;
+                color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+
+        /* Screen styles */
+        @media screen {
+            body {
+                background: #f5f5f5;
+                padding: 20px;
+            }
+            
+            .checklist-container {
+                max-width: 800px;
+                margin: 0 auto;
+                background: white;
+                padding: 30px;
+                border-radius: 8px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            }
+            
+            .toolbar {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: white;
+                padding: 15px;
+                border-radius: 8px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+                z-index: 1000;
+            }
+            
+            .toolbar-btn {
+                display: block;
+                width: 100%;
+                margin-bottom: 10px;
+                padding: 10px 20px;
+                background: #007bff;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                font-size: 14px;
+                cursor: pointer;
+                text-decoration: none;
+                text-align: center;
+            }
+            
+            .toolbar-btn:hover {
+                background: #0056b3;
+            }
+            
+            .toolbar-btn.secondary {
+                background: #6c757d;
+            }
+            
+            .toolbar-btn.secondary:hover {
+                background: #545b62;
+            }
+            
+            .toolbar-btn:last-child {
+                margin-bottom: 0;
+            }
+        }
+
+        /* Common styles */
+        .header {
+            margin-bottom: 30px;
+        }
+
+        .pack-title {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+
+        .pack-subtitle {
+            font-size: 16px;
+            color: #6c757d;
+            margin-bottom: 20px;
+        }
+
+        .stats-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 15px 0;
+            border-top: 1px solid #dee2e6;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #2c3e50;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            color: #6c757d;
+            margin-top: 4px;
+        }
+
+        .progress-bar {
+            background: #e9ecef;
+            border-radius: 10px;
+            height: 20px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .progress-fill {
+            background: linear-gradient(90deg, #28a745, #20c997);
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .progress-bar {
+            position: relative;
+        }
+
+        .progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #333;
+            font-size: 12px;
+            font-weight: 600;
+            z-index: 1;
+            text-shadow: 1px 1px 1px rgba(255,255,255,0.5);
+        }
+
+        .category-section {
+            margin-bottom: 25px;
+        }
+
+        .category-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #2c3e50;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .items-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .item-row {
+            display: flex;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #f8f9fa;
+        }
+
+        .checkbox {
+            width: 18px;
+            height: 18px;
+            border: 2px solid #6c757d;
+            border-radius: 3px;
+            margin-right: 12px;
+            cursor: pointer;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .checkbox.checked {
+            background: #28a745;
+            border-color: #28a745;
+        }
+
+        .checkbox.checked::after {
+            content: '✓';
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .item-content {
+            flex: 1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .item-name {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .item-details {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 14px;
+            color: #6c757d;
+        }
+
+        .item-weight {
+            background: #e9ecef;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+
+        .item-quantity {
+            font-weight: 500;
+        }
+
+        .item-labels {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+
+        .label-tag {
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: 500;
+            color: white;
+            text-shadow: 0 1px 1px rgba(0,0,0,0.2);
+        }
+
+        .empty-pack {
+            text-align: center;
+            padding: 40px 20px;
+            color: #6c757d;
+            font-style: italic;
+        }
+
+        /* Mobile responsive */
+        @media (max-width: 600px) {
+            .checklist-container {
+                padding: 20px;
+                margin: 10px;
+            }
+            
+            .toolbar {
+                position: relative;
+                top: auto;
+                right: auto;
+                margin-bottom: 20px;
+            }
+            
+            .pack-title {
+                font-size: 24px;
+            }
+            
+            .stats-summary {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+            }
+            
+            .item-content {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 5px;
+            }
+            
+            .item-details {
+                gap: 10px;
+            }
+        }
+
+        /* Additional print optimizations */
+        @media print {
+            .toolbar {
+                display: none !important;
+            }
+            
+            @page {
+                margin: 0.5in;
+                size: auto;
+            }
+            
+            .checklist-container {
+                box-shadow: none;
+                border-radius: 0;
+            }
+            
+            .progress-bar {
+                display: none;
+            }
+            
+            /* Make items more compact */
+            .items-list {
+                gap: 1pt !important;
+            }
+            
+            .item-content {
+                gap: 2pt !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Toolbar for screen view -->
+    <div class="toolbar no-print">
+        <button class="toolbar-btn" onclick="window.print()">🖨️ Print</button>
+        <button class="toolbar-btn secondary" onclick="resetChecklist()">↻ Reset All</button>
+        <a href="{{if .Pack.IsPublic}}/p/packs/{{.Pack.ID}}{{else}}/packs/{{.Pack.ID}}{{end}}" class="toolbar-btn secondary">← Back to Pack</a>
+    </div>
+
+    <div class="checklist-container">
+        {{if .Error}}
+            <div class="alert alert-error">{{.Error}}</div>
+        {{end}}
+
+        <div class="header">
+            <h1 class="pack-title">{{.Pack.Name}}</h1>
+            <div class="pack-subtitle">Gear Checklist</div>
+            
+            <div class="stats-summary">
+                <div class="stat-item">
+                    <span class="stat-value" id="totalItems">{{.TotalItems}}</span>
+                    <div class="stat-label">Total Items</div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value" id="packedItems">0</span>
+                    <div class="stat-label">Packed</div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value" id="remainingItems">{{.TotalItems}}</span>
+                    <div class="stat-label">Remaining</div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value" id="packProgress">0%</span>
+                    <div class="stat-label">Complete</div>
+                </div>
+            </div>
+
+            <div class="progress-bar no-print">
+                <div class="progress-fill" id="progressBar"></div>
+                <div class="progress-text" id="progressText">0% Complete</div>
+            </div>
+        </div>
+
+        {{if .Pack.Items}}
+            {{range $category, $items := (groupByCategory .Pack.Items)}}
+                <div class="category-section">
+                    <h2 class="category-title">{{$category}}</h2>
+                    <div class="items-list">
+                        {{range $packItem := $items}}
+                            {{$itemId := printf "%d" $packItem.Item.ID}}
+                            {{range $i := (sequence $packItem.Count)}}
+                                <div class="item-row">
+                                    <div class="checkbox" onclick="toggleCheck(this)" data-item-id="{{$itemId}}-{{$i}}"></div>
+                                    <div class="item-content">
+                                        <span class="item-name">{{$packItem.Item.Name}}{{if gt $packItem.Count 1}} ({{add $i 1}}/{{$packItem.Count}}){{end}}</span>
+                                        <div class="item-details">
+                                            <span class="item-weight">{{$packItem.Item.WeightGrams}}g</span>
+                                            {{if $packItem.Item.Note}}
+                                                <span class="item-note">{{$packItem.Item.Note}}</span>
+                                            {{end}}
+                                            {{if $packItem.Labels}}
+                                                <div class="item-labels">
+                                                    {{range $packItem.Labels}}
+                                                        <span class="label-tag" style="background-color: {{.PackLabel.Color}};">
+                                                            {{.PackLabel.Name}}{{if gt .Count 1}} ({{.Count}}){{end}}
+                                                        </span>
+                                                    {{end}}
+                                                </div>
+                                            {{end}}
+                                        </div>
+                                    </div>
+                                </div>
+                            {{end}}
+                        {{end}}
+                    </div>
+                </div>
+            {{end}}
+        {{else}}
+            <div class="empty-pack">
+                <p>This pack has no items to check.</p>
+            </div>
+        {{end}}
+    </div>
+
+    <script>
+        // Stateless checkbox functionality
+        let packedCount = 0;
+        const totalItems = {{.TotalItems}};
+
+        function toggleCheck(checkbox) {
+            const isChecked = checkbox.classList.contains('checked');
+            
+            if (isChecked) {
+                checkbox.classList.remove('checked');
+                packedCount--;
+            } else {
+                checkbox.classList.add('checked');
+                packedCount++;
+            }
+            
+            updateProgress();
+        }
+
+        function updateProgress() {
+            const remaining = totalItems - packedCount;
+            const percentage = totalItems > 0 ? Math.round((packedCount / totalItems) * 100) : 0;
+            
+            // Update counters
+            document.getElementById('packedItems').textContent = packedCount;
+            document.getElementById('remainingItems').textContent = remaining;
+            document.getElementById('packProgress').textContent = percentage + '%';
+            
+            // Update progress bar
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            if (progressBar && progressText) {
+                progressBar.style.width = percentage + '%';
+                progressText.textContent = percentage + '% Complete';
+                
+                // Change text color based on progress
+                if (percentage > 0) {
+                    progressText.style.color = 'white';
+                } else {
+                    progressText.style.color = '#333';
+                }
+            }
+        }
+
+        function resetChecklist() {
+            const checkboxes = document.querySelectorAll('.checkbox');
+            checkboxes.forEach(checkbox => {
+                checkbox.classList.remove('checked');
+            });
+            packedCount = 0;
+            updateProgress();
+        }
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', function() {
+            updateProgress();
+        });
+    </script>
+</body>
+</html>
+{{end}}
