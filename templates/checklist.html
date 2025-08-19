@@ -531,8 +531,9 @@
                             {{$itemId := printf "%d" $packItem.Item.ID}}
                             {{$hasMultipleItems := gt $packItem.Count 1}}
                             {{if $hasMultipleItems}}
-                                <!-- Parent item (no checkbox, just info) -->
+                                <!-- Parent item (with checkbox for all instances) -->
                                 <div class="item-row item-group-parent">
+                                    <div class="checkbox" onclick="toggleParentCheck(this)" data-parent-id="{{$itemId}}" data-count="{{$packItem.Count}}"></div>
                                     <div class="item-content">
                                         <span class="item-name">{{$packItem.Item.Name}}</span>
                                         <div class="item-details">
@@ -546,7 +547,7 @@
                                 <!-- Child items (each with checkbox) -->
                                 {{range $itemIndex := (sequence $packItem.Count)}}
                                     <div class="item-row item-group-child">
-                                        <div class="checkbox" onclick="toggleCheck(this)" data-item-id="{{$itemId}}-{{$itemIndex}}"></div>
+                                        <div class="checkbox" onclick="toggleCheck(this)" data-item-id="{{$itemId}}-{{$itemIndex}}" data-parent-id="{{$itemId}}"></div>
                                         <div class="item-content">
                                             <span class="item-name-continuation">
                                                 {{$packItem.Item.Name}} ({{add $itemIndex 1}} of {{$packItem.Count}})
@@ -603,8 +604,56 @@
         let packedCount = 0;
         const totalItems = {{.TotalItems}};
 
+        function toggleParentCheck(parentCheckbox) {
+            const parentId = parentCheckbox.getAttribute('data-parent-id');
+            const isParentChecked = parentCheckbox.classList.contains('checked');
+            
+            // Find all child checkboxes
+            const childCheckboxes = document.querySelectorAll(`[data-parent-id="${parentId}"][data-item-id]`);
+            
+            if (isParentChecked) {
+                // Uncheck parent and all children
+                parentCheckbox.classList.remove('checked');
+                childCheckboxes.forEach(child => {
+                    if (child.classList.contains('checked')) {
+                        child.classList.remove('checked');
+                        packedCount--;
+                    }
+                });
+            } else {
+                // Check parent and all children
+                parentCheckbox.classList.add('checked');
+                childCheckboxes.forEach(child => {
+                    if (!child.classList.contains('checked')) {
+                        child.classList.add('checked');
+                        packedCount++;
+                    }
+                });
+            }
+            
+            updateProgress();
+        }
+
+        function updateParentState(parentId) {
+            const parentCheckbox = document.querySelector(`[data-parent-id="${parentId}"]:not([data-item-id])`);
+            if (!parentCheckbox) return; // No parent checkbox for this item
+            
+            const childCheckboxes = document.querySelectorAll(`[data-parent-id="${parentId}"][data-item-id]`);
+            const checkedChildren = document.querySelectorAll(`[data-parent-id="${parentId}"][data-item-id].checked`);
+            
+            // Update parent state based on children
+            if (checkedChildren.length === childCheckboxes.length) {
+                // All children checked
+                parentCheckbox.classList.add('checked');
+            } else {
+                // Not all children checked
+                parentCheckbox.classList.remove('checked');
+            }
+        }
+
         function toggleCheck(checkbox) {
             const isChecked = checkbox.classList.contains('checked');
+            const parentId = checkbox.getAttribute('data-parent-id');
             
             if (isChecked) {
                 checkbox.classList.remove('checked');
@@ -612,6 +661,11 @@
             } else {
                 checkbox.classList.add('checked');
                 packedCount++;
+            }
+            
+            // Update parent state if this is a child checkbox
+            if (parentId) {
+                updateParentState(parentId);
             }
             
             updateProgress();
