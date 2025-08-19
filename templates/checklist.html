@@ -86,6 +86,25 @@
             .item-name {
                 font-size: 10pt !important;
             }
+
+            .item-name-continuation {
+                font-size: 8pt !important;
+                color: #666 !important;
+            }
+
+            .item-group-parent {
+                border-bottom: 0.5pt solid #666 !important;
+                margin-bottom: 2pt;
+            }
+
+            .item-group-parent .item-content {
+                margin-left: 10pt !important;
+            }
+
+            .item-group-child {
+                border-bottom: none !important;
+                margin-bottom: 1pt;
+            }
             
             .item-details {
                 font-size: 8pt !important;
@@ -331,6 +350,30 @@
             color: #333;
         }
 
+        .item-name-continuation {
+            font-weight: 400;
+            color: #6c757d;
+            font-size: 14px;
+        }
+
+        .item-group-parent {
+            border-bottom: 1px solid #e9ecef;
+            margin-bottom: 4px;
+        }
+
+        .item-group-parent .item-content {
+            margin-left: 18px; /* Align with checkbox space */
+        }
+
+        .item-group-child {
+            border-bottom: none;
+            margin-bottom: 2px;
+        }
+
+        .item-group-child .item-content {
+            padding-left: 8px;
+        }
+
         .item-details {
             display: flex;
             align-items: center;
@@ -486,23 +529,58 @@
                     <div class="items-list">
                         {{range $packItem := $items}}
                             {{$itemId := printf "%d" $packItem.Item.ID}}
-                            {{range $i := (sequence $packItem.Count)}}
-                                <div class="item-row">
-                                    <div class="checkbox" onclick="toggleCheck(this)" data-item-id="{{$itemId}}-{{$i}}"></div>
+                            {{$hasMultipleItems := gt $packItem.Count 1}}
+                            {{if $hasMultipleItems}}
+                                <!-- Parent item (no checkbox, just info) -->
+                                <div class="item-row item-group-parent">
                                     <div class="item-content">
-                                        <span class="item-name">{{$packItem.Item.Name}}{{if gt $packItem.Count 1}} ({{add $i 1}}/{{$packItem.Count}}){{end}}</span>
+                                        <span class="item-name">{{$packItem.Item.Name}}</span>
                                         <div class="item-details">
                                             <span class="item-weight">{{$packItem.Item.WeightGrams}}g</span>
                                             {{if $packItem.Item.Note}}
                                                 <span class="item-note">{{$packItem.Item.Note}}</span>
                                             {{end}}
-                                            {{if $packItem.Labels}}
-                                                <div class="item-labels">
-                                                    {{range $packItem.Labels}}
-                                                        <span class="label-tag" style="background-color: {{.PackLabel.Color}};">
-                                                            {{.PackLabel.Name}}{{if gt .Count 1}} ({{.Count}}){{end}}
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Child items (each with checkbox) -->
+                                {{range $itemIndex := (sequence $packItem.Count)}}
+                                    <div class="item-row item-group-child">
+                                        <div class="checkbox" onclick="toggleCheck(this)" data-item-id="{{$itemId}}-{{$itemIndex}}"></div>
+                                        <div class="item-content">
+                                            <span class="item-name-continuation">
+                                                {{$packItem.Item.Name}} ({{add $itemIndex 1}} of {{$packItem.Count}})
+                                            </span>
+                                            <div class="item-details">
+                                                {{$assignedLabel := getLabelForItem $packItem.Labels $itemIndex}}
+                                                {{if $assignedLabel}}
+                                                    <div class="item-labels">
+                                                        <span class="label-tag" style="background-color: {{$assignedLabel.PackLabel.Color}};">
+                                                            {{$assignedLabel.PackLabel.Name}}
                                                         </span>
-                                                    {{end}}
+                                                    </div>
+                                                {{end}}
+                                            </div>
+                                        </div>
+                                    </div>
+                                {{end}}
+                            {{else}}
+                                <!-- Single item (normal display with checkbox) -->
+                                <div class="item-row">
+                                    <div class="checkbox" onclick="toggleCheck(this)" data-item-id="{{$itemId}}-0"></div>
+                                    <div class="item-content">
+                                        <span class="item-name">{{$packItem.Item.Name}}</span>
+                                        <div class="item-details">
+                                            <span class="item-weight">{{$packItem.Item.WeightGrams}}g</span>
+                                            {{if $packItem.Item.Note}}
+                                                <span class="item-note">{{$packItem.Item.Note}}</span>
+                                            {{end}}
+                                            {{$assignedLabel := getLabelForItem $packItem.Labels 0}}
+                                            {{if $assignedLabel}}
+                                                <div class="item-labels">
+                                                    <span class="label-tag" style="background-color: {{$assignedLabel.PackLabel.Color}};">
+                                                        {{$assignedLabel.PackLabel.Name}}
+                                                    </span>
                                                 </div>
                                             {{end}}
                                         </div>

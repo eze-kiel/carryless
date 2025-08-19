@@ -38,6 +38,9 @@ func main() {
 		"add": func(a, b int) int {
 			return a + b
 		},
+		"sub": func(a, b int) int {
+			return a - b
+		},
 		"groupByCategory": func(items []models.PackItem) map[string][]models.PackItem {
 			groups := make(map[string][]models.PackItem)
 			for _, item := range items {
@@ -78,6 +81,16 @@ func main() {
 				result[i] = i
 			}
 			return result
+		},
+		"getLabelForItem": func(labels []models.ItemLabel, itemIndex int) *models.ItemLabel {
+			currentIndex := 0
+			for _, label := range labels {
+				if currentIndex <= itemIndex && itemIndex < currentIndex+label.Count {
+					return &label
+				}
+				currentIndex += label.Count
+			}
+			return nil
 		},
 	}
 
