@@ -233,6 +233,20 @@
         </div>
     {{end}}
 
+    <!-- Pack Notes Section -->
+    <div class="pack-notes-section">
+        <div class="section-header">
+            <h3>Pack Notes</h3>
+        </div>
+        <div class="notes-form">
+            <textarea id="packNote" placeholder="Add notes about this pack..." maxlength="500">{{.Pack.Note}}</textarea>
+            <div class="notes-controls">
+                <span id="charCount" class="char-count">{{len .Pack.Note}}/500</span>
+                <button type="button" class="btn btn-primary" onclick="savePackNote()">Save Note</button>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 <!-- Modals -->
@@ -1039,7 +1053,69 @@ document.addEventListener('DOMContentLoaded', function() {
     if (savedUnit === 'oz') {
         convertWeightDisplays('oz');
     }
+    
+    // Initialize character counter for pack notes
+    const noteTextarea = document.getElementById('packNote');
+    const charCount = document.getElementById('charCount');
+    
+    if (noteTextarea && charCount) {
+        noteTextarea.addEventListener('input', function() {
+            const length = this.value.length;
+            charCount.textContent = length + '/500';
+            
+            if (length > 450) {
+                charCount.style.color = '#dc3545'; // Red when approaching limit
+            } else {
+                charCount.style.color = '#6c757d'; // Default gray
+            }
+        });
+    }
 });
+
+async function savePackNote() {
+    const noteTextarea = document.getElementById('packNote');
+    if (!noteTextarea) return;
+    
+    const note = noteTextarea.value;
+    if (note.length > 500) {
+        alert('Note must be less than 500 characters');
+        return;
+    }
+    
+    await fetchCSRFToken();
+    
+    const formData = new FormData();
+    formData.append('note', note);
+    formData.append('csrf_token', csrfToken);
+    
+    try {
+        const response = await fetch(`/packs/${packId}/note`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRF-Token': csrfToken
+            }
+        });
+        
+        const data = await response.json();
+        if (response.ok) {
+            // Show success feedback
+            const saveButton = document.querySelector('.pack-notes-section .btn-primary');
+            const originalText = saveButton.textContent;
+            saveButton.textContent = 'Saved!';
+            saveButton.style.backgroundColor = '#28a745';
+            
+            setTimeout(() => {
+                saveButton.textContent = originalText;
+                saveButton.style.backgroundColor = '';
+            }, 2000);
+        } else {
+            alert(data.error || 'Failed to save note');
+        }
+    } catch (error) {
+        alert('Failed to save note');
+    }
+}
 </script>
 
 <style>
@@ -1578,6 +1654,99 @@ document.addEventListener('DOMContentLoaded', function() {
     padding: 0.15rem 0.4rem;
     font-size: 0.75rem;
     line-height: 1.2;
+}
+
+/* Pack Notes Section */
+.pack-notes-section {
+    margin: 2rem 0 1rem 0;
+    padding: 1.5rem;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+}
+
+.pack-notes-section .section-header h3 {
+    margin: 0 0 1rem 0;
+    color: #333;
+    font-size: 1.1rem;
+}
+
+.notes-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.notes-form textarea {
+    width: 100%;
+    min-height: 120px;
+    padding: 0.75rem;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    resize: vertical;
+    transition: border-color 0.15s ease-in-out;
+}
+
+.notes-form textarea:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.notes-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.char-count {
+    font-size: 0.8rem;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.notes-form .btn {
+    padding: 0.5rem 1.5rem;
+    font-size: 0.9rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.notes-form .btn-primary {
+    background-color: #007bff;
+    color: white;
+}
+
+.notes-form .btn-primary:hover {
+    background-color: #0056b3;
+}
+
+@media (max-width: 600px) {
+    .pack-notes-section {
+        margin: 1.5rem 0 1rem 0;
+        padding: 1rem;
+    }
+    
+    .notes-form textarea {
+        min-height: 100px;
+        font-size: 0.85rem;
+    }
+    
+    .notes-controls {
+        flex-direction: column;
+        gap: 0.5rem;
+        align-items: stretch;
+    }
+    
+    .notes-form .btn {
+        width: 100%;
+        text-align: center;
+    }
 }
 </style>
     </main>

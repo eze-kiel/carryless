@@ -41,6 +41,7 @@ type Pack struct {
 	ID        string    `json:"id" db:"id"`
 	UserID    int       `json:"user_id" db:"user_id"`
 	Name      string    `json:"name" db:"name"`
+	Note      string    `json:"note" db:"note"`
 	IsPublic  bool      `json:"is_public" db:"is_public"`
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`

@@ -104,6 +104,7 @@
             .item-group-child {
                 border-bottom: none !important;
                 margin-bottom: 1pt;
+                padding-left: 15pt !important; /* Maintain indentation in print */
             }
             
             .item-details {
@@ -147,6 +148,23 @@
                 -webkit-print-color-adjust: exact;
                 color-adjust: exact;
                 print-color-adjust: exact;
+            }
+
+            .pack-notes {
+                margin-top: 12pt;
+                padding-top: 8pt;
+                border-top: 1pt solid #666;
+                break-inside: avoid;
+            }
+
+            .pack-notes h3 {
+                font-size: 12pt !important;
+                margin-bottom: 4pt !important;
+            }
+
+            .pack-notes p {
+                font-size: 9pt !important;
+                line-height: 1.2 !important;
             }
         }
 
@@ -368,10 +386,23 @@
         .item-group-child {
             border-bottom: none;
             margin-bottom: 2px;
+            padding-left: 30px; /* Indent entire child item row */
+            position: relative;
+        }
+
+        .item-group-child::before {
+            content: '';
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            width: 8px;
+            height: 1px;
+            background-color: #dee2e6;
+            transform: translateY(-50%);
         }
 
         .item-group-child .item-content {
-            padding-left: 8px;
+            padding-left: 0; /* Remove extra padding since row is already indented */
         }
 
         .item-details {
@@ -415,6 +446,26 @@
             font-style: italic;
         }
 
+        .pack-notes {
+            margin-top: 30px;
+            padding: 20px 0;
+            border-top: 2px solid #e9ecef;
+        }
+
+        .pack-notes h3 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+
+        .pack-notes p {
+            color: #495057;
+            line-height: 1.5;
+            margin: 0;
+            white-space: pre-wrap;
+        }
+
         /* Mobile responsive */
         @media (max-width: 600px) {
             .checklist-container {
@@ -446,6 +497,15 @@
             
             .item-details {
                 gap: 10px;
+            }
+            
+            .item-group-child {
+                padding-left: 25px; /* Reduce indentation on mobile */
+            }
+            
+            .item-group-child::before {
+                left: 16px; /* Adjust connector position */
+                width: 6px; /* Smaller connector on mobile */
             }
         }
 
@@ -595,6 +655,13 @@
         {{else}}
             <div class="empty-pack">
                 <p>This pack has no items to check.</p>
+            </div>
+        {{end}}
+
+        {{if .Pack.Note}}
+            <div class="pack-notes">
+                <h3>Pack Notes</h3>
+                <p>{{.Pack.Note}}</p>
             </div>
         {{end}}
     </div>

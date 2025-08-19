@@ -18,11 +18,11 @@ func createPackWithTx(tx *sql.Tx, userID int, name string) (*models.Pack, error)
 	id := uuid.New().String()
 
 	query := `
-		INSERT INTO packs (id, user_id, name, is_public)
-		VALUES (?, ?, ?, ?)
+		INSERT INTO packs (id, user_id, name, note, is_public)
+		VALUES (?, ?, ?, ?, ?)
 	`
 
-	_, err := tx.Exec(query, id, userID, name, false)
+	_, err := tx.Exec(query, id, userID, name, "", false)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create pack: %w", err)
 	}
@@ -41,11 +41,11 @@ func CreatePackWithPublic(db *sql.DB, userID int, name string, isPublic bool) (*
 	packID := uuid.New().String()
 
 	query := `
-		INSERT INTO packs (id, user_id, name, is_public)
-		VALUES (?, ?, ?, ?)
+		INSERT INTO packs (id, user_id, name, note, is_public)
+		VALUES (?, ?, ?, ?, ?)
 	`
 
-	_, err := db.Exec(query, packID, userID, name, isPublic)
+	_, err := db.Exec(query, packID, userID, name, "", isPublic)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create pack: %w", err)
 	}
@@ -62,7 +62,7 @@ func CreatePackWithPublic(db *sql.DB, userID int, name string, isPublic bool) (*
 
 func GetPacks(db *sql.DB, userID int) ([]models.Pack, error) {
 	query := `
-		SELECT id, user_id, name, is_public, created_at, updated_at
+		SELECT id, user_id, name, COALESCE(note, ''), is_public, created_at, updated_at
 		FROM packs
 		WHERE user_id = ?
 		ORDER BY updated_at DESC
@@ -81,6 +81,7 @@ func GetPacks(db *sql.DB, userID int) ([]models.Pack, error) {
 			&pack.ID,
 			&pack.UserID,
 			&pack.Name,
+			&pack.Note,
 			&pack.IsPublic,
 			&pack.CreatedAt,
 			&pack.UpdatedAt,
@@ -101,7 +102,7 @@ func GetPacks(db *sql.DB, userID int) ([]models.Pack, error) {
 func GetPack(db *sql.DB, packID string) (*models.Pack, error) {
 	pack := &models.Pack{}
 	query := `
-		SELECT id, user_id, name, is_public, created_at, updated_at
+		SELECT id, user_id, name, COALESCE(note, ''), is_public, created_at, updated_at
 		FROM packs
 		WHERE id = ?
 	`
@@ -110,6 +111,7 @@ func GetPack(db *sql.DB, packID string) (*models.Pack, error) {
 		&pack.ID,
 		&pack.UserID,
 		&pack.Name,
+		&pack.Note,
 		&pack.IsPublic,
 		&pack.CreatedAt,
 		&pack.UpdatedAt,
@@ -213,6 +215,30 @@ func UpdatePack(db *sql.DB, userID int, packID, name string, isPublic bool) erro
 	result, err := db.Exec(query, name, isPublic, packID, userID)
 	if err != nil {
 		return fmt.Errorf("failed to update pack: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("pack not found")
+	}
+
+	return nil
+}
+
+func UpdatePackNote(db *sql.DB, userID int, packID, note string) error {
+	query := `
+		UPDATE packs
+		SET note = ?, updated_at = CURRENT_TIMESTAMP
+		WHERE id = ? AND user_id = ?
+	`
+
+	result, err := db.Exec(query, note, packID, userID)
+	if err != nil {
+		return fmt.Errorf("failed to update pack note: %w", err)
 	}
 
 	rowsAffected, err := result.RowsAffected()

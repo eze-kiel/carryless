@@ -54,6 +54,7 @@ func SetupRoutes(r *gin.Engine, db *sql.DB) {
 		protected.POST("/packs/:id", handleUpdatePack)
 		protected.POST("/packs/:id/delete", handleDeletePack)
 		protected.POST("/packs/:id/duplicate", handleDuplicatePack)
+		protected.POST("/packs/:id/note", handleUpdatePackNote)
 		protected.POST("/packs/:id/items", handleAddItemToPack)
 		protected.DELETE("/packs/:id/items/:item_id", handleRemoveItemFromPack)
 		protected.PUT("/packs/:id/items/:item_id/worn", handleToggleWorn)

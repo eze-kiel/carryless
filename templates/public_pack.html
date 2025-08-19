@@ -164,6 +164,13 @@
                     <p>This pack has no items.</p>
                 </div>
             {{end}}
+
+            {{if .Pack.Note}}
+                <div class="pack-notes-display">
+                    <h3>Pack Notes</h3>
+                    <p>{{.Pack.Note}}</p>
+                </div>
+            {{end}}
         </div>
 
 <script>
@@ -748,6 +755,44 @@
     @media (min-width: 768px) {
         .item-labels-public {
             margin-top: 0;
+        }
+    }
+
+    /* Pack Notes Display */
+    .pack-notes-display {
+        margin: 2rem 0 1rem 0;
+        padding: 1.5rem;
+        background: #f8f9fa;
+        border-radius: 6px;
+        border: 1px solid #e9ecef;
+    }
+
+    .pack-notes-display h3 {
+        margin: 0 0 1rem 0;
+        color: #333;
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+
+    .pack-notes-display p {
+        margin: 0;
+        color: #495057;
+        line-height: 1.5;
+        white-space: pre-wrap;
+    }
+
+    @media (max-width: 600px) {
+        .pack-notes-display {
+            margin: 1.5rem 0 1rem 0;
+            padding: 1rem;
+        }
+        
+        .pack-notes-display h3 {
+            font-size: 1rem;
+        }
+        
+        .pack-notes-display p {
+            font-size: 0.9rem;
         }
     }
     </style>

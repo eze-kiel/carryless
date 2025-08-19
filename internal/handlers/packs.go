@@ -393,6 +393,32 @@ func handleDeletePack(c *gin.Context) {
 	c.Redirect(http.StatusFound, "/packs")
 }
 
+func handleUpdatePackNote(c *gin.Context) {
+	userID := c.MustGet("user_id").(int)
+	db := c.MustGet("db").(*sql.DB)
+	packID := c.Param("id")
+	
+	note := strings.TrimSpace(c.PostForm("note"))
+	
+	// Validate note length (500 character limit)
+	if len(note) > 500 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Note must be less than 500 characters"})
+		return
+	}
+
+	err := database.UpdatePackNote(db, userID, packID, note)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update pack note"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Pack note updated successfully"})
+}
+
 func handleAddItemToPack(c *gin.Context) {
 	userID := c.MustGet("user_id").(int)
 	db := c.MustGet("db").(*sql.DB)

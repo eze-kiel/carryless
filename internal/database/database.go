@@ -139,6 +139,11 @@ func Migrate(db *sql.DB) error {
 		return fmt.Errorf("failed to create labels tables: %w", err)
 	}
 
+	// Add note column to packs table if it doesn't exist
+	if err := addPackNoteColumn(db); err != nil {
+		return fmt.Errorf("failed to add note column to packs: %w", err)
+	}
+
 	return nil
 }
 
@@ -451,6 +456,39 @@ func createLabelsTable(db *sql.DB) error {
 			if _, err := db.Exec(migration); err != nil {
 				return err
 			}
+		}
+	}
+
+	return nil
+}
+
+func addPackNoteColumn(db *sql.DB) error {
+	// Check if note column exists
+	rows, err := db.Query("PRAGMA table_info(packs)")
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	hasNote := false
+	for rows.Next() {
+		var cid int
+		var name, dataType string
+		var notNull, dfltValue, pk interface{}
+		if err := rows.Scan(&cid, &name, &dataType, &notNull, &dfltValue, &pk); err != nil {
+			return err
+		}
+		if name == "note" {
+			hasNote = true
+			break
+		}
+	}
+
+	if !hasNote {
+		// Add note column to packs table
+		_, err = db.Exec("ALTER TABLE packs ADD COLUMN note TEXT")
+		if err != nil {
+			return err
 		}
 	}
 
