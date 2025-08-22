@@ -45,7 +45,7 @@
                 <div class="page-header">
                     <h1>{{.Pack.Name}} <span class="badge">Public Pack</span></h1>
                     <div>
-                        <a href="/packs/{{.Pack.ID}}/checklist" class="btn btn-secondary">Prep Mode</a>
+                        <a href="{{if .Pack.ShortID}}/p/{{.Pack.ShortID}}/checklist{{else}}/packs/{{.Pack.ID}}/checklist{{end}}" class="btn btn-secondary">Prep Mode</a>
                     </div>
                 </div>
                 

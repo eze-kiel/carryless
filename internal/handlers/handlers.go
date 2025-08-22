@@ -84,6 +84,8 @@ func SetupRoutes(r *gin.Engine, db *sql.DB) {
 		admin.POST("/toggle-registration", handleToggleRegistration)
 	}
 
+	r.GET("/p/:id", middleware.AuthOptional(db), handlePublicPackByShortID)
+	r.GET("/p/:id/checklist", middleware.AuthOptional(db), handlePackChecklistByShortID)
 	r.GET("/p/packs/:id", middleware.AuthOptional(db), handlePublicPack)
 	r.GET("/packs/:id/checklist", middleware.AuthOptional(db), handlePackChecklist)
 }

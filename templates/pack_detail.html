@@ -45,9 +45,9 @@
             <h1>{{.Pack.Name}}</h1>
             <div>
                 {{if .Pack.IsPublic}}
-                    <a href="/p/packs/{{.Pack.ID}}" class="btn btn-secondary">Public View</a>
+                    <a href="{{if .Pack.ShortID}}/p/{{.Pack.ShortID}}{{else}}/p/packs/{{.Pack.ID}}{{end}}" class="btn btn-secondary">Public View</a>
                 {{end}}
-                <a href="/packs/{{.Pack.ID}}/checklist" class="btn btn-secondary">Prep Mode</a>
+                <a href="{{if and .Pack.IsPublic .Pack.ShortID}}/p/{{.Pack.ShortID}}/checklist{{else}}/packs/{{.Pack.ID}}/checklist{{end}}" class="btn btn-secondary">Prep Mode</a>
             </div>
         </div>
         

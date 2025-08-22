@@ -1,8 +1,10 @@
 package database
 
 import (
+	"crypto/rand"
 	"database/sql"
 	"fmt"
+	"math/big"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -142,6 +144,11 @@ func Migrate(db *sql.DB) error {
 	// Add note column to packs table if it doesn't exist
 	if err := addPackNoteColumn(db); err != nil {
 		return fmt.Errorf("failed to add note column to packs: %w", err)
+	}
+
+	// Add short_id column to packs table if it doesn't exist
+	if err := addPackShortIDColumn(db); err != nil {
+		return fmt.Errorf("failed to add short_id column to packs: %w", err)
 	}
 
 	return nil
@@ -493,4 +500,119 @@ func addPackNoteColumn(db *sql.DB) error {
 	}
 
 	return nil
+}
+
+func addPackShortIDColumn(db *sql.DB) error {
+	// Check if short_id column exists
+	rows, err := db.Query("PRAGMA table_info(packs)")
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	hasShortID := false
+	for rows.Next() {
+		var cid int
+		var name, dataType string
+		var notNull, dfltValue, pk interface{}
+		if err := rows.Scan(&cid, &name, &dataType, &notNull, &dfltValue, &pk); err != nil {
+			return err
+		}
+		if name == "short_id" {
+			hasShortID = true
+			break
+		}
+	}
+
+	if !hasShortID {
+		// Add short_id column to packs table (without UNIQUE constraint initially)
+		_, err = db.Exec("ALTER TABLE packs ADD COLUMN short_id TEXT")
+		if err != nil {
+			return err
+		}
+
+		// Generate short IDs for existing public packs
+		err = migrateExistingPublicPacks(db)
+		if err != nil {
+			return err
+		}
+
+		// Now add the UNIQUE constraint and index
+		_, err = db.Exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_packs_short_id_unique ON packs(short_id) WHERE short_id IS NOT NULL AND short_id != ''")
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func migrateExistingPublicPacks(db *sql.DB) error {
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	const idLength = 8
+	
+	// Get all public packs without short_id
+	query := `SELECT id FROM packs WHERE is_public = 1 AND (short_id IS NULL OR short_id = '')`
+	rows, err := db.Query(query)
+	if err != nil {
+		return fmt.Errorf("failed to query public packs: %w", err)
+	}
+	defer rows.Close()
+
+	var packIDs []string
+	for rows.Next() {
+		var packID string
+		if err := rows.Scan(&packID); err != nil {
+			return fmt.Errorf("failed to scan pack ID: %w", err)
+		}
+		packIDs = append(packIDs, packID)
+	}
+
+	// Generate short IDs for each pack
+	for _, packID := range packIDs {
+		shortID, err := generateUniqueShortID(db, charset, idLength)
+		if err != nil {
+			return fmt.Errorf("failed to generate short ID for pack %s: %w", packID, err)
+		}
+
+		// Update the pack with the new short ID
+		updateQuery := `UPDATE packs SET short_id = ? WHERE id = ?`
+		_, err = db.Exec(updateQuery, shortID, packID)
+		if err != nil {
+			return fmt.Errorf("failed to update pack %s with short ID: %w", packID, err)
+		}
+	}
+
+	return nil
+}
+
+func generateUniqueShortID(db *sql.DB, charset string, idLength int) (string, error) {
+	const maxRetries = 10
+
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		// Generate random ID
+		b := make([]byte, idLength)
+		for i := range b {
+			num, err := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
+			if err != nil {
+				return "", fmt.Errorf("failed to generate random number: %w", err)
+			}
+			b[i] = charset[num.Int64()]
+		}
+		
+		shortID := string(b)
+		
+		// Check if this ID already exists
+		var exists bool
+		err := db.QueryRow("SELECT EXISTS(SELECT 1 FROM packs WHERE short_id = ?)", shortID).Scan(&exists)
+		if err != nil {
+			return "", fmt.Errorf("failed to check short ID existence: %w", err)
+		}
+		
+		if !exists {
+			return shortID, nil
+		}
+	}
+	
+	return "", fmt.Errorf("failed to generate unique short ID after %d attempts", maxRetries)
 }

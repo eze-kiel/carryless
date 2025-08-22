@@ -545,7 +545,7 @@
     <div class="toolbar no-print">
         <button class="toolbar-btn" onclick="window.print()">🖨️ Print</button>
         <button class="toolbar-btn secondary" onclick="resetChecklist()">↻ Reset All</button>
-        <a href="{{if .Pack.IsPublic}}/p/packs/{{.Pack.ID}}{{else}}/packs/{{.Pack.ID}}{{end}}" class="toolbar-btn secondary">← Back to Pack</a>
+        <a href="{{if and .Pack.IsPublic (not .IsOwner)}}{{if .Pack.ShortID}}/p/{{.Pack.ShortID}}{{else}}/p/packs/{{.Pack.ID}}{{end}}{{else}}/packs/{{.Pack.ID}}{{end}}" class="toolbar-btn secondary">← Back to Pack</a>
     </div>
 
     <div class="checklist-container">

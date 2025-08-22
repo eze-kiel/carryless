@@ -1,14 +1,50 @@
 package database
 
 import (
+	"crypto/rand"
 	"database/sql"
 	"fmt"
 	"log"
+	"math/big"
 
 	"carryless/internal/models"
 
 	"github.com/google/uuid"
 )
+
+const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+func generateShortID(db *sql.DB) (string, error) {
+	const idLength = 8
+	const maxRetries = 10
+
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		// Generate random 8-character ID
+		b := make([]byte, idLength)
+		for i := range b {
+			num, err := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
+			if err != nil {
+				return "", fmt.Errorf("failed to generate random number: %w", err)
+			}
+			b[i] = charset[num.Int64()]
+		}
+		
+		shortID := string(b)
+		
+		// Check if this ID already exists
+		var exists bool
+		err := db.QueryRow("SELECT EXISTS(SELECT 1 FROM packs WHERE short_id = ?)", shortID).Scan(&exists)
+		if err != nil {
+			return "", fmt.Errorf("failed to check short ID existence: %w", err)
+		}
+		
+		if !exists {
+			return shortID, nil
+		}
+	}
+	
+	return "", fmt.Errorf("failed to generate unique short ID after %d attempts", maxRetries)
+}
 
 func CreatePack(db *sql.DB, userID int, name string) (*models.Pack, error) {
 	return CreatePackWithPublic(db, userID, name, false)
@@ -39,13 +75,22 @@ func createPackWithTx(tx *sql.Tx, userID int, name string) (*models.Pack, error)
 
 func CreatePackWithPublic(db *sql.DB, userID int, name string, isPublic bool) (*models.Pack, error) {
 	packID := uuid.New().String()
+	
+	var shortID sql.NullString
+	if isPublic {
+		shortIDValue, err := generateShortID(db)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate short ID: %w", err)
+		}
+		shortID = sql.NullString{String: shortIDValue, Valid: true}
+	}
 
 	query := `
-		INSERT INTO packs (id, user_id, name, note, is_public)
-		VALUES (?, ?, ?, ?, ?)
+		INSERT INTO packs (id, user_id, name, note, is_public, short_id)
+		VALUES (?, ?, ?, ?, ?, ?)
 	`
 
-	_, err := db.Exec(query, packID, userID, name, "", isPublic)
+	_, err := db.Exec(query, packID, userID, name, "", isPublic, shortID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create pack: %w", err)
 	}
@@ -55,6 +100,7 @@ func CreatePackWithPublic(db *sql.DB, userID int, name string, isPublic bool) (*
 		UserID:   userID,
 		Name:     name,
 		IsPublic: isPublic,
+		ShortID:  shortID.String,
 	}
 
 	return pack, nil
@@ -62,7 +108,7 @@ func CreatePackWithPublic(db *sql.DB, userID int, name string, isPublic bool) (*
 
 func GetPacks(db *sql.DB, userID int) ([]models.Pack, error) {
 	query := `
-		SELECT id, user_id, name, COALESCE(note, ''), is_public, created_at, updated_at
+		SELECT id, user_id, name, COALESCE(note, ''), is_public, COALESCE(short_id, ''), created_at, updated_at
 		FROM packs
 		WHERE user_id = ?
 		ORDER BY updated_at DESC
@@ -83,6 +129,7 @@ func GetPacks(db *sql.DB, userID int) ([]models.Pack, error) {
 			&pack.Name,
 			&pack.Note,
 			&pack.IsPublic,
+			&pack.ShortID,
 			&pack.CreatedAt,
 			&pack.UpdatedAt,
 		)
@@ -102,7 +149,7 @@ func GetPacks(db *sql.DB, userID int) ([]models.Pack, error) {
 func GetPack(db *sql.DB, packID string) (*models.Pack, error) {
 	pack := &models.Pack{}
 	query := `
-		SELECT id, user_id, name, COALESCE(note, ''), is_public, created_at, updated_at
+		SELECT id, user_id, name, COALESCE(note, ''), is_public, COALESCE(short_id, ''), created_at, updated_at
 		FROM packs
 		WHERE id = ?
 	`
@@ -113,6 +160,35 @@ func GetPack(db *sql.DB, packID string) (*models.Pack, error) {
 		&pack.Name,
 		&pack.Note,
 		&pack.IsPublic,
+		&pack.ShortID,
+		&pack.CreatedAt,
+		&pack.UpdatedAt,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("pack not found")
+		}
+		return nil, fmt.Errorf("failed to query pack: %w", err)
+	}
+
+	return pack, nil
+}
+
+func GetPackByShortID(db *sql.DB, shortID string) (*models.Pack, error) {
+	pack := &models.Pack{}
+	query := `
+		SELECT id, user_id, name, COALESCE(note, ''), is_public, COALESCE(short_id, ''), created_at, updated_at
+		FROM packs
+		WHERE short_id = ?
+	`
+
+	err := db.QueryRow(query, shortID).Scan(
+		&pack.ID,
+		&pack.UserID,
+		&pack.Name,
+		&pack.Note,
+		&pack.IsPublic,
+		&pack.ShortID,
 		&pack.CreatedAt,
 		&pack.UpdatedAt,
 	)
@@ -206,13 +282,35 @@ func GetPackWithItems(db *sql.DB, packID string) (*models.Pack, error) {
 }
 
 func UpdatePack(db *sql.DB, userID int, packID, name string, isPublic bool) error {
+	// First, get the current pack to check if it's being made public and needs a short ID
+	currentPack, err := GetPack(db, packID)
+	if err != nil {
+		return fmt.Errorf("failed to get current pack: %w", err)
+	}
+	
+	if currentPack.UserID != userID {
+		return fmt.Errorf("pack not found")
+	}
+
+	// Generate short ID if pack is being made public and doesn't have one
+	var shortIDToSet sql.NullString
+	if isPublic && currentPack.ShortID == "" {
+		shortIDValue, err := generateShortID(db)
+		if err != nil {
+			return fmt.Errorf("failed to generate short ID: %w", err)
+		}
+		shortIDToSet = sql.NullString{String: shortIDValue, Valid: true}
+	} else if currentPack.ShortID != "" {
+		shortIDToSet = sql.NullString{String: currentPack.ShortID, Valid: true}
+	}
+
 	query := `
 		UPDATE packs
-		SET name = ?, is_public = ?, updated_at = CURRENT_TIMESTAMP
+		SET name = ?, is_public = ?, short_id = ?, updated_at = CURRENT_TIMESTAMP
 		WHERE id = ? AND user_id = ?
 	`
 
-	result, err := db.Exec(query, name, isPublic, packID, userID)
+	result, err := db.Exec(query, name, isPublic, shortIDToSet, packID, userID)
 	if err != nil {
 		return fmt.Errorf("failed to update pack: %w", err)
 	}

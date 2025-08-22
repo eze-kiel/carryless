@@ -281,6 +281,100 @@ func handlePublicPack(c *gin.Context) {
 	})
 }
 
+func handlePublicPackByShortID(c *gin.Context) {
+	shortID := c.Param("id")
+	db := c.MustGet("db").(*sql.DB)
+	
+	user, _ := c.Get("user")
+
+	pack, err := database.GetPackByShortID(db, shortID)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			c.HTML(http.StatusNotFound, "404.html", gin.H{
+				"Title": "Pack Not Found - Carryless",
+				"User":  user,
+			})
+			return
+		}
+		c.HTML(http.StatusInternalServerError, "public_pack.html", gin.H{
+			"Title": "Pack Detail - Carryless",
+			"User":  user,
+			"Error": "Failed to load pack",
+		})
+		return
+	}
+
+	if !pack.IsPublic {
+		c.HTML(http.StatusForbidden, "403.html", gin.H{
+			"Title": "Access Denied - Carryless",
+			"User":  user,
+		})
+		return
+	}
+
+	// Get pack items
+	packWithItems, err := database.GetPackWithItems(db, pack.ID)
+	if err != nil {
+		c.HTML(http.StatusInternalServerError, "public_pack.html", gin.H{
+			"Title": "Pack Detail - Carryless",
+			"User":  user,
+			"Error": "Failed to load pack items",
+		})
+		return
+	}
+
+	categoryWeights := make(map[string]int)
+	categoryWornWeights := make(map[string]int)
+	labelWeights := make(map[string]int)
+	labelColors := make(map[string]string)
+	totalWeight := 0
+	totalWornWeight := 0
+	totalItemCount := 0
+
+	for _, packItem := range packWithItems.Items {
+		categoryName := packItem.Item.Category.Name
+		packWeight := packItem.Item.WeightGrams * (packItem.Count - packItem.WornCount)
+		wornWeight := packItem.Item.WeightGrams * packItem.WornCount
+		totalItemCount += packItem.Count
+		
+		if packWeight > 0 {
+			categoryWeights[categoryName] += packWeight
+			totalWeight += packWeight
+		}
+		if wornWeight > 0 {
+			categoryWornWeights[categoryName] += wornWeight
+			totalWornWeight += wornWeight
+		}
+		
+		// Calculate label weights using the actual label assignment counts
+		for _, itemLabel := range packItem.Labels {
+			labelWeights[itemLabel.PackLabel.Name] += packItem.Item.WeightGrams * itemLabel.Count
+			labelColors[itemLabel.PackLabel.Name] = itemLabel.PackLabel.Color
+		}
+	}
+
+	var csrfToken string
+	if userID, hasUserID := c.Get("user_id"); hasUserID {
+		if token, err := database.CreateCSRFToken(db, userID.(int)); err == nil {
+			csrfToken = token.Token
+		}
+	}
+
+	c.HTML(http.StatusOK, "public_pack.html", gin.H{
+		"Title":               packWithItems.Name + " - Carryless",
+		"User":                user,
+		"Pack":                packWithItems,
+		"CategoryWeights":     categoryWeights,
+		"CategoryWornWeights": categoryWornWeights,
+		"LabelWeights":        labelWeights,
+		"LabelColors":         labelColors,
+		"TotalWeight":         totalWeight,
+		"TotalWornWeight":     totalWornWeight,
+		"TotalItemCount":      totalItemCount,
+		"CSRFToken":           csrfToken,
+	})
+}
+
 func handleEditPackPage(c *gin.Context) {
 	userID := c.MustGet("user_id").(int)
 	db := c.MustGet("db").(*sql.DB)
@@ -803,10 +897,80 @@ func handlePackChecklist(c *gin.Context) {
 		totalItems += packItem.Count
 	}
 
+	// Check if current user is the owner
+	isOwner := false
+	if hasUserID {
+		isOwner = pack.UserID == userID.(int)
+	}
+
 	c.HTML(http.StatusOK, "checklist.html", gin.H{
 		"Title":      pack.Name + " Checklist - Carryless",
 		"User":       user,
 		"Pack":       pack,
 		"TotalItems": totalItems,
+		"IsOwner":    isOwner,
+	})
+}
+
+func handlePackChecklistByShortID(c *gin.Context) {
+	shortID := c.Param("id")
+	db := c.MustGet("db").(*sql.DB)
+	
+	user, _ := c.Get("user")
+	userID, hasUserID := c.Get("user_id")
+
+	pack, err := database.GetPackByShortID(db, shortID)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			c.HTML(http.StatusNotFound, "404.html", gin.H{
+				"Title": "Pack Not Found - Carryless",
+				"User":  user,
+			})
+			return
+		}
+		c.HTML(http.StatusInternalServerError, "checklist.html", gin.H{
+			"Title": "Pack Checklist - Carryless",
+			"User":  user,
+			"Error": "Failed to load pack",
+		})
+		return
+	}
+
+	if !pack.IsPublic {
+		c.HTML(http.StatusForbidden, "403.html", gin.H{
+			"Title": "Access Denied - Carryless",
+			"User":  user,
+		})
+		return
+	}
+
+	// Get pack items using the full UUID
+	packWithItems, err := database.GetPackWithItems(db, pack.ID)
+	if err != nil {
+		c.HTML(http.StatusInternalServerError, "checklist.html", gin.H{
+			"Title": "Pack Checklist - Carryless",
+			"User":  user,
+			"Error": "Failed to load pack items",
+		})
+		return
+	}
+
+	totalItems := 0
+	for _, packItem := range packWithItems.Items {
+		totalItems += packItem.Count
+	}
+
+	// Check if current user is the owner
+	isOwner := false
+	if hasUserID {
+		isOwner = packWithItems.UserID == userID.(int)
+	}
+
+	c.HTML(http.StatusOK, "checklist.html", gin.H{
+		"Title":      packWithItems.Name + " Checklist - Carryless",
+		"User":       user,
+		"Pack":       packWithItems,
+		"TotalItems": totalItems,
+		"IsOwner":    isOwner,
 	})
 }
