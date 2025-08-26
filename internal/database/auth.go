@@ -93,7 +93,7 @@ func CreateSession(db *sql.DB, userID int) (*models.Session, error) {
 		return nil, fmt.Errorf("failed to generate session ID: %w", err)
 	}
 
-	expiresAt := time.Now().Add(24 * time.Hour)
+	expiresAt := time.Now().Add(7 * 24 * time.Hour)
 
 	query := `
 		INSERT INTO sessions (id, user_id, expires_at)
@@ -140,6 +140,13 @@ func ValidateSession(db *sql.DB, sessionID string) (*models.User, error) {
 		return nil, fmt.Errorf("failed to validate session: %w", err)
 	}
 
+	// Renew session expiration on each access
+	err = RenewSession(db, sessionID)
+	if err != nil {
+		// Log the error but don't fail the validation
+		// The session is still valid even if renewal fails
+	}
+
 	return user, nil
 }
 
@@ -181,6 +188,16 @@ func UpdateUserCurrency(db *sql.DB, userID int, currency string) error {
 		return fmt.Errorf("failed to update currency: %w", err)
 	}
 
+	return nil
+}
+
+func RenewSession(db *sql.DB, sessionID string) error {
+	newExpiresAt := time.Now().Add(7 * 24 * time.Hour)
+	query := `UPDATE sessions SET expires_at = ? WHERE id = ?`
+	_, err := db.Exec(query, newExpiresAt, sessionID)
+	if err != nil {
+		return fmt.Errorf("failed to renew session: %w", err)
+	}
 	return nil
 }
 
