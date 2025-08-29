@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{.Title}}</title>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
     <link rel="stylesheet" href="/static/css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -167,9 +168,9 @@
 <script>
 // Dropdown functionality
 document.addEventListener('DOMContentLoaded', function() {
-    const dropdown = document.querySelector('.dropdown');
-    const dropdownToggle = document.querySelector('.dropdown-toggle');
-    const dropdownMenu = document.querySelector('.dropdown-menu');
+    const dropdown = document.querySelector('.nav-links .dropdown');
+    const dropdownToggle = document.querySelector('.nav-links .dropdown-toggle');
+    const dropdownMenu = document.querySelector('.nav-links .dropdown-menu');
     
     if (dropdown && dropdownToggle && dropdownMenu) {
         // Toggle dropdown on button click
