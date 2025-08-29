@@ -341,6 +341,23 @@ body {
     flex: 1;
 }
 
+.donate-link {
+    color: rgb(220, 15, 130);
+    text-decoration: none;
+    font-weight: var(--font-weight-semibold);
+    transition: color var(--transition-fast);
+}
+
+.donate-link:hover {
+    color: rgb(190, 10, 110);
+    text-decoration: underline;
+}
+
+.donate-link i {
+    margin-left: 2px;
+    color: rgb(220, 15, 130);
+}
+
 @media (max-width: 768px) {
     .footer-content {
         flex-direction: column;
