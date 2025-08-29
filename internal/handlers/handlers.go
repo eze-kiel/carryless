@@ -18,9 +18,9 @@ func SetupRoutes(r *gin.Engine, db *sql.DB) {
 
 	r.GET("/", middleware.AuthOptional(db), handleHome)
 	r.GET("/register", handleRegisterPage)
-	r.POST("/register", handleRegister)
+	r.POST("/register", middleware.AuthRateLimit(), handleRegister)
 	r.GET("/login", handleLoginPage)
-	r.POST("/login", handleLogin)
+	r.POST("/login", middleware.AuthRateLimit(), handleLogin)
 	r.POST("/logout", middleware.AuthRequired(db), handleLogout)
 
 	protected := r.Group("/")

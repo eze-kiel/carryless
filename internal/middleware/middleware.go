@@ -41,12 +41,47 @@ func RateLimit() gin.HandlerFunc {
 			}
 		} else {
 			clients[ip] = &rateLimiter{
-				limiter:  rate.NewLimiter(rate.Every(time.Second), 200),
+				limiter:  rate.NewLimiter(rate.Every(time.Second/20), 20),
 				lastSeen: time.Now(),
 			}
 		}
 
 		cleanupOldClients()
+		c.Next()
+	}
+}
+
+func AuthRateLimit() gin.HandlerFunc {
+	authClients := make(map[string]*rateLimiter)
+	var authMu sync.Mutex
+	
+	return func(c *gin.Context) {
+		ip := c.ClientIP()
+		
+		authMu.Lock()
+		defer authMu.Unlock()
+
+		if limiter, exists := authClients[ip]; exists {
+			limiter.lastSeen = time.Now()
+			if !limiter.limiter.Allow() {
+				c.JSON(http.StatusTooManyRequests, gin.H{"error": "Authentication rate limit exceeded"})
+				c.Abort()
+				return
+			}
+		} else {
+			authClients[ip] = &rateLimiter{
+				limiter:  rate.NewLimiter(rate.Every(time.Minute), 5),
+				lastSeen: time.Now(),
+			}
+		}
+
+		// Cleanup old auth clients
+		for ip, client := range authClients {
+			if time.Since(client.lastSeen) > 30*time.Minute {
+				delete(authClients, ip)
+			}
+		}
+		
 		c.Next()
 	}
 }
