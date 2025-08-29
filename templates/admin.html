@@ -17,9 +17,19 @@
             <div class="nav-links">
                 {{if .User}}
                     <a href="/dashboard">Dashboard</a>
-                    <a href="/inventory">Inventory</a>
-                    <a href="/categories">Categories</a>
-                    <a href="/packs">Packs</a>
+                    <div class="dropdown">
+                        <button class="dropdown-toggle" type="button" aria-haspopup="true" aria-expanded="false">
+                            Inventory
+                            <svg class="dropdown-arrow" width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+                                <path d="M2.5 4.5L6 8L9.5 4.5"></path>
+                            </svg>
+                        </button>
+                        <div class="dropdown-menu">
+                            <a href="/inventory" class="dropdown-item">Items</a>
+                            <a href="/categories" class="dropdown-item">Categories</a>
+                            <a href="/packs" class="dropdown-item">Packs</a>
+                        </div>
+                    </div>
                     {{if .User.IsAdmin}}
                         <a href="/admin">Admin</a>
                     {{end}}
@@ -122,6 +132,71 @@
                 </div>
             </div>
         </div>
+
+<script>
+// Dropdown functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const dropdown = document.querySelector('.dropdown');
+    const dropdownToggle = document.querySelector('.dropdown-toggle');
+    const dropdownMenu = document.querySelector('.dropdown-menu');
+    
+    if (dropdown && dropdownToggle && dropdownMenu) {
+        // Toggle dropdown on button click
+        dropdownToggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            dropdown.classList.toggle('active');
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!dropdown.contains(e.target)) {
+                dropdown.classList.remove('active');
+            }
+        });
+        
+        // Close dropdown on escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                dropdown.classList.remove('active');
+                dropdownToggle.focus();
+            }
+        });
+        
+        // Handle arrow keys for dropdown navigation
+        dropdownToggle.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                dropdown.classList.add('active');
+                const firstItem = dropdownMenu.querySelector('.dropdown-item');
+                if (firstItem) {
+                    firstItem.focus();
+                }
+            }
+        });
+        
+        // Handle navigation within dropdown
+        const dropdownItems = dropdownMenu.querySelectorAll('.dropdown-item');
+        dropdownItems.forEach((item, index) => {
+            item.addEventListener('keydown', function(e) {
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    const nextIndex = (index + 1) % dropdownItems.length;
+                    dropdownItems[nextIndex].focus();
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    const prevIndex = (index - 1 + dropdownItems.length) % dropdownItems.length;
+                    dropdownItems[prevIndex].focus();
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    dropdown.classList.remove('active');
+                    dropdownToggle.focus();
+                }
+            });
+        });
+    }
+});
+</script>
 
 <script>
         // Close other dropdowns when one is opened
