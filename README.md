@@ -21,11 +21,9 @@ Open http://localhost:8080
 Environment variables:
 - `PORT` - Server port (default: 8080)
 - `DATABASE_PATH` - SQLite database path (default: carryless.db)
-- `SECRET_KEY` - Session secret (required for production)
 
 ```bash
 export PORT=3000
-export SECRET_KEY=your-secret-key
 ./carryless
 ```
 
