@@ -98,7 +98,7 @@ func main() {
 	r.LoadHTMLGlob("templates/*.html")
 	r.Static("/static", "./static")
 
-	r.Use(middleware.CORS())
+	r.Use(middleware.CORS(cfg.AllowedOrigins))
 	r.Use(middleware.RateLimit())
 
 	handlers.SetupRoutes(r, db)

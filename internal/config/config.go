@@ -5,14 +5,16 @@ import (
 )
 
 type Config struct {
-	DatabasePath string
-	Port         string
+	DatabasePath   string
+	Port           string
+	AllowedOrigins string
 }
 
 func Load() *Config {
 	cfg := &Config{
-		DatabasePath: getEnv("DATABASE_PATH", "carryless.db"),
-		Port:         getEnv("PORT", "8080"),
+		DatabasePath:   getEnv("DATABASE_PATH", "carryless.db"),
+		Port:           getEnv("PORT", "8080"),
+		AllowedOrigins: getEnv("ALLOWED_ORIGINS", "http://localhost:8080,http://127.0.0.1:8080,https://carryless.plop.name,https://carryless.org"),
 	}
 	return cfg
 }
