@@ -102,6 +102,7 @@ Core entities with foreign key relationships:
 Environment variables (see internal/config/config.go):
 - `PORT` - Server port (default: 8080)
 - `DATABASE_PATH` - SQLite file location (default: carryless.db)
+- `ALLOWED_ORIGINS` - Comma-separated CORS origins (default: localhost + production domains)
 
 ## Testing Strategy
 

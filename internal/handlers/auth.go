@@ -72,11 +72,7 @@ func handleRegister(c *gin.Context) {
 	user, err := database.CreateUser(db, username, email, password)
 	if err != nil {
 		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
-			if strings.Contains(err.Error(), "username") {
-				errors["username"] = "Username already exists"
-			} else if strings.Contains(err.Error(), "email") {
-				errors["email"] = "Email already exists"
-			}
+			errors["general"] = "An account with those credentials already exists"
 		} else {
 			errors["general"] = "Failed to create account. Please try again."
 		}
@@ -84,8 +80,8 @@ func handleRegister(c *gin.Context) {
 		c.HTML(http.StatusBadRequest, "register.html", gin.H{
 			"Title":               "Register - Carryless",
 			"Errors":              errors,
-			"Username":            username,
-			"Email":               email,
+			"Username":            "",
+			"Email":               "",
 			"RegistrationEnabled": true,
 		})
 		return
@@ -100,7 +96,8 @@ func handleRegister(c *gin.Context) {
 		return
 	}
 
-	c.SetCookie("session_id", session.ID, 86400, "/", "", false, true)
+	c.SetSameSite(http.SameSiteStrictMode)
+	c.SetCookie("session_id", session.ID, 86400, "/", "", true, true)
 	c.Redirect(http.StatusFound, "/dashboard")
 }
 
@@ -149,7 +146,8 @@ func handleLogin(c *gin.Context) {
 		return
 	}
 
-	c.SetCookie("session_id", session.ID, 86400, "/", "", false, true)
+	c.SetSameSite(http.SameSiteStrictMode)
+	c.SetCookie("session_id", session.ID, 86400, "/", "", true, true)
 	c.Redirect(http.StatusFound, "/dashboard")
 }
 
@@ -160,7 +158,8 @@ func handleLogout(c *gin.Context) {
 		database.DeleteSession(db, sessionCookie)
 	}
 
-	c.SetCookie("session_id", "", -1, "/", "", false, true)
+	c.SetSameSite(http.SameSiteStrictMode)
+	c.SetCookie("session_id", "", -1, "/", "", true, true)
 	c.Redirect(http.StatusFound, "/")
 }
 

@@ -181,7 +181,8 @@ func AuthRequired(db *sql.DB) gin.HandlerFunc {
 
 		user, err := database.ValidateSession(db, sessionCookie)
 		if err != nil {
-			c.SetCookie("session_id", "", -1, "/", "", false, true)
+			c.SetSameSite(http.SameSiteStrictMode)
+			c.SetCookie("session_id", "", -1, "/", "", true, true)
 			c.Redirect(http.StatusFound, "/login")
 			c.Abort()
 			return
@@ -266,7 +267,8 @@ func AdminRequired(db *sql.DB) gin.HandlerFunc {
 
 		user, err := database.ValidateSession(db, sessionCookie)
 		if err != nil {
-			c.SetCookie("session_id", "", -1, "/", "", false, true)
+			c.SetSameSite(http.SameSiteStrictMode)
+			c.SetCookie("session_id", "", -1, "/", "", true, true)
 			c.Redirect(http.StatusFound, "/login")
 			c.Abort()
 			return

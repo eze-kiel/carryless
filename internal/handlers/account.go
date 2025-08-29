@@ -60,11 +60,11 @@ func handleChangePassword(c *gin.Context) {
 		return
 	}
 
-	if len(newPassword) < 6 {
+	if len(newPassword) < 8 {
 		c.HTML(http.StatusBadRequest, "account.html", gin.H{
 			"Title": "Account - Carryless",
 			"User":  user,
-			"Error": "New password must be at least 6 characters long",
+			"Error": "New password must be at least 8 characters long",
 		})
 		return
 	}
