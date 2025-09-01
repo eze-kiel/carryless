@@ -1,0 +1,300 @@
+{{define "privacy.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}}</title>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <header class="header">
+        <nav class="nav">
+            <div class="nav-brand">
+                <a href="/">Carryless</a>
+            </div>
+            <div class="nav-links">
+                {{if .User}}
+                    <a href="/dashboard">Dashboard</a>
+                    <div class="dropdown">
+                        <button class="dropdown-toggle" type="button" aria-haspopup="true" aria-expanded="false">
+                            Inventory
+                            <svg class="dropdown-arrow" width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+                                <path d="M2.5 4.5L6 8L9.5 4.5"></path>
+                            </svg>
+                        </button>
+                        <div class="dropdown-menu">
+                            <a href="/inventory" class="dropdown-item">Items</a>
+                            <a href="/categories" class="dropdown-item">Categories</a>
+                            <a href="/packs" class="dropdown-item">Packs</a>
+                        </div>
+                    </div>
+                    {{if .User.IsAdmin}}
+                        <a href="/admin">Admin</a>
+                    {{end}}
+                    <a href="/account">Account</a>
+                    <form class="logout-form" action="/logout" method="POST">
+                        <button type="submit" class="btn btn-secondary">Logout</button>
+                    </form>
+                {{else}}
+                    <a href="/login">Login</a>
+                    <a href="/register">Register</a>
+                {{end}}
+            </div>
+        </nav>
+    </header>
+
+    <main class="main">
+        {{if .Error}}
+            <div class="alert alert-error">{{.Error}}</div>
+        {{end}}
+        
+        <div class="legal-document">
+            <h1>Privacy Policy</h1>
+            <p><strong>Last updated:</strong> September 1, 2025</p>
+            
+            <h2>1. Introduction</h2>
+            <p>At Carryless, we are committed to protecting your privacy and personal data. This Privacy Policy explains how we collect, use, and safeguard your information in compliance with the General Data Protection Regulation (GDPR) and other applicable privacy laws in the European Union.</p>
+            
+            <h2>2. Data Controller</h2>
+            <p>Serac Alpine Gear created and maintains Carryless as a free, open-source service. Serac Alpine Gear acts as the data controller for the personal data you provide when using our service.</p>
+            
+            <h2>3. Legal Basis for Processing</h2>
+            <p>We process your personal data based on:</p>
+            <ul>
+                <li><strong>Contract:</strong> To provide the gear catalog and pack planning service you've requested</li>
+                <li><strong>Legitimate Interest:</strong> To maintain and improve our service security and functionality</li>
+                <li><strong>Consent:</strong> For any optional features you explicitly agree to use</li>
+            </ul>
+            
+            <h2>4. Data We Collect</h2>
+            <p>We practice data minimization and only collect information necessary to provide our service:</p>
+            
+            <h3>4.1 Account Information</h3>
+            <ul>
+                <li><strong>Email address:</strong> Required for account creation and authentication</li>
+                <li><strong>Username/Nickname:</strong> Your chosen display name for the service</li>
+                <li><strong>Password:</strong> Stored as a secure hash (never in plain text)</li>
+            </ul>
+            
+            <h3>4.2 Service Data</h3>
+            <ul>
+                <li><strong>Gear inventory:</strong> Items, categories, weights, and notes you create</li>
+                <li><strong>Pack configurations:</strong> Your pack plans and item selections</li>
+                <li><strong>User preferences:</strong> Settings like currency and weight units</li>
+            </ul>
+            
+            <h3>4.3 Technical Data</h3>
+            <ul>
+                <li><strong>Session tokens:</strong> For secure authentication during your visits</li>
+                <li><strong>Basic server logs:</strong> For security and error monitoring (IP addresses are not permanently stored)</li>
+            </ul>
+            
+            <h2>5. How We Use Your Data</h2>
+            <p>Your data is used exclusively to:</p>
+            <ul>
+                <li>Provide the gear catalog and pack planning functionality</li>
+                <li>Maintain your account and authenticate your access</li>
+                <li>Display your gear and packs within the application</li>
+                <li>Enable public pack sharing when you choose to make packs public</li>
+                <li>Ensure service security and prevent misuse</li>
+            </ul>
+            
+            <h2>6. Data Sharing and Third Parties</h2>
+            <p><strong>We do not sell, rent, or share your personal data with third parties.</strong> Period.</p>
+            
+            <p>The only exception is when you voluntarily make a pack public - in this case, your pack configuration (but not your email or other personal details) becomes visible to other users.</p>
+            
+            <h2>7. Data Security</h2>
+            <p>We implement appropriate technical and organizational measures to protect your data:</p>
+            <ul>
+                <li>Password hashing using bcrypt</li>
+                <li>CSRF protection for all state-changing operations</li>
+                <li>Rate limiting to prevent abuse</li>
+                <li>Secure session management</li>
+                <li>Regular security updates to our infrastructure</li>
+            </ul>
+            
+            <h2>8. Data Retention</h2>
+            <p>We retain your data only as long as necessary:</p>
+            <ul>
+                <li><strong>Account data:</strong> Until you delete your account</li>
+                <li><strong>Session data:</strong> Automatically expires after periods of inactivity</li>
+                <li><strong>Server logs:</strong> Kept for a maximum of 30 days for security purposes</li>
+            </ul>
+            
+            <h2>9. Your Rights Under GDPR</h2>
+            <p>As a data subject, you have the following rights:</p>
+            <ul>
+                <li><strong>Right of Access:</strong> Request a copy of your personal data</li>
+                <li><strong>Right to Rectification:</strong> Correct inaccurate or incomplete data</li>
+                <li><strong>Right to Erasure:</strong> Request deletion of your personal data</li>
+                <li><strong>Right to Restrict Processing:</strong> Limit how we use your data</li>
+                <li><strong>Right to Data Portability:</strong> Receive your data in a portable format</li>
+                <li><strong>Right to Object:</strong> Object to certain types of data processing</li>
+                <li><strong>Right to Withdraw Consent:</strong> Where processing is based on consent</li>
+            </ul>
+            
+            <p>To exercise these rights, please contact us through our <a href="https://github.com/eze-kiel/carryless/issues" target="_blank">GitHub repository</a>.</p>
+            
+            <h2>10. Cookies and Local Storage</h2>
+            <p>We use minimal cookies and local storage:</p>
+            <ul>
+                <li><strong>Session cookies:</strong> Essential for authentication and security</li>
+                <li><strong>Preference cookies:</strong> Remember your weight unit preference (grams/ounces)</li>
+            </ul>
+            <p>All cookies are technically necessary for the service to function properly.</p>
+            
+            <h2>11. International Data Transfers</h2>
+            <p>Your data is processed within the European Union. If we ever need to transfer data outside the EU, we will ensure appropriate safeguards are in place and obtain your explicit consent where required.</p>
+            
+            <h2>12. Funding and Independence</h2>
+            <p>Our service is funded entirely through voluntary donations to Serac Alpine Gear. This funding model ensures we have no financial incentive to monetize your data or compromise your privacy. We are committed to maintaining this approach.</p>
+            
+            <h2>13. Children's Privacy</h2>
+            <p>Our service is not intended for children under 16 years of age. We do not knowingly collect personal information from children under 16.</p>
+            
+            <h2>14. Changes to This Policy</h2>
+            <p>We may update this Privacy Policy from time to time. We will notify users of any significant changes through the platform and update the "Last updated" date at the top of this policy.</p>
+            
+            <h2>15. Contact and Supervisory Authority</h2>
+            <p>For privacy-related questions or to exercise your rights, please contact us through our <a href="https://github.com/eze-kiel/carryless/issues" target="_blank">GitHub repository</a>.</p>
+            
+            <p>You also have the right to lodge a complaint with your local data protection supervisory authority if you believe we have not handled your data appropriately.</p>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <p>Built with love by Serac Alpine Gear. Free and <a href="https://github.com/eze-kiel/carryless">open-source</a>, forever. <a href="https://ko-fi.com/seracalpinegear" class="donate-link" target="_blank" rel="noopener noreferrer">Donate <i class="fas fa-heart"></i></a></p>
+            <div class="legal-links">
+                <a href="/terms">Terms of Service</a> | <a href="/privacy">Privacy Policy</a>
+            </div>
+            <div class="weight-unit-selector">
+                <label for="weightUnitSelector">Units:</label>
+                <select id="weightUnitSelector" onchange="changeWeightUnit(this.value)">
+                    <option value="g">Grams</option>
+                    <option value="oz">Ounces</option>
+                </select>
+            </div>
+        </div>
+    </footer>
+
+    <script src="/static/js/app.js"></script>
+
+<script>
+// Weight unit cookie management (for consistency across pages)
+function setCookie(name, value, days = 365) {
+    const expires = new Date();
+    expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
+    document.cookie = name + '=' + value + ';expires=' + expires.toUTCString() + ';path=/';
+}
+
+function getCookie(name) {
+    const nameEQ = name + "=";
+    const ca = document.cookie.split(';');
+    for (let i = 0; i < ca.length; i++) {
+        let c = ca[i];
+        while (c.charAt(0) === ' ') c = ca[i].substring(1, ca[i].length);
+        if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+    }
+    return null;
+}
+
+function isValidWeightUnit(unit) {
+    return unit === 'g' || unit === 'oz';
+}
+
+function changeWeightUnit(unit) {
+    if (!isValidWeightUnit(unit)) {
+        console.warn('Invalid weight unit:', unit, 'Defaulting to grams');
+        unit = 'g';
+    }
+    setCookie('weightUnit', unit);
+}
+
+// Initialize unit preference on page load
+document.addEventListener('DOMContentLoaded', function() {
+    let savedUnit = getCookie('weightUnit') || 'g';
+    
+    if (!isValidWeightUnit(savedUnit)) {
+        savedUnit = 'g';
+        setCookie('weightUnit', 'g');
+    }
+    
+    const selector = document.getElementById('weightUnitSelector');
+    if (selector) {
+        selector.value = savedUnit;
+    }
+});
+</script>
+
+<script>
+// Dropdown functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const dropdown = document.querySelector('.nav-links .dropdown');
+    const dropdownToggle = document.querySelector('.nav-links .dropdown-toggle');
+    const dropdownMenu = document.querySelector('.nav-links .dropdown-menu');
+    
+    if (dropdown && dropdownToggle && dropdownMenu) {
+        // Toggle dropdown on button click
+        dropdownToggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            dropdown.classList.toggle('active');
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!dropdown.contains(e.target)) {
+                dropdown.classList.remove('active');
+            }
+        });
+        
+        // Close dropdown on escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                dropdown.classList.remove('active');
+                dropdownToggle.focus();
+            }
+        });
+        
+        // Handle arrow keys for dropdown navigation
+        dropdownToggle.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                dropdown.classList.add('active');
+                const firstItem = dropdownMenu.querySelector('.dropdown-item');
+                if (firstItem) {
+                    firstItem.focus();
+                }
+            }
+        });
+        
+        // Handle navigation within dropdown
+        const dropdownItems = dropdownMenu.querySelectorAll('.dropdown-item');
+        dropdownItems.forEach((item, index) => {
+            item.addEventListener('keydown', function(e) {
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    const nextIndex = (index + 1) % dropdownItems.length;
+                    dropdownItems[nextIndex].focus();
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    const prevIndex = (index - 1 + dropdownItems.length) % dropdownItems.length;
+                    dropdownItems[prevIndex].focus();
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    dropdown.classList.remove('active');
+                    dropdownToggle.focus();
+                }
+            });
+        });
+    }
+});
+</script>
+</body>
+</html>
+{{end}}

@@ -17,6 +17,8 @@ func SetupRoutes(r *gin.Engine, db *sql.DB) {
 	r.Use(middleware.TrimSpaces())
 
 	r.GET("/", middleware.AuthOptional(db), handleHome)
+	r.GET("/terms", middleware.AuthOptional(db), handleTermsPage)
+	r.GET("/privacy", middleware.AuthOptional(db), handlePrivacyPage)
 	r.GET("/register", handleRegisterPage)
 	r.POST("/register", middleware.AuthRateLimit(), handleRegister)
 	r.GET("/login", handleLoginPage)
@@ -134,6 +136,22 @@ func handleRegisterPage(c *gin.Context) {
 func handleLoginPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "login.html", gin.H{
 		"Title": "Login - Carryless",
+	})
+}
+
+func handleTermsPage(c *gin.Context) {
+	user, _ := c.Get("user")
+	c.HTML(http.StatusOK, "terms.html", gin.H{
+		"Title": "Terms of Service - Carryless",
+		"User":  user,
+	})
+}
+
+func handlePrivacyPage(c *gin.Context) {
+	user, _ := c.Get("user")
+	c.HTML(http.StatusOK, "privacy.html", gin.H{
+		"Title": "Privacy Policy - Carryless",
+		"User":  user,
 	})
 }
 

@@ -1,4 +1,4 @@
-{{define "edit_pack.html"}}
+{{define "terms.html"}}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,7 +8,6 @@
     <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/static/css/style.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <header class="header">
@@ -52,43 +51,59 @@
             <div class="alert alert-error">{{.Error}}</div>
         {{end}}
         
-        <div class="page-header">
-            <h1>Edit Pack</h1>
-            <a href="/packs" class="btn btn-secondary">Back to Packs</a>
-        </div>
-
-        {{if .Pack}}
-        <div class="form-container">
-            <form action="/packs/{{.Pack.ID}}" method="POST" class="form">
-                <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-                <div class="form-group">
-                    <label for="name">Pack Name</label>
-                    <input type="text" id="name" name="name" value="{{.Pack.Name}}" required maxlength="200" placeholder="Enter pack name">
-                </div>
-                
-                <div class="form-group">
-                    <label class="checkbox-label">
-                        <input type="checkbox" name="is_public" value="true" {{if .Pack.IsPublic}}checked{{end}}>
-                        Make this pack public (allows sharing with others)
-                    </label>
-                </div>
-                
-                <div class="form-actions">
-                    <a href="/packs" class="btn btn-secondary">Cancel</a>
-                    <button type="submit" class="btn btn-primary">Update Pack</button>
-                </div>
-            </form>
+        <div class="legal-document">
+            <h1>Terms of Service</h1>
+            <p><strong>Last updated:</strong> September 1, 2025</p>
             
-            <div class="danger-zone">
-                <h3>Danger Zone</h3>
-                <p>Deleting a pack will permanently remove it and all its items.</p>
-                <form action="/packs/{{.Pack.ID}}/delete" method="POST" onsubmit="return confirm('Are you sure you want to delete this pack? This action cannot be undone.')">
-                    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-                    <button type="submit" class="btn btn-danger">Delete Pack</button>
-                </form>
-            </div>
+            <h2>1. Acceptance of Terms</h2>
+            <p>By accessing and using Carryless, you accept and agree to be bound by the terms and provision of this agreement. These terms are governed by European Union law and applicable national legislation.</p>
+            
+            <h2>2. Service Description</h2>
+            <p>Carryless is a free, open-source outdoor gear catalog and pack planner created and maintained by Serac Alpine Gear. The service allows users to:</p>
+            <ul>
+                <li>Catalog outdoor gear with weights, categories, and notes</li>
+                <li>Create and organize packs for different trips</li>
+                <li>Analyze weight distribution by category</li>
+                <li>Share packs publicly with other users</li>
+            </ul>
+            
+            <h2>3. Free Service and Open Source</h2>
+            <p>Carryless is provided free of charge under the MIT License. The source code is available at <a href="https://github.com/eze-kiel/carryless" target="_blank">GitHub</a>. We are committed to keeping this service free forever.</p>
+            
+            <h2>4. Funding Model</h2>
+            <p>This service operates entirely on voluntary donations to Serac Alpine Gear. We do not sell user data, display advertisements, or generate revenue through any other means. Donations help cover infrastructure costs and development time.</p>
+            
+            <h2>5. User Responsibilities</h2>
+            <p>As a user of Carryless, you agree to:</p>
+            <ul>
+                <li>Provide accurate information during registration</li>
+                <li>Use the service in accordance with applicable laws</li>
+                <li>Not attempt to compromise the security of the service</li>
+                <li>Respect other users when sharing public content</li>
+                <li>Not use the service for commercial purposes without explicit permission</li>
+            </ul>
+            
+            <h2>6. Data and Privacy</h2>
+            <p>We collect only the minimum data necessary to provide our service. Please refer to our <a href="/privacy">Privacy Policy</a> for detailed information about how we handle your personal data in compliance with GDPR and other applicable privacy laws.</p>
+            
+            <h2>7. Service Availability</h2>
+            <p>While we strive to maintain high availability, Carryless is provided "as is" without warranties. We may occasionally need to perform maintenance or updates that temporarily affect service availability.</p>
+            
+            <h2>8. Intellectual Property</h2>
+            <p>The Carryless platform is licensed under the MIT License. Users retain ownership of their gear data and pack configurations. By making packs public, users grant other users the right to view and learn from their configurations.</p>
+            
+            <h2>9. Limitation of Liability</h2>
+            <p>To the extent permitted by applicable law, Carryless and Serac Alpine Gear shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of the service.</p>
+            
+            <h2>10. Modifications to Terms</h2>
+            <p>We reserve the right to modify these terms at any time. Users will be notified of significant changes through the platform. Continued use of the service after modifications constitutes acceptance of the updated terms.</p>
+            
+            <h2>11. Governing Law and Jurisdiction</h2>
+            <p>These terms are governed by the laws of the European Union and the applicable national legislation where the service is operated. Any disputes shall be resolved in the competent courts within the EU.</p>
+            
+            <h2>12. Contact Information</h2>
+            <p>For questions about these terms, please contact us through our <a href="https://github.com/eze-kiel/carryless/issues" target="_blank">GitHub repository</a>.</p>
         </div>
-        {{end}}
     </main>
 
     <footer class="footer">
@@ -108,53 +123,53 @@
     </footer>
 
     <script src="/static/js/app.js"></script>
+
+<script>
+// Weight unit cookie management (for consistency across pages)
+function setCookie(name, value, days = 365) {
+    const expires = new Date();
+    expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
+    document.cookie = name + '=' + value + ';expires=' + expires.toUTCString() + ';path=/';
+}
+
+function getCookie(name) {
+    const nameEQ = name + "=";
+    const ca = document.cookie.split(';');
+    for (let i = 0; i < ca.length; i++) {
+        let c = ca[i];
+        while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+        if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+    }
+    return null;
+}
+
+function isValidWeightUnit(unit) {
+    return unit === 'g' || unit === 'oz';
+}
+
+function changeWeightUnit(unit) {
+    if (!isValidWeightUnit(unit)) {
+        console.warn('Invalid weight unit:', unit, 'Defaulting to grams');
+        unit = 'g';
+    }
+    setCookie('weightUnit', unit);
+}
+
+// Initialize unit preference on page load
+document.addEventListener('DOMContentLoaded', function() {
+    let savedUnit = getCookie('weightUnit') || 'g';
     
-    <script>
-    // Weight unit cookie management (for consistency across pages)
-    function setCookie(name, value, days = 365) {
-        const expires = new Date();
-        expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
-        document.cookie = name + '=' + value + ';expires=' + expires.toUTCString() + ';path=/';
+    if (!isValidWeightUnit(savedUnit)) {
+        savedUnit = 'g';
+        setCookie('weightUnit', 'g');
     }
     
-    function getCookie(name) {
-        const nameEQ = name + "=";
-        const ca = document.cookie.split(';');
-        for (let i = 0; i < ca.length; i++) {
-            let c = ca[i];
-            while (c.charAt(0) === ' ') c = c.substring(1, c.length);
-            if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
-        }
-        return null;
+    const selector = document.getElementById('weightUnitSelector');
+    if (selector) {
+        selector.value = savedUnit;
     }
-    
-    function isValidWeightUnit(unit) {
-        return unit === 'g' || unit === 'oz';
-    }
-    
-    function changeWeightUnit(unit) {
-        if (!isValidWeightUnit(unit)) {
-            console.warn('Invalid weight unit:', unit, 'Defaulting to grams');
-            unit = 'g';
-        }
-        setCookie('weightUnit', unit);
-    }
-    
-    // Initialize unit preference on page load
-    document.addEventListener('DOMContentLoaded', function() {
-        let savedUnit = getCookie('weightUnit') || 'g';
-        
-        if (!isValidWeightUnit(savedUnit)) {
-            savedUnit = 'g';
-            setCookie('weightUnit', 'g');
-        }
-        
-        const selector = document.getElementById('weightUnitSelector');
-        if (selector) {
-            selector.value = savedUnit;
-        }
-    });
-    </script>
+});
+</script>
 
 <script>
 // Dropdown functionality
