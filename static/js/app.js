@@ -102,7 +102,7 @@ function showToast(message, type = 'info') {
     
     // Type-specific styling
     const colors = {
-        info: '#007bff',
+        info: '#004aad',
         success: '#28a745',
         warning: '#ffc107',
         error: '#dc3545'
