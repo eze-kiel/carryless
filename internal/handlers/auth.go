@@ -2,11 +2,13 @@ package handlers
 
 import (
 	"database/sql"
+	"log"
 	"net/http"
 	"regexp"
 	"strings"
 
 	"carryless/internal/database"
+	emailService "carryless/internal/email"
 
 	"github.com/gin-gonic/gin"
 )
@@ -85,6 +87,13 @@ func handleRegister(c *gin.Context) {
 			"RegistrationEnabled": true,
 		})
 		return
+	}
+
+	emailSvc, _ := c.Get("email_service")
+	if service, ok := emailSvc.(*emailService.Service); ok && service.IsEnabled() {
+		if err := service.SendWelcomeEmail(user); err != nil {
+			log.Printf("Failed to send welcome email to %s: %v", user.Email, err)
+		}
 	}
 
 	session, err := database.CreateSession(db, user.ID)

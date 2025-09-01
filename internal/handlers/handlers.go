@@ -5,15 +5,17 @@ import (
 	"net/http"
 
 	"carryless/internal/database"
+	"carryless/internal/email"
 	"carryless/internal/middleware"
 
 	"github.com/gin-gonic/gin"
 )
 
-func SetupRoutes(r *gin.Engine, db *sql.DB) {
+func SetupRoutes(r *gin.Engine, db *sql.DB, emailService *email.Service) {
 	r.Use(middleware.LogRequests())
 	r.Use(middleware.SecurityHeaders())
 	r.Use(middleware.AddDBContext(db))
+	r.Use(addEmailServiceContext(emailService))
 	r.Use(middleware.TrimSpaces())
 
 	r.GET("/", middleware.AuthOptional(db), handleHome)
@@ -153,6 +155,13 @@ func handlePrivacyPage(c *gin.Context) {
 		"Title": "Privacy Policy - Carryless",
 		"User":  user,
 	})
+}
+
+func addEmailServiceContext(emailService *email.Service) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Set("email_service", emailService)
+		c.Next()
+	}
 }
 
 func handleDashboard(c *gin.Context) {

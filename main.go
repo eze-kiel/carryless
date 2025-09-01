@@ -8,6 +8,7 @@ import (
 
 	"carryless/internal/config"
 	"carryless/internal/database"
+	"carryless/internal/email"
 	"carryless/internal/handlers"
 	"carryless/internal/middleware"
 	"carryless/internal/models"
@@ -26,6 +27,13 @@ func main() {
 
 	if err := database.Migrate(db); err != nil {
 		log.Fatal("Failed to run migrations:", err)
+	}
+
+	emailService := email.NewService(cfg)
+	if emailService.IsEnabled() {
+		log.Println("Email service enabled with Mailgun")
+	} else {
+		log.Println("Email service disabled - Mailgun not configured")
 	}
 
 	r := gin.Default()
@@ -101,7 +109,7 @@ func main() {
 	r.Use(middleware.CORS(cfg.AllowedOrigins))
 	r.Use(middleware.RateLimit())
 
-	handlers.SetupRoutes(r, db)
+	handlers.SetupRoutes(r, db, emailService)
 
 	log.Printf("Server starting on port %s", cfg.Port)
 	log.Fatal(r.Run(":" + cfg.Port))
