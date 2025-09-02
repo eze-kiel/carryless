@@ -45,14 +45,14 @@ func (s *Service) IsEnabled() bool {
 	return s.enabled
 }
 
-func (s *Service) SendWelcomeEmail(user *models.User) error {
+func (s *Service) SendWelcomeEmail(user *models.User, activationToken string) error {
 	if !s.enabled {
 		return fmt.Errorf("email service is not configured")
 	}
 
-	subject := fmt.Sprintf("Welcome to Carryless, %s!", user.Username)
-	htmlBody := s.generateWelcomeHTML(user)
-	textBody := s.generateWelcomeText(user)
+	subject := fmt.Sprintf("Welcome to Carryless, %s! Please activate your account", user.Username)
+	htmlBody := s.generateWelcomeHTML(user, activationToken)
+	textBody := s.generateWelcomeText(user, activationToken)
 
 	message := mailgun.NewMessage(
 		s.domain,

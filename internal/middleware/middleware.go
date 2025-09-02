@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"carryless/internal/database"
+	"carryless/internal/models"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/time/rate"
@@ -252,6 +253,30 @@ func TrimSpaces() gin.HandlerFunc {
 				}
 			}
 		}
+		c.Next()
+	}
+}
+
+func RequireActivation() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		user, exists := c.Get("user")
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+			c.Abort()
+			return
+		}
+
+		userModel := user.(*models.User)
+		if !userModel.IsActivated {
+			c.HTML(http.StatusForbidden, "activation_required.html", gin.H{
+				"Title": "Account Activation Required - Carryless",
+				"User":  userModel,
+				"Message": "Please check your email and click the activation link to complete your account setup before accessing this feature.",
+			})
+			c.Abort()
+			return
+		}
+
 		c.Next()
 	}
 }

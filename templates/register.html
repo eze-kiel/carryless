@@ -52,6 +52,10 @@
             <div class="alert alert-error">{{.Error}}</div>
         {{end}}
         
+        {{if .Success}}
+            <div class="alert alert-success">{{.Success}}</div>
+        {{end}}
+        
         <div class="auth-container">
             {{if eq .RegistrationEnabled false}}
                 <div class="auth-form">

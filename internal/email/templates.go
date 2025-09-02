@@ -5,7 +5,7 @@ import (
 	"carryless/internal/models"
 )
 
-func (s *Service) generateWelcomeHTML(user *models.User) string {
+func (s *Service) generateWelcomeHTML(user *models.User, activationToken string) string {
 	return fmt.Sprintf(`
 <!DOCTYPE html>
 <html>
@@ -77,6 +77,14 @@ func (s *Service) generateWelcomeHTML(user *models.User) string {
         <div class="content">
             <p>Thank you for joining Carryless, the ultimate outdoor gear catalog and pack planner!</p>
             
+            <p><strong>To complete your registration and start using Carryless, please activate your account by clicking the link below:</strong></p>
+            
+            <p style="text-align: center; margin: 30px 0;">
+                <a href="https://carryless.org/activate/%s" class="cta-button">Activate Your Account</a>
+            </p>
+            
+            <p style="font-size: 14px; color: #6c757d;">This activation link will expire in 24 hours.</p>
+            
             <p>With Carryless, you can:</p>
             <ul>
                 <li>📦 Organize your outdoor gear inventory</li>
@@ -84,12 +92,6 @@ func (s *Service) generateWelcomeHTML(user *models.User) string {
                 <li>⚖️ Track weights and analyze pack distribution</li>
                 <li>🌍 Share your pack lists with the community</li>
             </ul>
-            
-            <p>Ready to start planning your next adventure?</p>
-            
-            <p style="text-align: center; margin: 30px 0;">
-                <a href="https://carryless.org/dashboard" class="cta-button">Start Organizing Your Gear</a>
-            </p>
         </div>
         
         <div class="footer">
@@ -101,13 +103,18 @@ func (s *Service) generateWelcomeHTML(user *models.User) string {
         </div>
     </div>
 </body>
-</html>`, user.Username, user.Email)
+</html>`, user.Username, activationToken, user.Email)
 }
 
-func (s *Service) generateWelcomeText(user *models.User) string {
+func (s *Service) generateWelcomeText(user *models.User, activationToken string) string {
 	return fmt.Sprintf(`Welcome %s!
 
 Thank you for joining Carryless, the ultimate outdoor gear catalog and pack planner!
+
+To complete your registration and start using Carryless, please activate your account by visiting:
+https://carryless.org/activate/%s
+
+This activation link will expire in 24 hours.
 
 With Carryless, you can:
 - Organize your outdoor gear inventory
@@ -115,14 +122,11 @@ With Carryless, you can:
 - Track weights and analyze pack distribution
 - Share your pack lists with the community
 
-Ready to start planning your next adventure? Visit your dashboard at:
-https://carryless.org/dashboard
-
 Happy trails!
 The Carryless Team
 
 ---
-This email was sent to %s. If you have any questions, feel free to reach out to us.`, user.Username, user.Email)
+This email was sent to %s. If you have any questions, feel free to reach out to us.`, user.Username, activationToken, user.Email)
 }
 
 func (s *Service) generateAdminNotificationHTML(admin *models.User, newUser *models.User) string {

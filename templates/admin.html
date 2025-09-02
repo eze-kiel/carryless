@@ -92,6 +92,7 @@
                                 <th>Username</th>
                                 <th>Email</th>
                                 <th>Admin</th>
+                                <th>Activated</th>
                                 <th>Packs</th>
                                 <th>Created At</th>
                                 <th>Actions</th>
@@ -104,6 +105,7 @@
                                 <td>{{.Username}}</td>
                                 <td>{{redactEmail .Email}}</td>
                                 <td>{{if .IsAdmin}}Yes{{else}}No{{end}}</td>
+                                <td>{{if .IsActivated}}<span style="color: green;">Yes</span>{{else}}<span style="color: red;">No</span>{{end}}</td>
                                 <td>{{.PackCount}}</td>
                                 <td>{{.CreatedAt.Format "2006-01-02 15:04:05"}}</td>
                                 <td>
@@ -119,6 +121,9 @@
                                             <div class="dropdown-menu">
                                                 <a href="#" class="dropdown-item" onclick="toggleAdmin({{.ID}})">
                                                     {{if .IsAdmin}}Remove Admin{{else}}Make Admin{{end}}
+                                                </a>
+                                                <a href="#" class="dropdown-item" onclick="toggleActivation({{.ID}})">
+                                                    {{if .IsActivated}}Deactivate User{{else}}Activate User{{end}}
                                                 </a>
                                                 <a href="#" class="dropdown-item dropdown-item-danger" onclick="banUser({{.ID}}, '{{.Username}}')">
                                                     Ban User
@@ -245,6 +250,31 @@ document.addEventListener('DOMContentLoaded', function() {
                 .catch(error => {
                     console.error('Error:', error);
                     alert('An error occurred while toggling admin status');
+                });
+            }
+        }
+
+        function toggleActivation(userId) {
+            if (confirm('Are you sure you want to toggle activation status for this user?')) {
+                fetch(`/admin/users/${userId}/toggle-activation`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': '{{.CSRFToken}}'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert('Error: ' + data.error);
+                    } else {
+                        alert(data.message);
+                        location.reload();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while toggling activation status');
                 });
             }
         }

@@ -11,6 +11,7 @@ type User struct {
 	PasswordHash string    `json:"-" db:"password_hash"`
 	Currency     string    `json:"currency" db:"currency"`
 	IsAdmin      bool      `json:"is_admin" db:"is_admin"`
+	IsActivated  bool      `json:"is_activated" db:"is_activated"`
 	CreatedAt    time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at" db:"updated_at"`
 }
@@ -70,6 +71,13 @@ type Session struct {
 }
 
 type CSRFToken struct {
+	Token     string    `json:"token" db:"token"`
+	UserID    int       `json:"user_id" db:"user_id"`
+	ExpiresAt time.Time `json:"expires_at" db:"expires_at"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
+}
+
+type ActivationToken struct {
 	Token     string    `json:"token" db:"token"`
 	UserID    int       `json:"user_id" db:"user_id"`
 	ExpiresAt time.Time `json:"expires_at" db:"expires_at"`

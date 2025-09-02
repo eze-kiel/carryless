@@ -1,0 +1,103 @@
+{{define "activation_required.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}}</title>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <header class="header">
+        <nav class="nav">
+            <div class="nav-brand">
+                <a href="/">Carryless</a>
+            </div>
+            <div class="nav-links">
+                {{if .User}}
+                    <a href="/dashboard">Dashboard</a>
+                    <a href="/account">Account</a>
+                    <form class="logout-form" action="/logout" method="POST">
+                        <button type="submit" class="btn btn-secondary">Logout</button>
+                    </form>
+                {{else}}
+                    <a href="/login">Login</a>
+                    <a href="/register">Register</a>
+                {{end}}
+            </div>
+        </nav>
+    </header>
+
+    <main class="main">
+        <div class="container">
+            <div class="form-container">
+                <div class="form-header">
+                    <h1><i class="fas fa-envelope"></i> Account Activation Required</h1>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <i class="fas fa-info-circle"></i>
+                    {{.Message}}
+                </div>
+
+                <div class="activation-instructions">
+                    <h2>What to do next:</h2>
+                    <ol>
+                        <li>Check your email inbox for the activation message</li>
+                        <li>Click the activation link in the email</li>
+                        <li>Return to this site and log in again</li>
+                    </ol>
+                    
+                    <p><strong>Didn't receive the email?</strong> Check your spam folder or contact support.</p>
+                </div>
+                
+                <div style="text-align: center; margin-top: 2rem;">
+                    <a href="/dashboard" class="btn btn-primary">Back to Dashboard</a>
+                    <a href="/" class="btn btn-secondary">Back to Home</a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <p>Built with love by Serac Alpine Gear. Free and <a href="https://github.com/eze-kiel/carryless">open-source</a>, forever.</p>
+        </div>
+    </footer>
+
+    <style>
+    .activation-instructions {
+        background: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 8px;
+        border-left: 4px solid #007bff;
+        margin: 2rem 0;
+    }
+
+    .activation-instructions h2 {
+        color: #495057;
+        margin-bottom: 1rem;
+        font-size: 1.2rem;
+    }
+
+    .activation-instructions ol {
+        margin-bottom: 1rem;
+        padding-left: 1.5rem;
+    }
+
+    .activation-instructions li {
+        margin-bottom: 0.5rem;
+        line-height: 1.4;
+    }
+
+    .activation-instructions p {
+        color: #6c757d;
+        font-style: italic;
+        margin: 0;
+    }
+    </style>
+</body>
+</html>
+{{end}}

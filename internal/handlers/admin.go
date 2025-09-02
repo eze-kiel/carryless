@@ -118,3 +118,27 @@ func handleToggleRegistration(c *gin.Context) {
 	
 	c.JSON(http.StatusOK, gin.H{"message": "Registration setting toggled successfully"})
 }
+
+func handleToggleUserActivation(c *gin.Context) {
+	db := c.MustGet("db").(*sql.DB)
+	
+	// Get user ID from URL parameter
+	userIDStr := c.Param("id")
+	userID, err := strconv.Atoi(userIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+	
+	err = database.ToggleUserActivation(db, userID)
+	if err != nil {
+		if err.Error() == "user not found" {
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to toggle user activation"})
+		}
+		return
+	}
+	
+	c.JSON(http.StatusOK, gin.H{"message": "User activation status toggled successfully"})
+}

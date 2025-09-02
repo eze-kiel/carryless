@@ -14,14 +14,15 @@ type AdminStats struct {
 }
 
 type UserWithStats struct {
-	ID        int       `json:"id"`
-	Username  string    `json:"username"`
-	Email     string    `json:"email"`
-	Currency  string    `json:"currency"`
-	IsAdmin   bool      `json:"is_admin"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	PackCount int       `json:"pack_count"`
+	ID          int       `json:"id"`
+	Username    string    `json:"username"`
+	Email       string    `json:"email"`
+	Currency    string    `json:"currency"`
+	IsAdmin     bool      `json:"is_admin"`
+	IsActivated bool      `json:"is_activated"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	PackCount   int       `json:"pack_count"`
 }
 
 func GetAdminStats(db *sql.DB) (*AdminStats, error) {
@@ -44,7 +45,7 @@ func GetAdminStats(db *sql.DB) (*AdminStats, error) {
 
 func GetAllUsers(db *sql.DB) ([]models.User, error) {
 	query := `
-		SELECT id, username, email, COALESCE(currency, '$'), COALESCE(is_admin, false), created_at, updated_at
+		SELECT id, username, email, COALESCE(currency, '$'), COALESCE(is_admin, false), COALESCE(is_activated, false), created_at, updated_at
 		FROM users
 		ORDER BY created_at ASC
 	`
@@ -64,6 +65,7 @@ func GetAllUsers(db *sql.DB) ([]models.User, error) {
 			&user.Email,
 			&user.Currency,
 			&user.IsAdmin,
+			&user.IsActivated,
 			&user.CreatedAt,
 			&user.UpdatedAt,
 		)
@@ -88,12 +90,13 @@ func GetAllUsersWithStats(db *sql.DB) ([]UserWithStats, error) {
 			u.email, 
 			COALESCE(u.currency, '$'), 
 			COALESCE(u.is_admin, false), 
+			COALESCE(u.is_activated, false), 
 			u.created_at, 
 			u.updated_at,
 			COUNT(p.id) as pack_count
 		FROM users u
 		LEFT JOIN packs p ON u.id = p.user_id
-		GROUP BY u.id, u.username, u.email, u.currency, u.is_admin, u.created_at, u.updated_at
+		GROUP BY u.id, u.username, u.email, u.currency, u.is_admin, u.is_activated, u.created_at, u.updated_at
 		ORDER BY u.created_at ASC
 	`
 	
@@ -112,6 +115,7 @@ func GetAllUsersWithStats(db *sql.DB) ([]UserWithStats, error) {
 			&user.Email,
 			&user.Currency,
 			&user.IsAdmin,
+			&user.IsActivated,
 			&user.CreatedAt,
 			&user.UpdatedAt,
 			&user.PackCount,
@@ -210,7 +214,7 @@ func IsRegistrationEnabled(db *sql.DB) (bool, error) {
 
 func GetAllAdmins(db *sql.DB) ([]models.User, error) {
 	query := `
-		SELECT id, username, email, COALESCE(currency, '$'), COALESCE(is_admin, false), created_at, updated_at
+		SELECT id, username, email, COALESCE(currency, '$'), COALESCE(is_admin, false), COALESCE(is_activated, false), created_at, updated_at
 		FROM users
 		WHERE COALESCE(is_admin, false) = true
 		ORDER BY username ASC
@@ -231,6 +235,7 @@ func GetAllAdmins(db *sql.DB) ([]models.User, error) {
 			&admin.Email,
 			&admin.Currency,
 			&admin.IsAdmin,
+			&admin.IsActivated,
 			&admin.CreatedAt,
 			&admin.UpdatedAt,
 		)
@@ -253,5 +258,24 @@ func ToggleRegistration(db *sql.DB) error {
 	if err != nil {
 		return fmt.Errorf("failed to toggle registration setting: %w", err)
 	}
+	return nil
+}
+
+func ToggleUserActivation(db *sql.DB, userID int) error {
+	query := `UPDATE users SET is_activated = NOT COALESCE(is_activated, false), updated_at = CURRENT_TIMESTAMP WHERE id = ?`
+	result, err := db.Exec(query, userID)
+	if err != nil {
+		return fmt.Errorf("failed to toggle user activation: %w", err)
+	}
+	
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get affected rows: %w", err)
+	}
+	
+	if rowsAffected == 0 {
+		return fmt.Errorf("user not found")
+	}
+	
 	return nil
 }

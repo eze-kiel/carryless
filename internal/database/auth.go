@@ -9,6 +9,7 @@ import (
 
 	"carryless/internal/models"
 
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -28,11 +29,11 @@ func CreateUser(db *sql.DB, username, email, password string) (*models.User, err
 	isAdmin := userCount == 0 // First user becomes admin
 
 	query := `
-		INSERT INTO users (username, email, password_hash, is_admin)
-		VALUES (?, ?, ?, ?)
+		INSERT INTO users (username, email, password_hash, is_admin, is_activated)
+		VALUES (?, ?, ?, ?, ?)
 	`
 
-	result, err := db.Exec(query, username, email, string(hashedPassword), isAdmin)
+	result, err := db.Exec(query, username, email, string(hashedPassword), isAdmin, false)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
@@ -48,6 +49,7 @@ func CreateUser(db *sql.DB, username, email, password string) (*models.User, err
 		Email:        email,
 		PasswordHash: string(hashedPassword),
 		IsAdmin:      isAdmin,
+		IsActivated:  false,
 		CreatedAt:    time.Now(),
 		UpdatedAt:    time.Now(),
 	}
@@ -58,7 +60,7 @@ func CreateUser(db *sql.DB, username, email, password string) (*models.User, err
 func AuthenticateUser(db *sql.DB, email, password string) (*models.User, error) {
 	user := &models.User{}
 	query := `
-		SELECT id, username, email, password_hash, COALESCE(is_admin, false), created_at, updated_at
+		SELECT id, username, email, password_hash, COALESCE(is_admin, false), COALESCE(is_activated, false), created_at, updated_at
 		FROM users
 		WHERE email = ?
 	`
@@ -69,6 +71,7 @@ func AuthenticateUser(db *sql.DB, email, password string) (*models.User, error) 
 		&user.Email,
 		&user.PasswordHash,
 		&user.IsAdmin,
+		&user.IsActivated,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	)
@@ -118,7 +121,7 @@ func CreateSession(db *sql.DB, userID int) (*models.Session, error) {
 func ValidateSession(db *sql.DB, sessionID string) (*models.User, error) {
 	user := &models.User{}
 	query := `
-		SELECT u.id, u.username, u.email, COALESCE(u.currency, '$'), COALESCE(u.is_admin, false), u.created_at, u.updated_at
+		SELECT u.id, u.username, u.email, COALESCE(u.currency, '$'), COALESCE(u.is_admin, false), COALESCE(u.is_activated, false), u.created_at, u.updated_at
 		FROM users u
 		INNER JOIN sessions s ON u.id = s.user_id
 		WHERE s.id = ? AND s.expires_at > CURRENT_TIMESTAMP
@@ -130,6 +133,7 @@ func ValidateSession(db *sql.DB, sessionID string) (*models.User, error) {
 		&user.Email,
 		&user.Currency,
 		&user.IsAdmin,
+		&user.IsActivated,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	)
@@ -287,4 +291,92 @@ func generateSecureToken() (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(bytes), nil
+}
+
+func CreateActivationToken(db *sql.DB, userID int) (*models.ActivationToken, error) {
+	tokenUUID := uuid.New().String()
+	expiresAt := time.Now().Add(24 * time.Hour)
+
+	query := `
+		INSERT INTO activation_tokens (token, user_id, expires_at)
+		VALUES (?, ?, ?)
+	`
+
+	_, err := db.Exec(query, tokenUUID, userID, expiresAt)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create activation token: %w", err)
+	}
+
+	token := &models.ActivationToken{
+		Token:     tokenUUID,
+		UserID:    userID,
+		ExpiresAt: expiresAt,
+		CreatedAt: time.Now(),
+	}
+
+	return token, nil
+}
+
+func ValidateActivationToken(db *sql.DB, token string) (*models.User, error) {
+	query := `
+		SELECT u.id, u.username, u.email, u.password_hash, COALESCE(u.is_admin, false), COALESCE(u.is_activated, false), u.created_at, u.updated_at
+		FROM users u
+		JOIN activation_tokens at ON u.id = at.user_id
+		WHERE at.token = ? AND at.expires_at > CURRENT_TIMESTAMP
+	`
+
+	user := &models.User{}
+	err := db.QueryRow(query, token).Scan(
+		&user.ID,
+		&user.Username,
+		&user.Email,
+		&user.PasswordHash,
+		&user.IsAdmin,
+		&user.IsActivated,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("activation token not found or expired")
+		}
+		return nil, fmt.Errorf("failed to validate activation token: %w", err)
+	}
+
+	return user, nil
+}
+
+func ActivateUser(db *sql.DB, userID int, token string) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	updateUserQuery := `UPDATE users SET is_activated = TRUE WHERE id = ?`
+	_, err = tx.Exec(updateUserQuery, userID)
+	if err != nil {
+		return fmt.Errorf("failed to activate user: %w", err)
+	}
+
+	deleteTokenQuery := `DELETE FROM activation_tokens WHERE token = ?`
+	_, err = tx.Exec(deleteTokenQuery, token)
+	if err != nil {
+		return fmt.Errorf("failed to delete activation token: %w", err)
+	}
+
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit activation: %w", err)
+	}
+
+	return nil
+}
+
+func CleanupExpiredActivationTokens(db *sql.DB) error {
+	query := `DELETE FROM activation_tokens WHERE expires_at < CURRENT_TIMESTAMP`
+	_, err := db.Exec(query)
+	if err != nil {
+		return fmt.Errorf("failed to cleanup expired activation tokens: %w", err)
+	}
+	return nil
 }

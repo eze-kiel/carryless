@@ -90,9 +90,21 @@ func handleRegister(c *gin.Context) {
 		return
 	}
 
+	// Create activation token
+	activationToken, err := database.CreateActivationToken(db, user.ID)
+	if err != nil {
+		log.Printf("Failed to create activation token for user %s: %v", user.Email, err)
+		c.HTML(http.StatusInternalServerError, "register.html", gin.H{
+			"Title":               "Register - Carryless",
+			"Errors":              map[string]string{"general": "Failed to complete registration. Please try again."},
+			"RegistrationEnabled": true,
+		})
+		return
+	}
+
 	emailSvc, _ := c.Get("email_service")
 	if service, ok := emailSvc.(*emailService.Service); ok && service.IsEnabled() {
-		if err := service.SendWelcomeEmail(user); err != nil {
+		if err := service.SendWelcomeEmail(user, activationToken.Token); err != nil {
 			log.Printf("Failed to send welcome email to %s: %v", user.Email, err)
 		}
 		
@@ -115,18 +127,12 @@ func handleRegister(c *gin.Context) {
 		}
 	}
 
-	session, err := database.CreateSession(db, user.ID)
-	if err != nil {
-		c.HTML(http.StatusInternalServerError, "register.html", gin.H{
-			"Title":  "Register - Carryless",
-			"Errors": map[string]string{"general": "Failed to create session. Please try logging in."},
-		})
-		return
-	}
-
-	c.SetSameSite(http.SameSiteStrictMode)
-	c.SetCookie("session_id", session.ID, 86400, "/", "", true, true)
-	c.Redirect(http.StatusFound, "/dashboard")
+	// Redirect to a success page instead of logging in the user
+	c.HTML(http.StatusOK, "register.html", gin.H{
+		"Title":               "Registration Complete - Carryless",
+		"Success":             "Registration successful! Please check your email and click the activation link to complete your account setup.",
+		"RegistrationEnabled": true,
+	})
 }
 
 func handleLogin(c *gin.Context) {
@@ -202,4 +208,62 @@ func handleCSRFToken(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"token": token.Token})
+}
+
+func handleActivate(c *gin.Context) {
+	token := c.Param("token")
+	if token == "" {
+		c.HTML(http.StatusBadRequest, "activation_result.html", gin.H{
+			"Title":   "Invalid Activation Link - Carryless",
+			"Success": false,
+			"Message": "Invalid activation link. Please check the link in your email and try again.",
+		})
+		return
+	}
+
+	db := c.MustGet("db").(*sql.DB)
+	
+	// Validate the activation token
+	user, err := database.ValidateActivationToken(db, token)
+	if err != nil {
+		log.Printf("Failed to validate activation token %s: %v", token, err)
+		c.HTML(http.StatusBadRequest, "activation_result.html", gin.H{
+			"Title":   "Activation Failed - Carryless",
+			"Success": false,
+			"Message": "This activation link is invalid or has expired. Please register again or contact support.",
+		})
+		return
+	}
+
+	// Check if user is already activated
+	if user.IsActivated {
+		c.HTML(http.StatusOK, "activation_result.html", gin.H{
+			"Title":   "Already Activated - Carryless",
+			"Success": true,
+			"Message": "Your account is already activated! You can now log in to access all features.",
+		})
+		return
+	}
+
+	// Activate the user
+	err = database.ActivateUser(db, user.ID, token)
+	if err != nil {
+		log.Printf("Failed to activate user %d with token %s: %v", user.ID, token, err)
+		c.HTML(http.StatusInternalServerError, "activation_result.html", gin.H{
+			"Title":   "Activation Error - Carryless",
+			"Success": false,
+			"Message": "There was an error activating your account. Please try again or contact support.",
+		})
+		return
+	}
+
+	log.Printf("User %s (ID: %d) successfully activated", user.Email, user.ID)
+	
+	// Success - user is now activated
+	c.HTML(http.StatusOK, "activation_result.html", gin.H{
+		"Title":   "Account Activated - Carryless",
+		"Success": true,
+		"Message": "Congratulations! Your account has been successfully activated. You can now log in and start using all features of Carryless.",
+		"ShowLoginButton": true,
+	})
 }

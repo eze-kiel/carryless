@@ -151,6 +151,16 @@ func Migrate(db *sql.DB) error {
 		return fmt.Errorf("failed to add short_id column to packs: %w", err)
 	}
 
+	// Add is_activated column to users table and create activation_tokens table
+	if err := addUserActivationColumn(db); err != nil {
+		return fmt.Errorf("failed to add activation column to users: %w", err)
+	}
+
+	// Create activation tokens table if it doesn't exist
+	if err := createActivationTokensTable(db); err != nil {
+		return fmt.Errorf("failed to create activation_tokens table: %w", err)
+	}
+
 	return nil
 }
 
@@ -615,4 +625,69 @@ func generateUniqueShortID(db *sql.DB, charset string, idLength int) (string, er
 	}
 	
 	return "", fmt.Errorf("failed to generate unique short ID after %d attempts", maxRetries)
+}
+
+func addUserActivationColumn(db *sql.DB) error {
+	rows, err := db.Query("PRAGMA table_info(users)")
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	hasActivated := false
+	for rows.Next() {
+		var cid int
+		var name, dataType, notNull, defaultValue, pk string
+		err := rows.Scan(&cid, &name, &dataType, &notNull, &defaultValue, &pk)
+		if err != nil {
+			continue
+		}
+		if name == "is_activated" {
+			hasActivated = true
+			break
+		}
+	}
+
+	if !hasActivated {
+		_, err = db.Exec("ALTER TABLE users ADD COLUMN is_activated BOOLEAN DEFAULT FALSE")
+		if err != nil {
+			return err
+		}
+		
+		_, err = db.Exec("UPDATE users SET is_activated = TRUE")
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func createActivationTokensTable(db *sql.DB) error {
+	query := `CREATE TABLE IF NOT EXISTS activation_tokens (
+		token TEXT PRIMARY KEY,
+		user_id INTEGER NOT NULL,
+		expires_at DATETIME NOT NULL,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+	)`
+	
+	_, err := db.Exec(query)
+	if err != nil {
+		return err
+	}
+
+	indexQuery := `CREATE INDEX IF NOT EXISTS idx_activation_tokens_user_id ON activation_tokens(user_id)`
+	_, err = db.Exec(indexQuery)
+	if err != nil {
+		return err
+	}
+
+	expireIndexQuery := `CREATE INDEX IF NOT EXISTS idx_activation_tokens_expires_at ON activation_tokens(expires_at)`
+	_, err = db.Exec(expireIndexQuery)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
