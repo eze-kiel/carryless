@@ -16,6 +16,8 @@ type UserStats struct {
 	ItemsToVerify   int     `json:"items_to_verify"`
 	LightestPack    *models.Pack `json:"lightest_pack,omitempty"`
 	LightestWeight  int     `json:"lightest_weight"`
+	HeaviestPack    *models.Pack `json:"heaviest_pack,omitempty"`
+	HeaviestWeight  int     `json:"heaviest_weight"`
 }
 
 type RecentPack struct {
@@ -88,6 +90,33 @@ func GetUserStats(db *sql.DB, userID int) (*UserStats, error) {
 	if err == nil {
 		stats.LightestPack = &lightestPack
 		stats.LightestWeight = lightestWeight
+	}
+	
+	// Get heaviest pack
+	heaviestQuery := `
+		SELECT 
+			p.id, 
+			p.name,
+			COALESCE(SUM(CASE WHEN pi.is_worn = 0 THEN i.weight_grams * pi.count ELSE 0 END), 0) as pack_weight
+		FROM packs p
+		LEFT JOIN pack_items pi ON p.id = pi.pack_id
+		LEFT JOIN items i ON pi.item_id = i.id
+		WHERE p.user_id = ?
+		GROUP BY p.id, p.name
+		HAVING COUNT(pi.item_id) > 0
+		ORDER BY pack_weight DESC
+		LIMIT 1
+	`
+	
+	var heaviestPack models.Pack
+	var heaviestWeight int
+	err = db.QueryRow(heaviestQuery, userID).Scan(&heaviestPack.ID, &heaviestPack.Name, &heaviestWeight)
+	if err != nil && err != sql.ErrNoRows {
+		return nil, fmt.Errorf("failed to get heaviest pack: %w", err)
+	}
+	if err == nil {
+		stats.HeaviestPack = &heaviestPack
+		stats.HeaviestWeight = heaviestWeight
 	}
 	
 	return stats, nil

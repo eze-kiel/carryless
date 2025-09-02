@@ -60,7 +60,7 @@
             <div class="stats-grid">
                 <div class="stat-card-mini">
                     <div class="stat-icon">
-                        <i class="fas fa-hiking"></i>
+                        <i class="fas fa-suitcase"></i>
                     </div>
                     <div class="stat-content">
                         <div class="stat-number">{{.Stats.TotalPacks}}</div>
@@ -109,7 +109,7 @@
                             <i class="fas fa-plus"></i> Add Gear Item
                         </a>
                         <a href="/packs" class="btn btn-secondary">
-                            <i class="fas fa-backpack"></i> Browse My Packs
+                            <i class="fas fa-suitcase"></i> Browse My Packs
                         </a>
                         <a href="/categories" class="btn btn-secondary">
                             <i class="fas fa-tags"></i> Manage Categories
@@ -153,7 +153,7 @@
                             </div>
                         {{else}}
                             <div class="empty-state">
-                                <i class="fas fa-backpack empty-icon"></i>
+                                <i class="fas fa-suitcase empty-icon"></i>
                                 <p>No packs yet</p>
                                 <a href="/packs/new" class="btn btn-primary">Create Your First Pack</a>
                             </div>
@@ -177,6 +177,21 @@
                                         <div class="insight-detail">
                                             <strong>{{.Stats.LightestPack.Name}}</strong>
                                             <span class="weight" data-weight="{{.Stats.LightestWeight}}">{{.Stats.LightestWeight}}g</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            {{end}}
+                            
+                            {{if .Stats.HeaviestPack}}
+                                <div class="insight-item">
+                                    <div class="insight-icon">
+                                        <i class="fas fa-dumbbell"></i>
+                                    </div>
+                                    <div class="insight-content">
+                                        <div class="insight-title">Heaviest Pack</div>
+                                        <div class="insight-detail">
+                                            <strong>{{.Stats.HeaviestPack.Name}}</strong>
+                                            <span class="weight" data-weight="{{.Stats.HeaviestWeight}}">{{.Stats.HeaviestWeight}}g</span>
                                         </div>
                                     </div>
                                 </div>
