@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"database/sql"
+	"log"
 	"net/http"
 
 	"carryless/internal/database"
@@ -165,12 +166,17 @@ func addEmailServiceContext(emailService *email.Service) gin.HandlerFunc {
 }
 
 func handleDashboard(c *gin.Context) {
+	log.Println("Dashboard handler started")
+	
 	userID := c.MustGet("user_id").(int)
 	db := c.MustGet("db").(*sql.DB)
 	user := c.MustGet("user")
+	
+	log.Printf("Dashboard: userID=%d, user=%+v", userID, user)
 
 	csrfToken, err := database.CreateCSRFToken(db, userID)
 	if err != nil {
+		log.Printf("Dashboard: Failed to create CSRF token: %v", err)
 		c.HTML(http.StatusInternalServerError, "dashboard.html", gin.H{
 			"Title": "Dashboard - Carryless",
 			"User":  user,
@@ -178,10 +184,43 @@ func handleDashboard(c *gin.Context) {
 		})
 		return
 	}
+	log.Println("Dashboard: CSRF token created successfully")
+
+	// Get user statistics
+	log.Println("Dashboard: Fetching user statistics")
+	stats, err := database.GetUserStats(db, userID)
+	if err != nil {
+		log.Printf("Dashboard: Failed to get user stats: %v", err)
+		c.HTML(http.StatusInternalServerError, "dashboard.html", gin.H{
+			"Title": "Dashboard - Carryless",
+			"User":  user,
+			"Error": "Failed to load dashboard statistics",
+		})
+		return
+	}
+	log.Printf("Dashboard: User stats fetched: %+v", stats)
+
+	// Get recent packs
+	log.Println("Dashboard: Fetching recent packs")
+	recentPacks, err := database.GetRecentPacks(db, userID, 3)
+	if err != nil {
+		log.Printf("Dashboard: Failed to get recent packs: %v", err)
+		c.HTML(http.StatusInternalServerError, "dashboard.html", gin.H{
+			"Title": "Dashboard - Carryless",
+			"User":  user,
+			"Error": "Failed to load recent packs",
+		})
+		return
+	}
+	log.Printf("Dashboard: Recent packs fetched: %+v", recentPacks)
 	
+	log.Println("Dashboard: Rendering template")
 	c.HTML(http.StatusOK, "dashboard.html", gin.H{
-		"Title":     "Dashboard - Carryless",
-		"User":      user,
-		"CSRFToken": csrfToken.Token,
+		"Title":       "Dashboard - Carryless",
+		"User":        user,
+		"CSRFToken":   csrfToken.Token,
+		"Stats":       stats,
+		"RecentPacks": recentPacks,
 	})
+	log.Println("Dashboard: Template rendered successfully")
 }

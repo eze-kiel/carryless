@@ -55,26 +55,188 @@
         <div class="dashboard">
             <h1>Welcome back, {{.User.Username}}!</h1>
             
-            <div class="dashboard-stats">
+            <!-- Stats Grid -->
+            {{if .Stats}}
+            <div class="stats-grid">
+                <div class="stat-card-mini">
+                    <div class="stat-icon">
+                        <i class="fas fa-hiking"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-number">{{.Stats.TotalPacks}}</div>
+                        <div class="stat-label">Packs</div>
+                    </div>
+                </div>
+                <div class="stat-card-mini">
+                    <div class="stat-icon">
+                        <i class="fas fa-cube"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-number">{{.Stats.TotalItems}}</div>
+                        <div class="stat-label">Items</div>
+                    </div>
+                </div>
+                <div class="stat-card-mini">
+                    <div class="stat-icon">
+                        <i class="fas fa-tags"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-number">{{.Stats.TotalCategories}}</div>
+                        <div class="stat-label">Categories</div>
+                    </div>
+                </div>
+                <div class="stat-card-mini">
+                    <div class="stat-icon">
+                        <i class="fas fa-weight-hanging"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-number" data-weight="{{.Stats.TotalWeight}}">{{.Stats.TotalWeight}}g</div>
+                        <div class="stat-label">Total Weight</div>
+                    </div>
+                </div>
+            </div>
+            {{end}}
+
+            <!-- Quick Actions -->
+            <div class="dashboard-section">
                 <div class="stat-card">
                     <h3>Quick Actions</h3>
                     <div class="quick-actions">
-                        <a href="/inventory" class="btn btn-primary">Manage Inventory</a>
-                        <a href="/packs" class="btn btn-primary">View Packs</a>
-                        <a href="/categories" class="btn btn-secondary">Manage Categories</a>
+                        <a href="/packs/new" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Create New Pack
+                        </a>
+                        <a href="/inventory/new" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Add Gear Item
+                        </a>
+                        <a href="/packs" class="btn btn-secondary">
+                            <i class="fas fa-backpack"></i> Browse My Packs
+                        </a>
+                        <a href="/categories" class="btn btn-secondary">
+                            <i class="fas fa-tags"></i> Manage Categories
+                        </a>
                     </div>
                 </div>
             </div>
 
-            <div class="dashboard-content">
-                <div class="getting-started">
-                    <h3>Getting Started</h3>
-                    <ol>
-                        <li>Create categories like "Sleeping", "Cooking", "Clothing"</li>
-                        <li>Add your gear items with weights and details</li>
-                        <li>Create packs and add items for specific trips</li>
-                        <li>Analyze weight distribution and share your packs</li>
-                    </ol>
+            <div class="dashboard-row">
+                <!-- Recent Activity -->
+                <div class="dashboard-section">
+                    <div class="stat-card">
+                        <h3>Recent Activity</h3>
+                        {{if .RecentPacks}}
+                            <div class="recent-packs-list">
+                                {{range .RecentPacks}}
+                                <div class="recent-pack-card">
+                                    <div class="pack-info">
+                                        <a href="/packs/{{.ID}}" class="pack-name">{{.Name}}</a>
+                                        <div class="pack-meta">
+                                            <span class="weight" data-weight="{{.TotalWeight}}">{{.TotalWeight}}g</span>
+                                            <span class="separator">•</span>
+                                            <span class="items">{{.ItemCount}} items</span>
+                                            <span class="separator">•</span>
+                                            <span class="updated">{{timeAgo .UpdatedAt}}</span>
+                                        </div>
+                                    </div>
+                                    <div class="pack-actions">
+                                        {{if .IsPublic}}
+                                            <span class="badge badge-public">Public</span>
+                                        {{end}}
+                                        <a href="/packs/{{.ID}}" class="icon-link" title="View pack">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                                {{end}}
+                            </div>
+                            <div class="section-footer">
+                                <a href="/packs" class="view-all-link">View all packs <i class="fas fa-arrow-right"></i></a>
+                            </div>
+                        {{else}}
+                            <div class="empty-state">
+                                <i class="fas fa-backpack empty-icon"></i>
+                                <p>No packs yet</p>
+                                <a href="/packs/new" class="btn btn-primary">Create Your First Pack</a>
+                            </div>
+                        {{end}}
+                    </div>
+                </div>
+
+                <!-- Insights -->
+                <div class="dashboard-section">
+                    <div class="stat-card">
+                        <h3>Insights</h3>
+                        {{if .Stats}}
+                        <div class="insights-content">
+                            {{if .Stats.LightestPack}}
+                                <div class="insight-item">
+                                    <div class="insight-icon">
+                                        <i class="fas fa-feather-alt"></i>
+                                    </div>
+                                    <div class="insight-content">
+                                        <div class="insight-title">Lightest Pack</div>
+                                        <div class="insight-detail">
+                                            <strong>{{.Stats.LightestPack.Name}}</strong>
+                                            <span class="weight" data-weight="{{.Stats.LightestWeight}}">{{.Stats.LightestWeight}}g</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            {{end}}
+                            
+                            {{if gt .Stats.ItemsToVerify 0}}
+                                <div class="insight-item alert alert-persistent">
+                                    <div class="insight-icon">
+                                        <i class="fas fa-exclamation-triangle"></i>
+                                    </div>
+                                    <div class="insight-content">
+                                        <div class="insight-title">Weight Verification</div>
+                                        <div class="insight-detail">
+                                            {{.Stats.ItemsToVerify}} items need weight verification
+                                            <a href="/inventory?verify_only=true" class="verify-link">Review items</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            {{end}}
+
+                            {{if eq .Stats.TotalPacks 0}}
+                                <div class="insight-item getting-started">
+                                    <div class="insight-icon">
+                                        <i class="fas fa-rocket"></i>
+                                    </div>
+                                    <div class="insight-content">
+                                        <div class="insight-title">Getting Started</div>
+                                        <div class="insight-detail">
+                                            <ol class="getting-started-list">
+                                                <li>Create categories like "Sleeping", "Cooking", "Clothing"</li>
+                                                <li>Add your gear items with weights and details</li>
+                                                <li>Create packs and add items for specific trips</li>
+                                                <li>Analyze weight distribution and share your packs</li>
+                                            </ol>
+                                        </div>
+                                    </div>
+                                </div>
+                            {{end}}
+                        </div>
+                        {{else}}
+                        <div class="insights-content">
+                            <div class="insight-item getting-started">
+                                <div class="insight-icon">
+                                    <i class="fas fa-rocket"></i>
+                                </div>
+                                <div class="insight-content">
+                                    <div class="insight-title">Getting Started</div>
+                                    <div class="insight-detail">
+                                        <ol class="getting-started-list">
+                                            <li>Create categories like "Sleeping", "Cooking", "Clothing"</li>
+                                            <li>Add your gear items with weights and details</li>
+                                            <li>Create packs and add items for specific trips</li>
+                                            <li>Analyze weight distribution and share your packs</li>
+                                        </ol>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {{end}}
+                    </div>
                 </div>
             </div>
         </div>

@@ -2,9 +2,11 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"log"
 	"strings"
+	"time"
 
 	"carryless/internal/config"
 	"carryless/internal/database"
@@ -99,6 +101,33 @@ func main() {
 				currentIndex += label.Count
 			}
 			return nil
+		},
+		"timeAgo": func(t time.Time) string {
+			now := time.Now()
+			duration := now.Sub(t)
+			
+			if duration.Minutes() < 1 {
+				return "Just now"
+			} else if duration.Hours() < 1 {
+				minutes := int(duration.Minutes())
+				if minutes == 1 {
+					return "1 minute ago"
+				}
+				return fmt.Sprintf("%d minutes ago", minutes)
+			} else if duration.Hours() < 24 {
+				hours := int(duration.Hours())
+				if hours == 1 {
+					return "1 hour ago"
+				}
+				return fmt.Sprintf("%d hours ago", hours)
+			} else if duration.Hours() < 48 {
+				return "Yesterday"
+			} else if duration.Hours() < 168 { // 7 days
+				days := int(duration.Hours() / 24)
+				return fmt.Sprintf("%d days ago", days)
+			} else {
+				return t.Format("Jan 2")
+			}
 		},
 	}
 
