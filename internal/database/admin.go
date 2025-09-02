@@ -208,6 +208,45 @@ func IsRegistrationEnabled(db *sql.DB) (bool, error) {
 	return value == "true", nil
 }
 
+func GetAllAdmins(db *sql.DB) ([]models.User, error) {
+	query := `
+		SELECT id, username, email, COALESCE(currency, '$'), COALESCE(is_admin, false), created_at, updated_at
+		FROM users
+		WHERE COALESCE(is_admin, false) = true
+		ORDER BY username ASC
+	`
+	
+	rows, err := db.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query admin users: %w", err)
+	}
+	defer rows.Close()
+	
+	var admins []models.User
+	for rows.Next() {
+		var admin models.User
+		err := rows.Scan(
+			&admin.ID,
+			&admin.Username,
+			&admin.Email,
+			&admin.Currency,
+			&admin.IsAdmin,
+			&admin.CreatedAt,
+			&admin.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan admin user: %w", err)
+		}
+		admins = append(admins, admin)
+	}
+	
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating admin users: %w", err)
+	}
+	
+	return admins, nil
+}
+
 func ToggleRegistration(db *sql.DB) error {
 	query := `UPDATE system_settings SET value = CASE WHEN value = 'true' THEN 'false' ELSE 'true' END, updated_at = CURRENT_TIMESTAMP WHERE key = 'registration_enabled'`
 	_, err := db.Exec(query)

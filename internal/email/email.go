@@ -70,3 +70,33 @@ func (s *Service) SendWelcomeEmail(user *models.User) error {
 	log.Printf("Welcome email sent to %s (Message ID: %s)", user.Email, resp)
 	return nil
 }
+
+func (s *Service) SendAdminNotificationEmail(admin *models.User, newUser *models.User) error {
+	if !s.enabled {
+		return fmt.Errorf("email service is not configured")
+	}
+
+	subject := fmt.Sprintf("New User Registered - %s", newUser.Username)
+	htmlBody := s.generateAdminNotificationHTML(admin, newUser)
+	textBody := s.generateAdminNotificationText(admin, newUser)
+
+	message := mailgun.NewMessage(
+		s.domain,
+		fmt.Sprintf("%s <%s>", s.senderName, s.senderEmail),
+		subject,
+		textBody,
+		admin.Email,
+	)
+	message.SetHTML(htmlBody)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	resp, err := s.client.Send(ctx, message)
+	if err != nil {
+		return fmt.Errorf("failed to send admin notification email to %s: %w", admin.Email, err)
+	}
+
+	log.Printf("Admin notification email sent to %s (Message ID: %s)", admin.Email, resp)
+	return nil
+}

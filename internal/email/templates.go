@@ -124,3 +124,118 @@ The Carryless Team
 ---
 This email was sent to %s. If you have any questions, feel free to reach out to us.`, user.Username, user.Email)
 }
+
+func (s *Service) generateAdminNotificationHTML(admin *models.User, newUser *models.User) string {
+	return fmt.Sprintf(`
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New User Registration</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .container {
+            background-color: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #2d5e3e;
+            margin-bottom: 10px;
+        }
+        .notification-title {
+            font-size: 24px;
+            color: #2d5e3e;
+            margin-bottom: 20px;
+        }
+        .user-info {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .user-info h3 {
+            color: #2d5e3e;
+            margin-top: 0;
+        }
+        .info-row {
+            margin: 10px 0;
+        }
+        .label {
+            font-weight: 600;
+            color: #495057;
+        }
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e9ecef;
+            font-size: 14px;
+            color: #6c757d;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">Carryless Admin</div>
+            <div class="notification-title">New User Registration</div>
+        </div>
+        
+        <div class="content">
+            <p>Hello %s,</p>
+            <p>A new user has registered on Carryless:</p>
+            
+            <div class="user-info">
+                <h3>User Details</h3>
+                <div class="info-row">
+                    <span class="label">Username:</span> %s
+                </div>
+                <div class="info-row">
+                    <span class="label">Email:</span> %s
+                </div>
+                <div class="info-row">
+                    <span class="label">Registration Time:</span> %s
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>Carryless Admin Notification System</p>
+        </div>
+    </div>
+</body>
+</html>`, admin.Username, newUser.Username, newUser.Email, newUser.CreatedAt.Format("January 2, 2006 at 3:04 PM"))
+}
+
+func (s *Service) generateAdminNotificationText(admin *models.User, newUser *models.User) string {
+	return fmt.Sprintf(`New User Registration
+
+Hello %s,
+
+A new user has registered on Carryless:
+
+User Details:
+- Username: %s
+- Email: %s
+- Registration Time: %s
+
+---
+Carryless Admin Notification System`, admin.Username, newUser.Username, newUser.Email, newUser.CreatedAt.Format("January 2, 2006 at 3:04 PM"))
+}

@@ -9,6 +9,7 @@ import (
 
 	"carryless/internal/database"
 	emailService "carryless/internal/email"
+	"carryless/internal/models"
 
 	"github.com/gin-gonic/gin"
 )
@@ -93,6 +94,20 @@ func handleRegister(c *gin.Context) {
 	if service, ok := emailSvc.(*emailService.Service); ok && service.IsEnabled() {
 		if err := service.SendWelcomeEmail(user); err != nil {
 			log.Printf("Failed to send welcome email to %s: %v", user.Email, err)
+		}
+		
+		// Send notification to all admins about the new user registration
+		admins, err := database.GetAllAdmins(db)
+		if err != nil {
+			log.Printf("Failed to get admin users for notification: %v", err)
+		} else {
+			for _, admin := range admins {
+				go func(adminUser models.User) {
+					if err := service.SendAdminNotificationEmail(&adminUser, user); err != nil {
+						log.Printf("Failed to send admin notification email to %s: %v", adminUser.Email, err)
+					}
+				}(admin)
+			}
 		}
 	}
 
