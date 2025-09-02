@@ -1,5 +1,5 @@
 # Build stage
-FROM --platform=$BUILDPLATFORM golang:1.21-bookworm AS builder
+FROM --platform=$BUILDPLATFORM golang:1.22-bookworm AS builder
 
 # Install security updates and dependencies
 RUN apt-get update && apt-get install -y \
