@@ -2345,3 +2345,10 @@ th .dropdown-menu {
         font-size: var(--font-size-base);
     }
 }
+
+/* ============================================
+   Admin Panel Styles
+   ============================================ */
+.admin-stats .stat-number {
+    color: var(--color-primary);
+}
