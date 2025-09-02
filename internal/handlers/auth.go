@@ -101,10 +101,14 @@ func handleRegister(c *gin.Context) {
 		if err != nil {
 			log.Printf("Failed to get admin users for notification: %v", err)
 		} else {
+			log.Printf("Found %d admin users for notification", len(admins))
 			for _, admin := range admins {
+				log.Printf("Sending admin notification to: %s (ID: %d, IsAdmin: %t)", admin.Email, admin.ID, admin.IsAdmin)
 				go func(adminUser models.User) {
 					if err := service.SendAdminNotificationEmail(&adminUser, user); err != nil {
 						log.Printf("Failed to send admin notification email to %s: %v", adminUser.Email, err)
+					} else {
+						log.Printf("Successfully queued admin notification email to %s", adminUser.Email)
 					}
 				}(admin)
 			}

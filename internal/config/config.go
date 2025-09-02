@@ -12,6 +12,7 @@ type Config struct {
 	MailgunAPIKey      string
 	MailgunSenderEmail string
 	MailgunSenderName  string
+	MailgunRegion      string
 }
 
 func Load() *Config {
@@ -23,6 +24,7 @@ func Load() *Config {
 		MailgunAPIKey:      getEnv("MAILGUN_API_KEY", ""),
 		MailgunSenderEmail: getEnv("MAILGUN_SENDER_EMAIL", "noreply@carryless.org"),
 		MailgunSenderName:  getEnv("MAILGUN_SENDER_NAME", "Carryless"),
+		MailgunRegion:      getEnv("MAILGUN_REGION", "EU"),
 	}
 	return cfg
 }

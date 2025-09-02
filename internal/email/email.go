@@ -26,6 +26,10 @@ func NewService(cfg *config.Config) *Service {
 	var client mailgun.Mailgun
 	if enabled {
 		client = mailgun.NewMailgun(cfg.MailgunAPIKey)
+		// Set EU API base for European users
+		if cfg.MailgunRegion == "EU" {
+			client.SetAPIBase(mailgun.APIBaseEU)
+		}
 	}
 	
 	return &Service{
