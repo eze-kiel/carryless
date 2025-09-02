@@ -14,6 +14,13 @@ import (
 
 const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
+// Helper function to update pack timestamp when items are modified
+func updatePackTimestamp(db *sql.DB, packID string) error {
+	query := `UPDATE packs SET updated_at = CURRENT_TIMESTAMP WHERE id = ?`
+	_, err := db.Exec(query, packID)
+	return err
+}
+
 func generateShortID(db *sql.DB) (string, error) {
 	const idLength = 8
 	const maxRetries = 10
@@ -416,6 +423,11 @@ func AddItemToPack(db *sql.DB, packID string, itemID int, userID int) error {
 		}
 	}
 
+	// Update pack timestamp since items were modified
+	if err := updatePackTimestamp(db, packID); err != nil {
+		return fmt.Errorf("failed to update pack timestamp: %w", err)
+	}
+
 	return nil
 }
 
@@ -454,6 +466,11 @@ func RemoveItemFromPack(db *sql.DB, packID string, itemID, userID int) error {
 		if err != nil {
 			return fmt.Errorf("failed to decrement item count: %w", err)
 		}
+	}
+
+	// Update pack timestamp since items were modified
+	if err := updatePackTimestamp(db, packID); err != nil {
+		return fmt.Errorf("failed to update pack timestamp: %w", err)
 	}
 
 	return nil
@@ -496,6 +513,11 @@ func UpdatePackItemWornCount(db *sql.DB, packID string, itemID, userID int, worn
 		return fmt.Errorf("failed to update worn count: %w", err)
 	}
 
+	// Update pack timestamp since items were modified
+	if err := updatePackTimestamp(db, packID); err != nil {
+		return fmt.Errorf("failed to update pack timestamp: %w", err)
+	}
+
 	return nil
 }
 
@@ -533,6 +555,11 @@ func TogglePackItemWorn(db *sql.DB, packID string, itemID, userID int, isWorn bo
 	_, err = db.Exec(updateQuery, isWorn, wornCount, packItemID)
 	if err != nil {
 		return fmt.Errorf("failed to update worn status: %w", err)
+	}
+
+	// Update pack timestamp since items were modified
+	if err := updatePackTimestamp(db, packID); err != nil {
+		return fmt.Errorf("failed to update pack timestamp: %w", err)
 	}
 
 	return nil
