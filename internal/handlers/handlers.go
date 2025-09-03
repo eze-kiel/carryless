@@ -27,7 +27,7 @@ func SetupRoutes(r *gin.Engine, db *sql.DB, emailService *email.Service) {
 	r.GET("/login", handleLoginPage)
 	r.POST("/login", middleware.AuthRateLimit(), handleLogin)
 	r.POST("/logout", middleware.AuthRequired(db), handleLogout)
-	r.GET("/activate/:token", middleware.AddDBContext(db), handleActivate)
+	r.GET("/activate/:token", middleware.ActivationRateLimit(), middleware.AddDBContext(db), handleActivate)
 
 	protected := r.Group("/")
 	protected.Use(middleware.AuthRequired(db))

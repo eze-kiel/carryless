@@ -87,6 +87,45 @@ func AuthRateLimit() gin.HandlerFunc {
 	}
 }
 
+func ActivationRateLimit() gin.HandlerFunc {
+	activationClients := make(map[string]*rateLimiter)
+	var activationMu sync.Mutex
+	
+	return func(c *gin.Context) {
+		ip := c.ClientIP()
+		
+		activationMu.Lock()
+		defer activationMu.Unlock()
+
+		if limiter, exists := activationClients[ip]; exists {
+			limiter.lastSeen = time.Now()
+			if !limiter.limiter.Allow() {
+				c.HTML(http.StatusTooManyRequests, "activation_result.html", gin.H{
+					"Title":   "Too Many Requests - Carryless",
+					"Success": false,
+					"Message": "Too many activation attempts. Please wait before trying again.",
+				})
+				c.Abort()
+				return
+			}
+		} else {
+			activationClients[ip] = &rateLimiter{
+				limiter:  rate.NewLimiter(rate.Every(time.Minute*5), 3),
+				lastSeen: time.Now(),
+			}
+		}
+
+		// Cleanup old activation clients
+		for ip, client := range activationClients {
+			if time.Since(client.lastSeen) > 30*time.Minute {
+				delete(activationClients, ip)
+			}
+		}
+		
+		c.Next()
+	}
+}
+
 func cleanupOldClients() {
 	for ip, client := range clients {
 		if time.Since(client.lastSeen) > 10*time.Minute {
