@@ -30,6 +30,25 @@ A comprehensive outdoor gear catalog and pack planner for backpackers and outdoo
 - **Admin panel** - User management, system controls, registration settings
 - **Multi-user support** - Each user has isolated data and preferences
 
+## Screenshots
+
+<details>
+<summary>View Screenshots</summary>
+
+### Homepage
+![Homepage](img/home.png)
+
+### Inventory Management
+![Inventory Management](img/inventory.png)
+
+### Pack Statistics
+![Pack Statistics](img/pack-stats.png)
+
+### Pack Content
+![Pack Content](img/pack-content.png)
+
+</details>
+
 ## Quick Start
 
 **Requirements:** Go 1.21+
