@@ -101,6 +101,8 @@ func SetupRoutes(r *gin.Engine, db *sql.DB, emailService *email.Service) {
 	r.GET("/p/:id/checklist", middleware.AuthOptional(db), handlePackChecklistByShortID)
 	r.GET("/p/packs/:id", middleware.AuthOptional(db), handlePublicPack)
 	r.GET("/packs/:id/checklist", middleware.AuthOptional(db), handlePackChecklist)
+	
+	r.NoRoute(handle404)
 }
 
 func handleHome(c *gin.Context) {
@@ -171,6 +173,14 @@ func addEmailServiceContext(emailService *email.Service) gin.HandlerFunc {
 		c.Set("email_service", emailService)
 		c.Next()
 	}
+}
+
+func handle404(c *gin.Context) {
+	user, _ := c.Get("user")
+	c.HTML(http.StatusNotFound, "404.html", gin.H{
+		"Title": "Page Not Found - Carryless",
+		"User":  user,
+	})
 }
 
 func handleDashboard(c *gin.Context) {

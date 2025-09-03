@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"sync"
@@ -21,9 +22,17 @@ type rateLimiter struct {
 	lastSeen time.Time
 }
 
+type clientTracker struct {
+	errors404    []time.Time
+	blockedUntil time.Time
+	lastSeen     time.Time
+}
+
 var (
-	clients = make(map[string]*rateLimiter)
-	mu      sync.Mutex
+	clients      = make(map[string]*rateLimiter)
+	mu           sync.Mutex
+	trackers     = make(map[string]*clientTracker)
+	trackersMu   sync.Mutex
 )
 
 func RateLimit() gin.HandlerFunc {
@@ -123,6 +132,77 @@ func ActivationRateLimit() gin.HandlerFunc {
 		}
 		
 		c.Next()
+	}
+}
+
+func IPBlocker() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ip := c.ClientIP()
+		
+		trackersMu.Lock()
+		tracker, exists := trackers[ip]
+		trackersMu.Unlock()
+		
+		if exists && time.Now().Before(tracker.blockedUntil) {
+			c.HTML(http.StatusForbidden, "blocked.html", gin.H{
+				"Title":   "Access Blocked - Carryless",
+				"Message": "Your IP has been temporarily blocked due to excessive invalid requests. Please try again later.",
+			})
+			c.Abort()
+			return
+		}
+		
+		c.Next()
+	}
+}
+
+func Track404AndBlock() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Next()
+		
+		if c.Writer.Status() == http.StatusNotFound {
+			ip := c.ClientIP()
+			now := time.Now()
+			
+			trackersMu.Lock()
+			defer trackersMu.Unlock()
+			
+			tracker, exists := trackers[ip]
+			if !exists {
+				tracker = &clientTracker{
+					errors404: make([]time.Time, 0),
+					lastSeen:  now,
+				}
+				trackers[ip] = tracker
+			}
+			
+			tracker.lastSeen = now
+			tracker.errors404 = append(tracker.errors404, now)
+			
+			// Remove 404 errors older than 5 minutes
+			cutoff := now.Add(-5 * time.Minute)
+			validErrors := make([]time.Time, 0)
+			for _, errorTime := range tracker.errors404 {
+				if errorTime.After(cutoff) {
+					validErrors = append(validErrors, errorTime)
+				}
+			}
+			tracker.errors404 = validErrors
+			
+			// Check if we should block this IP
+			if len(tracker.errors404) >= 10 {
+				tracker.blockedUntil = now.Add(15 * time.Minute)
+				tracker.errors404 = make([]time.Time, 0) // Reset counter
+				log.Printf("Blocked IP %s for 15 minutes due to %d 404 errors in 5 minutes", ip, len(validErrors))
+			}
+			
+			// Cleanup old trackers
+			for trackerIP, trackerData := range trackers {
+				if time.Since(trackerData.lastSeen) > 30*time.Minute && time.Now().After(trackerData.blockedUntil) {
+					delete(trackers, trackerIP)
+				}
+			}
+		}
 	}
 }
 
