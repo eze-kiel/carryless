@@ -130,7 +130,7 @@ func GetRecentPacks(db *sql.DB, userID int, limit int) ([]RecentPack, error) {
 			p.is_public,
 			COALESCE(p.short_id, ''),
 			p.updated_at,
-			COUNT(DISTINCT pi.item_id) as item_count,
+			COALESCE(SUM(pi.count), 0) as item_count,
 			COALESCE(SUM(CASE WHEN pi.is_worn = 0 THEN i.weight_grams * pi.count ELSE 0 END), 0) as pack_weight,
 			COALESCE(SUM(CASE WHEN pi.is_worn = 1 THEN i.weight_grams * pi.count ELSE 0 END), 0) as worn_weight
 		FROM packs p
