@@ -139,7 +139,9 @@
                                     </div>
                                     <div class="pack-actions">
                                         {{if .IsPublic}}
-                                            <span class="badge badge-public">Public</span>
+                                            <span class="public-indicator" title="Public pack">
+                                                <i class="fas fa-globe"></i>
+                                            </span>
                                         {{end}}
                                         <a href="/packs/{{.ID}}" class="icon-link" title="View pack">
                                             <i class="fas fa-eye"></i>

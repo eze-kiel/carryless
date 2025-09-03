@@ -1212,6 +1212,19 @@ th .dropdown-menu {
     color: var(--color-primary);
 }
 
+.public-indicator {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background-color: #e0f2fe;
+    color: #0369a1;
+    font-size: 11px;
+    margin-right: var(--space-1);
+}
+
 .badge-public {
     background: var(--color-success-light);
     color: var(--color-success);
