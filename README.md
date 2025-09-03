@@ -1,79 +1,158 @@
 # Carryless
 
-Outdoor gear catalog and pack planner built with Go. Track gear weight, plan packs, and analyze weight distribution for backpacking and outdoor adventures.
+A comprehensive outdoor gear catalog and pack planner for backpackers and outdoor enthusiasts. Track your gear inventory, plan perfect packs, analyze weight distribution, and share your setups with the community.
+
+## Features
+
+### Gear Management
+- **Complete inventory** - Catalog gear with weight, price, notes, and categories
+- **Weight verification** - Mark items that need weight confirmation
+- **Multi-currency support** - Display prices in your preferred currency (USD, EUR, etc.)
+- **Smart categories** - Organize by shelter, cooking, clothing, electronics, etc.
+- **Weight units** - Switch between grams and ounces globally
+
+### Pack Planning
+- **Advanced pack creation** - Design packs for specific trips with detailed notes
+- **Container organization** - Use labels to organize items into pack compartments/containers
+- **Worn vs carried** - Track what you wear vs carry for accurate pack weight
+- **Item quantities** - Specify counts and partial quantities (e.g., 2.5 items)
+- **Weight analysis** - Total weight, category breakdowns, visual charts
+- **Print-ready checklists** - Generate PDFs with checkboxes for packing
+
+### Sharing & Community
+- **Public pack sharing** - Share packs via clean URLs (e.g., `/p/abc123`)
+- **Short link system** - Generate memorable short IDs for public packs
+- **Privacy controls** - Toggle packs between private and public instantly
+
+### User Management
+- **Email-based activation** - Secure account activation workflow
+- **Session-based auth** - Secure login with automatic session management
+- **Admin panel** - User management, system controls, registration settings
+- **Multi-user support** - Each user has isolated data and preferences
 
 ## Quick Start
 
 **Requirements:** Go 1.21+
 
 ```bash
+# Clone and build
 git clone <repository-url>
 cd carryless
 go mod tidy
 go build -o carryless .
+
+# Run locally
 ./carryless
 ```
 
-Open http://localhost:8080
+Visit http://localhost:8080 to get started.
 
 ## Configuration
 
-Environment variables:
-- `PORT` - Server port (default: 8080)
-- `DATABASE_PATH` - SQLite database path (default: carryless.db)
-- `ALLOWED_ORIGINS` - Comma-separated list of allowed CORS origins (default includes localhost and production domains)
-
+### Basic Configuration
 ```bash
-export PORT=3000
-./carryless
+export PORT=3000                    # Server port (default: 8080)
+export DATABASE_PATH=/data/app.db   # SQLite database path (default: carryless.db)
+export ALLOWED_ORIGINS="https://yourdomain.com,https://app.yourdomain.com"
 ```
 
-## Architecture
+### Email Configuration (Mailgun)
+For user activation emails and admin notifications:
 
-**Backend:** Go + Gin web framework  
-**Database:** SQLite with foreign key constraints  
-**Frontend:** Vanilla JavaScript, HTML5, Chart.js  
+```bash
+# Required for email functionality
+export MAILGUN_DOMAIN="yourdomain.com"
+export MAILGUN_API_KEY="your-mailgun-api-key"
 
-Clean architecture with organized internal packages:
-- `internal/handlers/` - HTTP request handlers
-- `internal/database/` - SQLite operations and migrations
-- `internal/middleware/` - Auth, CSRF, rate limiting
-- `internal/models/` - Data structures
+# Optional email settings
+export MAILGUN_SENDER_EMAIL="noreply@yourdomain.com"  # Default: noreply@carryless.org
+export MAILGUN_SENDER_NAME="Your App Name"            # Default: Carryless
+export MAILGUN_REGION="US"                            # Default: EU (EU/US)
+```
 
-## Core Features
+**Note:** Without Mailgun configuration, users will be automatically activated and no emails will be sent.
 
-- Multi-user gear inventory with categories
-- Pack planning with weight analysis
-- Public pack sharing via UUID URLs  
-- Weight visualization with Chart.js
-- Session-based authentication
+### System Features
+- **Registration control** - Admins can enable/disable new user registration
+- **Admin notifications** - Get notified when new users register  
+- **Activation workflow** - Email-based account activation (if email is configured)
+- **Advanced rate limiting** - Different limits for authentication, activation, and general requests
+- **IP blocking** - Automatic blocking of IPs with excessive 404 errors
+- **Security headers** - CSP, HSTS, X-Frame-Options, etc.
 
 ## Development
 
+### Testing
 ```bash
-# Run tests
-go test ./...
-
-# Build for production
-go build -ldflags="-s -w" -o carryless .
-
-# Docker
-docker build -t carryless .
-docker-compose -f docker-compose.traefik.yaml up -d
+go test ./...                 # Run all tests
+go test ./... -v              # Verbose test output
+go test ./internal/database/  # Test specific package
 ```
 
-## Database Schema
+### Production Build
+```bash
+go build -ldflags="-s -w" -o carryless .
+```
 
-- `users` - User accounts and preferences
-- `categories` - User-defined gear categories
-- `items` - Gear items with weight, price, notes
-- `packs` - Trip pack collections
-- `pack_items` - Items in packs with worn status
+### Docker
+```bash
+# Build image
+docker build -t carryless .
 
-## API Structure
+# Run with Docker Compose (includes Traefik labels)
+docker-compose -f docker-compose.dev.yaml up -d
+```
 
-**Auth:** `/register`, `/login`, `/logout`  
-**Categories:** `/categories` (CRUD)  
-**Items:** `/inventory/items` (CRUD)  
-**Packs:** `/packs` (CRUD), `/packs/:id/items` (manage pack contents)  
-**Public:** `/p/packs/:id` (view shared packs)
+### Database
+- **SQLite** with foreign key constraints
+- **Automatic migrations** - Schema updates handled automatically
+- **Indexes** - Optimized for performance with proper indexing
+- **Data isolation** - Complete separation between users
+
+## Security Features
+
+- **Rate limiting** - Configurable per IP (20 req/sec general, 5/min auth, 3 per 5min activation)
+- **CSRF protection** - Token-based protection for state-changing operations  
+- **Session security** - HTTP-only, secure, SameSite cookies
+- **IP blocking** - Auto-block IPs with 10+ 404s in 5 minutes (15min timeout)
+- **Security headers** - Comprehensive CSP, HSTS, XSS protection
+- **Input validation** - Automatic trimming, SQL injection prevention
+
+## API Endpoints
+
+### Authentication
+- `POST /register` - User registration
+- `POST /login` - User login  
+- `POST /logout` - User logout
+- `GET /activate/:token` - Account activation
+
+### Inventory Management
+- `GET /categories` - List categories
+- `POST /categories` - Create category
+- `GET /inventory` - List items
+- `POST /inventory/items` - Create item
+- `PUT /inventory/items/:id` - Update item
+
+### Pack Management  
+- `GET /packs` - List user's packs
+- `POST /packs` - Create pack
+- `GET /packs/:id` - View pack details
+- `POST /packs/:id/items` - Add item to pack
+- `GET /p/packs/:shortid` - Public pack view
+
+### Admin
+- `GET /admin` - Admin dashboard
+- `POST /admin/settings` - Update system settings
+
+## Technical Architecture
+
+- **Backend:** Go 1.21+ with Gin web framework
+- **Database:** SQLite with comprehensive migrations
+- **Frontend:** Vanilla JavaScript, Chart.js for visualizations  
+- **Security:** Multi-layer middleware stack
+- **Email:** Mailgun integration for transactional emails
+- **Deployment:** Docker with Traefik reverse proxy support
+
+## License
+
+This project is open source and available under the [MIT License](LICENSE).
