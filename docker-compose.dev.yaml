@@ -2,7 +2,7 @@ version: '3'
 
 services:
   carryless:
-    image: ez3kiel/splitr:latest
+    image: ez3kiel/carryless:latest
     container_name: carryless-app
     restart: unless-stopped
     environment:
