@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 
+	"carryless/internal/config"
 	"carryless/internal/database"
 	emailService "carryless/internal/email"
 	"carryless/internal/models"
@@ -171,7 +172,8 @@ func handleLogin(c *gin.Context) {
 		return
 	}
 
-	session, err := database.CreateSession(db, user.ID)
+	cfg := c.MustGet("config").(*config.Config)
+	session, err := database.CreateSession(db, user.ID, cfg.SessionDuration)
 	if err != nil {
 		c.HTML(http.StatusInternalServerError, "login.html", gin.H{
 			"Title":  "Login - Carryless",

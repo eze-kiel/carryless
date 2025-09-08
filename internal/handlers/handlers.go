@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 
+	"carryless/internal/config"
 	"carryless/internal/database"
 	"carryless/internal/email"
 	"carryless/internal/middleware"
@@ -12,25 +13,26 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func SetupRoutes(r *gin.Engine, db *sql.DB, emailService *email.Service) {
+func SetupRoutes(r *gin.Engine, db *sql.DB, emailService *email.Service, cfg *config.Config) {
 	r.Use(middleware.LogRequests())
 	r.Use(middleware.SecurityHeaders())
 	r.Use(middleware.AddDBContext(db))
 	r.Use(addEmailServiceContext(emailService))
+	r.Use(addConfigContext(cfg))
 	r.Use(middleware.TrimSpaces())
 
-	r.GET("/", middleware.AuthOptional(db), handleHome)
-	r.GET("/terms", middleware.AuthOptional(db), handleTermsPage)
-	r.GET("/privacy", middleware.AuthOptional(db), handlePrivacyPage)
+	r.GET("/", middleware.AuthOptional(db, cfg), handleHome)
+	r.GET("/terms", middleware.AuthOptional(db, cfg), handleTermsPage)
+	r.GET("/privacy", middleware.AuthOptional(db, cfg), handlePrivacyPage)
 	r.GET("/register", handleRegisterPage)
 	r.POST("/register", middleware.AuthRateLimit(), handleRegister)
 	r.GET("/login", handleLoginPage)
 	r.POST("/login", middleware.AuthRateLimit(), handleLogin)
-	r.POST("/logout", middleware.AuthRequired(db), handleLogout)
+	r.POST("/logout", middleware.AuthRequired(db, cfg), handleLogout)
 	r.GET("/activate/:token", middleware.ActivationRateLimit(), middleware.AddDBContext(db), handleActivate)
 
 	protected := r.Group("/")
-	protected.Use(middleware.AuthRequired(db))
+	protected.Use(middleware.AuthRequired(db, cfg))
 	protected.Use(middleware.CSRF())
 	{
 		protected.GET("/dashboard", handleDashboard)
@@ -42,7 +44,7 @@ func SetupRoutes(r *gin.Engine, db *sql.DB, emailService *email.Service) {
 
 	// Routes that require activation (content creation/modification)
 	activated := r.Group("/")
-	activated.Use(middleware.AuthRequired(db))
+	activated.Use(middleware.AuthRequired(db, cfg))
 	activated.Use(middleware.RequireActivation())
 	activated.Use(middleware.CSRF())
 	{
@@ -87,7 +89,7 @@ func SetupRoutes(r *gin.Engine, db *sql.DB, emailService *email.Service) {
 
 	// Admin routes
 	admin := r.Group("/admin")
-	admin.Use(middleware.AdminRequired(db))
+	admin.Use(middleware.AdminRequired(db, cfg))
 	admin.Use(middleware.CSRF())
 	{
 		admin.GET("/", handleAdminPanel)
@@ -97,10 +99,10 @@ func SetupRoutes(r *gin.Engine, db *sql.DB, emailService *email.Service) {
 		admin.POST("/toggle-registration", handleToggleRegistration)
 	}
 
-	r.GET("/p/:id", middleware.AuthOptional(db), handlePublicPackByShortID)
-	r.GET("/p/:id/checklist", middleware.AuthOptional(db), handlePackChecklistByShortID)
-	r.GET("/p/packs/:id", middleware.AuthOptional(db), handlePublicPack)
-	r.GET("/packs/:id/checklist", middleware.AuthOptional(db), handlePackChecklist)
+	r.GET("/p/:id", middleware.AuthOptional(db, cfg), handlePublicPackByShortID)
+	r.GET("/p/:id/checklist", middleware.AuthOptional(db, cfg), handlePackChecklistByShortID)
+	r.GET("/p/packs/:id", middleware.AuthOptional(db, cfg), handlePublicPack)
+	r.GET("/packs/:id/checklist", middleware.AuthOptional(db, cfg), handlePackChecklist)
 	
 	r.NoRoute(handle404)
 }
@@ -171,6 +173,13 @@ func handlePrivacyPage(c *gin.Context) {
 func addEmailServiceContext(emailService *email.Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Set("email_service", emailService)
+		c.Next()
+	}
+}
+
+func addConfigContext(cfg *config.Config) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Set("config", cfg)
 		c.Next()
 	}
 }

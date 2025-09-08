@@ -140,7 +140,7 @@ func main() {
 	r.Use(middleware.RateLimit())
 	r.Use(middleware.Track404AndBlock())
 
-	handlers.SetupRoutes(r, db, emailService)
+	handlers.SetupRoutes(r, db, emailService, cfg)
 
 	log.Printf("Server starting on port %s", cfg.Port)
 	log.Fatal(r.Run(":" + cfg.Port))

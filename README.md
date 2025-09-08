@@ -26,7 +26,8 @@ A comprehensive outdoor gear catalog and pack planner for backpackers and outdoo
 
 ### User Management
 - **Email-based activation** - Secure account activation workflow
-- **Session-based auth** - Secure login with automatic session management
+- **Smart session management** - Automatic session extension for active users
+- **Configurable session durations** - Customize how long users stay logged in
 - **Admin panel** - User management, system controls, registration settings
 - **Multi-user support** - Each user has isolated data and preferences
 
@@ -74,6 +75,26 @@ export PORT=3000                    # Server port (default: 8080)
 export DATABASE_PATH=/data/app.db   # SQLite database path (default: carryless.db)
 export ALLOWED_ORIGINS="https://yourdomain.com,https://app.yourdomain.com"
 ```
+
+### Session Configuration
+Control user session behavior and automatic extension for active users:
+
+```bash
+export SESSION_DURATION=168        # Session duration in hours (default: 168 = 7 days)
+export SESSION_EXTENSION_THRESHOLD=24  # Hours before expiration to auto-extend (default: 24)
+```
+
+You can also use Go duration strings:
+```bash
+export SESSION_DURATION="30d"      # 30 days
+export SESSION_EXTENSION_THRESHOLD="2h"  # 2 hours
+```
+
+**Session Extension Behavior:**
+- Active users get automatically extended sessions - they stay logged in as long as they're active
+- Sessions are only extended when they're close to expiring (within threshold)
+- Reduces unnecessary database writes while keeping active users logged in
+- Default: 7-day sessions, extended when within 1 day of expiration
 
 ### Email Configuration (Mailgun)
 For user activation emails and admin notifications:
@@ -132,7 +153,8 @@ docker-compose -f docker-compose.dev.yaml up -d
 
 - **Rate limiting** - Configurable per IP (20 req/sec general, 5/min auth, 3 per 5min activation)
 - **CSRF protection** - Token-based protection for state-changing operations  
-- **Session security** - HTTP-only, secure, SameSite cookies
+- **Smart session security** - HTTP-only, secure, SameSite cookies with automatic extension
+- **Configurable session lifetimes** - Customizable session durations and extension policies
 - **IP blocking** - Auto-block IPs with 10+ 404s in 5 minutes (15min timeout)
 - **Security headers** - Comprehensive CSP, HSTS, XSS protection
 - **Input validation** - Automatic trimming, SQL injection prevention

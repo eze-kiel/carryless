@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"fmt"
+	"log"
 	"time"
 
 	"carryless/internal/models"
@@ -90,13 +91,13 @@ func AuthenticateUser(db *sql.DB, email, password string) (*models.User, error) 
 	return user, nil
 }
 
-func CreateSession(db *sql.DB, userID int) (*models.Session, error) {
+func CreateSession(db *sql.DB, userID int, sessionDuration time.Duration) (*models.Session, error) {
 	sessionID, err := generateSecureToken()
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate session ID: %w", err)
 	}
 
-	expiresAt := time.Now().Add(7 * 24 * time.Hour)
+	expiresAt := time.Now().Add(sessionDuration)
 
 	query := `
 		INSERT INTO sessions (id, user_id, expires_at)
@@ -118,7 +119,7 @@ func CreateSession(db *sql.DB, userID int) (*models.Session, error) {
 	return session, nil
 }
 
-func ValidateSession(db *sql.DB, sessionID string) (*models.User, error) {
+func ValidateSession(db *sql.DB, sessionID string, sessionDuration time.Duration, extensionThreshold time.Duration) (*models.User, error) {
 	user := &models.User{}
 	query := `
 		SELECT u.id, u.username, u.email, COALESCE(u.currency, '$'), COALESCE(u.is_admin, false), COALESCE(u.is_activated, false), u.created_at, u.updated_at
@@ -144,11 +145,9 @@ func ValidateSession(db *sql.DB, sessionID string) (*models.User, error) {
 		return nil, fmt.Errorf("failed to validate session: %w", err)
 	}
 
-	// Renew session expiration on each access
-	err = RenewSession(db, sessionID)
+	err = RenewSession(db, sessionID, sessionDuration, extensionThreshold)
 	if err != nil {
-		// Log the error but don't fail the validation
-		// The session is still valid even if renewal fails
+		log.Printf("Failed to renew session %s: %v", sessionID[:8], err)
 	}
 
 	return user, nil
@@ -195,13 +194,32 @@ func UpdateUserCurrency(db *sql.DB, userID int, currency string) error {
 	return nil
 }
 
-func RenewSession(db *sql.DB, sessionID string) error {
-	newExpiresAt := time.Now().Add(7 * 24 * time.Hour)
-	query := `UPDATE sessions SET expires_at = ? WHERE id = ?`
-	_, err := db.Exec(query, newExpiresAt, sessionID)
+func RenewSession(db *sql.DB, sessionID string, sessionDuration time.Duration, extensionThreshold time.Duration) error {
+	now := time.Now()
+	
+	var currentExpiresAt time.Time
+	query := `SELECT expires_at FROM sessions WHERE id = ?`
+	err := db.QueryRow(query, sessionID).Scan(&currentExpiresAt)
+	if err != nil {
+		return fmt.Errorf("failed to get session expiration: %w", err)
+	}
+	
+	timeUntilExpiration := currentExpiresAt.Sub(now)
+	if timeUntilExpiration > extensionThreshold {
+		return nil
+	}
+	
+	newExpiresAt := now.Add(sessionDuration)
+	updateQuery := `UPDATE sessions SET expires_at = ? WHERE id = ?`
+	_, err = db.Exec(updateQuery, newExpiresAt, sessionID)
 	if err != nil {
 		return fmt.Errorf("failed to renew session: %w", err)
 	}
+	
+	log.Printf("Extended session %s from %v to %v (time until expiration was %v)", 
+		sessionID[:8], currentExpiresAt.Format("2006-01-02 15:04:05"), 
+		newExpiresAt.Format("2006-01-02 15:04:05"), timeUntilExpiration)
+	
 	return nil
 }
 

@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"carryless/internal/config"
 	"carryless/internal/database"
 	"carryless/internal/models"
 
@@ -290,7 +291,7 @@ func CSRF() gin.HandlerFunc {
 	}
 }
 
-func AuthRequired(db *sql.DB) gin.HandlerFunc {
+func AuthRequired(db *sql.DB, cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		sessionCookie, err := c.Cookie("session_id")
 		if err != nil {
@@ -299,7 +300,7 @@ func AuthRequired(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		user, err := database.ValidateSession(db, sessionCookie)
+		user, err := database.ValidateSession(db, sessionCookie, cfg.SessionDuration, cfg.SessionExtensionThreshold)
 		if err != nil {
 			c.SetSameSite(http.SameSiteStrictMode)
 			c.SetCookie("session_id", "", -1, "/", "", true, true)
@@ -315,11 +316,11 @@ func AuthRequired(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
-func AuthOptional(db *sql.DB) gin.HandlerFunc {
+func AuthOptional(db *sql.DB, cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		sessionCookie, err := c.Cookie("session_id")
 		if err == nil {
-			user, err := database.ValidateSession(db, sessionCookie)
+			user, err := database.ValidateSession(db, sessionCookie, cfg.SessionDuration, cfg.SessionExtensionThreshold)
 			if err == nil {
 				c.Set("user", user)
 				c.Set("user_id", user.ID)
@@ -400,7 +401,7 @@ func RequireActivation() gin.HandlerFunc {
 	}
 }
 
-func AdminRequired(db *sql.DB) gin.HandlerFunc {
+func AdminRequired(db *sql.DB, cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		sessionCookie, err := c.Cookie("session_id")
 		if err != nil {
@@ -409,7 +410,7 @@ func AdminRequired(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		user, err := database.ValidateSession(db, sessionCookie)
+		user, err := database.ValidateSession(db, sessionCookie, cfg.SessionDuration, cfg.SessionExtensionThreshold)
 		if err != nil {
 			c.SetSameSite(http.SameSiteStrictMode)
 			c.SetCookie("session_id", "", -1, "/", "", true, true)
