@@ -116,6 +116,15 @@
             </form>
         </div>
     </div>
+
+    <!-- Feedback Section -->
+    <div class="account-section feedback-card">
+        <h2>Feedback & Support</h2>
+        <div class="feedback-content">
+            <p>Any feedback or question? Reach out at <a href="mailto:carryless@plop.name">carryless@plop.name</a> or <a href="https://github.com/eze-kiel/carryless/issues" target="_blank" rel="noopener noreferrer">open an issue on GitHub</a>.</p>
+            <p>Love Carryless? Consider <a href="https://ko-fi.com/carryless" class="donate-link" target="_blank" rel="noopener noreferrer">supporting the project! <i class="fas fa-heart"></i></a></p>
+        </div>
+    </div>
 </div>
 
 <style>
@@ -124,6 +133,38 @@
     grid-template-columns: 1fr 1fr;
     gap: 2rem;
     margin-top: 2rem;
+}
+
+.feedback-card {
+    grid-column: 1 / -1;
+    background: #f8f9fa;
+    border: 1px solid #e3e6ea;
+}
+
+.feedback-content p {
+    margin-bottom: 0.75rem;
+}
+
+.feedback-content p:last-child {
+    margin-bottom: 0;
+}
+
+.feedback-content a {
+    color: #007bff;
+    text-decoration: none;
+}
+
+.feedback-content a:hover {
+    text-decoration: underline;
+}
+
+.feedback-content .donate-link {
+    font-weight: 500;
+    color: #e91e63;
+}
+
+.feedback-content .donate-link:hover {
+    color: #c2185b;
 }
 
 .account-section {
@@ -165,7 +206,7 @@
 
     <footer class="footer">
         <div class="footer-content">
-            <p>Built with love by Serac Alpine Gear. Free and <a href="https://github.com/eze-kiel/carryless">open-source</a>, forever. <a href="https://ko-fi.com/carryless" class="donate-link" target="_blank" rel="noopener noreferrer">Donate <i class="fas fa-heart"></i></a></p>
+            <p>Built with love by Hugo Blanc. Free and <a href="https://github.com/eze-kiel/carryless">open-source</a>, forever. <a href="https://ko-fi.com/carryless" class="donate-link" target="_blank" rel="noopener noreferrer">Donate <i class="fas fa-heart"></i></a></p>
             <div class="legal-links">
                 <a href="/terms">Terms of Service</a> | <a href="/privacy">Privacy Policy</a>
             </div>
