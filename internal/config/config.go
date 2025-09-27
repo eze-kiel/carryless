@@ -29,8 +29,8 @@ func Load() *Config {
 		MailgunSenderEmail:        getEnv("MAILGUN_SENDER_EMAIL", "noreply@carryless.org"),
 		MailgunSenderName:         getEnv("MAILGUN_SENDER_NAME", "Carryless"),
 		MailgunRegion:             getEnv("MAILGUN_REGION", "EU"),
-		SessionDuration:           getDurationEnv("SESSION_DURATION", 7*24*time.Hour),
-		SessionExtensionThreshold: getDurationEnv("SESSION_EXTENSION_THRESHOLD", 24*time.Hour),
+		SessionDuration:           getDurationEnv("SESSION_DURATION", 14*24*time.Hour),
+		SessionExtensionThreshold: getDurationEnv("SESSION_EXTENSION_THRESHOLD", 48*time.Hour),
 	}
 	return cfg
 }
