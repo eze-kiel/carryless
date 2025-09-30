@@ -16,6 +16,8 @@ type Config struct {
 	MailgunSenderName          string
 	MailgunRegion              string
 	SessionDuration            time.Duration
+	LogLevel                   string
+	Environment                string
 }
 
 func Load() *Config {
@@ -29,6 +31,8 @@ func Load() *Config {
 		MailgunSenderName:         getEnv("MAILGUN_SENDER_NAME", "Carryless"),
 		MailgunRegion:             getEnv("MAILGUN_REGION", "EU"),
 		SessionDuration:           getDurationEnv("SESSION_DURATION", 14*24*time.Hour),
+		LogLevel:                  getEnv("LOG_LEVEL", "INFO"),
+		Environment:               getEnv("ENVIRONMENT", "production"),
 	}
 	return cfg
 }

@@ -2,12 +2,12 @@ package handlers
 
 import (
 	"database/sql"
-	"log"
 	"net/http"
 
 	"carryless/internal/config"
 	"carryless/internal/database"
 	"carryless/internal/email"
+	"carryless/internal/logger"
 	"carryless/internal/middleware"
 
 	"github.com/gin-gonic/gin"
@@ -193,17 +193,17 @@ func handle404(c *gin.Context) {
 }
 
 func handleDashboard(c *gin.Context) {
-	log.Println("Dashboard handler started")
-	
+	logger.Debug("Dashboard handler started")
+
 	userID := c.MustGet("user_id").(int)
 	db := c.MustGet("db").(*sql.DB)
 	user := c.MustGet("user")
-	
-	log.Printf("Dashboard: userID=%d, user=%+v", userID, user)
+
+	logger.Debug("Dashboard request", "user_id", userID)
 
 	csrfToken, err := database.CreateCSRFToken(db, userID)
 	if err != nil {
-		log.Printf("Dashboard: Failed to create CSRF token: %v", err)
+		logger.Error("Failed to create CSRF token", "user_id", userID, "error", err)
 		c.HTML(http.StatusInternalServerError, "dashboard.html", gin.H{
 			"Title": "Dashboard - Carryless",
 			"User":  user,
@@ -211,13 +211,13 @@ func handleDashboard(c *gin.Context) {
 		})
 		return
 	}
-	log.Println("Dashboard: CSRF token created successfully")
+	logger.Debug("CSRF token created successfully")
 
 	// Get user statistics
-	log.Println("Dashboard: Fetching user statistics")
+	logger.Debug("Fetching user statistics", "user_id", userID)
 	stats, err := database.GetUserStats(db, userID)
 	if err != nil {
-		log.Printf("Dashboard: Failed to get user stats: %v", err)
+		logger.Error("Failed to get user stats", "user_id", userID, "error", err)
 		c.HTML(http.StatusInternalServerError, "dashboard.html", gin.H{
 			"Title": "Dashboard - Carryless",
 			"User":  user,
@@ -225,13 +225,16 @@ func handleDashboard(c *gin.Context) {
 		})
 		return
 	}
-	log.Printf("Dashboard: User stats fetched: %+v", stats)
+	logger.Debug("User stats fetched",
+		"user_id", userID,
+		"total_packs", stats.TotalPacks,
+		"total_items", stats.TotalItems)
 
 	// Get recent packs
-	log.Println("Dashboard: Fetching recent packs")
+	logger.Debug("Fetching recent packs", "user_id", userID)
 	recentPacks, err := database.GetRecentPacks(db, userID, 3)
 	if err != nil {
-		log.Printf("Dashboard: Failed to get recent packs: %v", err)
+		logger.Error("Failed to get recent packs", "user_id", userID, "error", err)
 		c.HTML(http.StatusInternalServerError, "dashboard.html", gin.H{
 			"Title": "Dashboard - Carryless",
 			"User":  user,
@@ -239,9 +242,11 @@ func handleDashboard(c *gin.Context) {
 		})
 		return
 	}
-	log.Printf("Dashboard: Recent packs fetched: %+v", recentPacks)
-	
-	log.Println("Dashboard: Rendering template")
+	logger.Debug("Recent packs fetched",
+		"user_id", userID,
+		"pack_count", len(recentPacks))
+
+	logger.Debug("Rendering dashboard template", "user_id", userID)
 	c.HTML(http.StatusOK, "dashboard.html", gin.H{
 		"Title":       "Dashboard - Carryless",
 		"User":        user,
@@ -249,5 +254,5 @@ func handleDashboard(c *gin.Context) {
 		"Stats":       stats,
 		"RecentPacks": recentPacks,
 	})
-	log.Println("Dashboard: Template rendered successfully")
+	logger.Debug("Dashboard template rendered successfully", "user_id", userID)
 }

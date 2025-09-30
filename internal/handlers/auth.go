@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"database/sql"
-	"log"
 	"net/http"
 	"regexp"
 	"strings"
@@ -10,6 +9,7 @@ import (
 	"carryless/internal/config"
 	"carryless/internal/database"
 	emailService "carryless/internal/email"
+	"carryless/internal/logger"
 	"carryless/internal/models"
 
 	"github.com/gin-gonic/gin"
@@ -94,7 +94,10 @@ func handleRegister(c *gin.Context) {
 	// Create activation token
 	activationToken, err := database.CreateActivationToken(db, user.ID)
 	if err != nil {
-		log.Printf("Failed to create activation token for user %s: %v", user.Email, err)
+		logger.Error("Failed to create activation token",
+			"email", user.Email,
+			"user_id", user.ID,
+			"error", err)
 		c.HTML(http.StatusInternalServerError, "register.html", gin.H{
 			"Title":               "Register - Carryless",
 			"Errors":              map[string]string{"general": "Failed to complete registration. Please try again."},
@@ -106,22 +109,33 @@ func handleRegister(c *gin.Context) {
 	emailSvc, _ := c.Get("email_service")
 	if service, ok := emailSvc.(*emailService.Service); ok && service.IsEnabled() {
 		if err := service.SendWelcomeEmail(user, activationToken.Token); err != nil {
-			log.Printf("Failed to send welcome email to %s: %v", user.Email, err)
+			logger.Warn("Failed to send welcome email",
+				"email", user.Email,
+				"user_id", user.ID,
+				"error", err)
 		}
 		
 		// Send notification to all admins about the new user registration
 		admins, err := database.GetAllAdmins(db)
 		if err != nil {
-			log.Printf("Failed to get admin users for notification: %v", err)
+			logger.Error("Failed to get admin users for notification", "error", err)
 		} else {
-			log.Printf("Found %d admin users for notification", len(admins))
+			logger.Debug("Found admin users for notification", "count", len(admins))
 			for _, admin := range admins {
-				log.Printf("Sending admin notification to: %s (ID: %d, IsAdmin: %t)", admin.Email, admin.ID, admin.IsAdmin)
+				logger.Debug("Sending admin notification",
+					"admin_email", admin.Email,
+					"admin_id", admin.ID,
+					"new_user_id", user.ID)
 				go func(adminUser models.User) {
 					if err := service.SendAdminNotificationEmail(&adminUser, user); err != nil {
-						log.Printf("Failed to send admin notification email to %s: %v", adminUser.Email, err)
+						logger.Warn("Failed to send admin notification email",
+							"admin_email", adminUser.Email,
+							"admin_id", adminUser.ID,
+							"error", err)
 					} else {
-						log.Printf("Successfully queued admin notification email to %s", adminUser.Email)
+						logger.Debug("Successfully queued admin notification email",
+							"admin_email", adminUser.Email,
+							"admin_id", adminUser.ID)
 					}
 				}(admin)
 			}
@@ -230,7 +244,9 @@ func handleActivate(c *gin.Context) {
 	// Validate the activation token
 	user, err := database.ValidateActivationToken(db, token)
 	if err != nil {
-		log.Printf("Failed to validate activation token %s: %v", token, err)
+		logger.Warn("Failed to validate activation token",
+			"token", token,
+			"error", err)
 		c.HTML(http.StatusBadRequest, "activation_result.html", gin.H{
 			"Title":   "Activation Failed - Carryless",
 			"Success": false,
@@ -252,7 +268,10 @@ func handleActivate(c *gin.Context) {
 	// Activate the user
 	err = database.ActivateUser(db, user.ID, token)
 	if err != nil {
-		log.Printf("Failed to activate user %d with token %s: %v", user.ID, token, err)
+		logger.Error("Failed to activate user",
+			"user_id", user.ID,
+			"token", token,
+			"error", err)
 		c.HTML(http.StatusInternalServerError, "activation_result.html", gin.H{
 			"Title":   "Activation Error - Carryless",
 			"Success": false,
@@ -261,7 +280,9 @@ func handleActivate(c *gin.Context) {
 		return
 	}
 
-	log.Printf("User %s (ID: %d) successfully activated", user.Email, user.ID)
+	logger.Info("User successfully activated",
+		"email", user.Email,
+		"user_id", user.ID)
 	
 	// Success - user is now activated
 	c.HTML(http.StatusOK, "activation_result.html", gin.H{

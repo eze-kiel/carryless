@@ -4,9 +4,9 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"fmt"
-	"log"
 	"math/big"
 
+	"carryless/internal/logger"
 	"carryless/internal/models"
 
 	"github.com/google/uuid"
@@ -566,20 +566,22 @@ func TogglePackItemWorn(db *sql.DB, packID string, itemID, userID int, isWorn bo
 }
 
 func DuplicatePack(db *sql.DB, userID int, originalPackID string) (*models.Pack, error) {
-	log.Printf("[DUPLICATE] Starting pack duplication - UserID: %d, OriginalPackID: %s", userID, originalPackID)
+	logger.Debug("Starting pack duplication",
+		"user_id", userID,
+		"original_pack_id", originalPackID)
 	
 	// Start a database transaction
 	tx, err := db.Begin()
 	if err != nil {
-		log.Printf("[DUPLICATE] Failed to begin transaction: %v", err)
+		logger.Error("Failed to begin transaction", "error", err)
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	log.Printf("[DUPLICATE] Started database transaction")
+	logger.Debug("Started database transaction")
 	
 	// Defer rollback in case of error
 	defer func() {
 		if r := recover(); r != nil {
-			log.Printf("[DUPLICATE] Panic occurred, rolling back transaction: %v", r)
+			logger.Error("Panic occurred, rolling back transaction", "panic", r)
 			tx.Rollback()
 			panic(r)
 		}
@@ -588,37 +590,43 @@ func DuplicatePack(db *sql.DB, userID int, originalPackID string) (*models.Pack,
 	// Get the original pack with all its items
 	originalPack, err := GetPackWithItems(db, originalPackID)
 	if err != nil {
-		log.Printf("[DUPLICATE] Failed to get original pack %s: %v", originalPackID, err)
+		logger.Error("Failed to get original pack",
+			"pack_id", originalPackID,
+			"error", err)
 		tx.Rollback()
 		return nil, fmt.Errorf("failed to get original pack: %w", err)
 	}
-	log.Printf("[DUPLICATE] Retrieved original pack '%s' with %d items", originalPack.Name, len(originalPack.Items))
+	logger.Debug("Retrieved original pack",
+		"pack_name", originalPack.Name,
+		"item_count", len(originalPack.Items))
 
 	// Check if user owns the pack
 	if originalPack.UserID != userID {
-		log.Printf("[DUPLICATE] Unauthorized access attempt - UserID: %d, PackOwnerID: %d", userID, originalPack.UserID)
+		logger.Warn("Unauthorized pack duplication attempt",
+			"user_id", userID,
+			"pack_owner_id", originalPack.UserID)
 		tx.Rollback()
 		return nil, fmt.Errorf("unauthorized")
 	}
 
 	// Create new pack with "Copy" appended to name
 	newPackName := originalPack.Name + " Copy"
-	log.Printf("[DUPLICATE] Creating new pack with name: '%s'", newPackName)
+	logger.Debug("Creating new pack", "pack_name", newPackName)
 	newPack, err := createPackWithTx(tx, userID, newPackName)
 	if err != nil {
-		log.Printf("[DUPLICATE] Failed to create duplicate pack: %v", err)
+		logger.Error("Failed to create duplicate pack", "error", err)
 		tx.Rollback()
 		return nil, fmt.Errorf("failed to create duplicate pack: %w", err)
 	}
-	log.Printf("[DUPLICATE] Created new pack with ID: %s", newPack.ID)
+	logger.Info("Created new pack", "pack_id", newPack.ID)
 
 	// Copy all labels from original pack to new pack
 	// First, get all labels from the original pack
-	log.Printf("[DUPLICATE] Starting to copy labels from pack %s", originalPack.ID)
+	logger.Debug("Starting to copy labels", "pack_id", originalPack.ID)
 	getLabelsQuery := `SELECT id, name, color FROM pack_labels WHERE pack_id = ?`
 	labelRows, err := tx.Query(getLabelsQuery, originalPack.ID)
 	if err != nil {
-		log.Printf("[DUPLICATE] Failed to query pack labels: %v", err)
+		logger.Error("Failed to query pack labels", "error", err)
 		tx.Rollback()
 		return nil, fmt.Errorf("failed to get pack labels: %w", err)
 	}
@@ -632,7 +640,7 @@ func DuplicatePack(db *sql.DB, userID int, originalPackID string) (*models.Pack,
 		var name, color string
 		err := labelRows.Scan(&oldLabelID, &name, &color)
 		if err != nil {
-			log.Printf("[DUPLICATE] Failed to scan pack label: %v", err)
+			logger.Error("Failed to scan pack label", "error", err)
 			tx.Rollback()
 			return nil, fmt.Errorf("failed to scan pack label: %w", err)
 		}
@@ -641,32 +649,43 @@ func DuplicatePack(db *sql.DB, userID int, originalPackID string) (*models.Pack,
 		insertLabelQuery := `INSERT INTO pack_labels (pack_id, name, color) VALUES (?, ?, ?)`
 		result, err := tx.Exec(insertLabelQuery, newPack.ID, name, color)
 		if err != nil {
-			log.Printf("[DUPLICATE] Failed to insert label '%s': %v", name, err)
+			logger.Error("Failed to insert label",
+				"label_name", name,
+				"error", err)
 			tx.Rollback()
 			return nil, fmt.Errorf("failed to copy pack label: %w", err)
 		}
 
 		newLabelID, err := result.LastInsertId()
 		if err != nil {
-			log.Printf("[DUPLICATE] Failed to get new label ID: %v", err)
+			logger.Error("Failed to get new label ID", "error", err)
 			tx.Rollback()
 			return nil, fmt.Errorf("failed to get new label ID: %w", err)
 		}
 
 		labelIDMap[oldLabelID] = int(newLabelID)
 		labelCount++
-		log.Printf("[DUPLICATE] Copied label '%s' (color: %s) - OldID: %d -> NewID: %d", name, color, oldLabelID, int(newLabelID))
+		logger.Debug("Copied label",
+			"label_name", name,
+			"color", color,
+			"old_id", oldLabelID,
+			"new_id", int(newLabelID))
 	}
-	log.Printf("[DUPLICATE] Successfully copied %d labels", labelCount)
+	logger.Info("Successfully copied labels", "count", labelCount)
 
 	// Map old pack item IDs to new pack item IDs
 	packItemIDMap := make(map[int]int)
 
 	// Copy all items from original pack to new pack
-	log.Printf("[DUPLICATE] Starting to copy %d pack items", len(originalPack.Items))
+	logger.Debug("Starting to copy pack items", "count", len(originalPack.Items))
 	for i, packItem := range originalPack.Items {
-		log.Printf("[DUPLICATE] Copying pack item %d/%d - ItemID: %d, Count: %d, WornCount: %d", i+1, len(originalPack.Items), packItem.ItemID, packItem.Count, packItem.WornCount)
-		
+		logger.Debug("Copying pack item",
+			"index", i+1,
+			"total", len(originalPack.Items),
+			"item_id", packItem.ItemID,
+			"count", packItem.Count,
+			"worn_count", packItem.WornCount)
+
 		// Insert the pack item with the same count and worn_count
 		insertQuery := `
 			INSERT INTO pack_items (pack_id, item_id, count, worn_count, is_worn)
@@ -674,34 +693,38 @@ func DuplicatePack(db *sql.DB, userID int, originalPackID string) (*models.Pack,
 		`
 		result, err := tx.Exec(insertQuery, newPack.ID, packItem.ItemID, packItem.Count, packItem.WornCount, packItem.IsWorn)
 		if err != nil {
-			log.Printf("[DUPLICATE] Failed to copy pack item (ItemID: %d): %v", packItem.ItemID, err)
+			logger.Error("Failed to copy pack item",
+				"item_id", packItem.ItemID,
+				"error", err)
 			tx.Rollback()
 			return nil, fmt.Errorf("failed to copy pack items: %w", err)
 		}
 
 		newPackItemID, err := result.LastInsertId()
 		if err != nil {
-			log.Printf("[DUPLICATE] Failed to get new pack item ID: %v", err)
+			logger.Error("Failed to get new pack item ID", "error", err)
 			tx.Rollback()
 			return nil, fmt.Errorf("failed to get new pack item ID: %w", err)
 		}
 
 		packItemIDMap[packItem.ID] = int(newPackItemID)
-		log.Printf("[DUPLICATE] Mapped pack item - OldID: %d -> NewID: %d", packItem.ID, int(newPackItemID))
+		logger.Debug("Mapped pack item",
+			"old_id", packItem.ID,
+			"new_id", int(newPackItemID))
 	}
-	log.Printf("[DUPLICATE] Successfully copied all pack items")
+	logger.Info("Successfully copied all pack items")
 
 	// Copy item label assignments
-	log.Printf("[DUPLICATE] Starting to copy item label assignments")
+	logger.Debug("Starting to copy item label assignments")
 	getItemLabelsQuery := `
-		SELECT il.pack_item_id, il.pack_label_id, il.count 
+		SELECT il.pack_item_id, il.pack_label_id, il.count
 		FROM item_labels il
 		JOIN pack_items pi ON il.pack_item_id = pi.id
 		WHERE pi.pack_id = ?
 	`
 	itemLabelRows, err := tx.Query(getItemLabelsQuery, originalPack.ID)
 	if err != nil {
-		log.Printf("[DUPLICATE] Failed to query item labels: %v", err)
+		logger.Error("Failed to query item labels", "error", err)
 		tx.Rollback()
 		return nil, fmt.Errorf("failed to get item labels: %w", err)
 	}
@@ -712,7 +735,7 @@ func DuplicatePack(db *sql.DB, userID int, originalPackID string) (*models.Pack,
 		var oldPackItemID, oldLabelID, count int
 		err := itemLabelRows.Scan(&oldPackItemID, &oldLabelID, &count)
 		if err != nil {
-			log.Printf("[DUPLICATE] Failed to scan item label: %v", err)
+			logger.Error("Failed to scan item label", "error", err)
 			tx.Rollback()
 			return nil, fmt.Errorf("failed to scan item label: %w", err)
 		}
@@ -720,13 +743,15 @@ func DuplicatePack(db *sql.DB, userID int, originalPackID string) (*models.Pack,
 		// Get the new IDs from our maps
 		newPackItemID, exists := packItemIDMap[oldPackItemID]
 		if !exists {
-			log.Printf("[DUPLICATE] Warning: Pack item ID %d not found in mapping, skipping label assignment", oldPackItemID)
+			logger.Warn("Pack item ID not found in mapping, skipping label assignment",
+				"pack_item_id", oldPackItemID)
 			continue // Skip if pack item doesn't exist (shouldn't happen)
 		}
 
 		newLabelID, exists := labelIDMap[oldLabelID]
 		if !exists {
-			log.Printf("[DUPLICATE] Warning: Label ID %d not found in mapping, skipping label assignment", oldLabelID)
+			logger.Warn("Label ID not found in mapping, skipping label assignment",
+				"label_id", oldLabelID)
 			continue // Skip if label doesn't exist (shouldn't happen)
 		}
 
@@ -734,24 +759,37 @@ func DuplicatePack(db *sql.DB, userID int, originalPackID string) (*models.Pack,
 		insertItemLabelQuery := `INSERT INTO item_labels (pack_item_id, pack_label_id, count) VALUES (?, ?, ?)`
 		_, err = tx.Exec(insertItemLabelQuery, newPackItemID, newLabelID, count)
 		if err != nil {
-			log.Printf("[DUPLICATE] Failed to copy item label assignment (PackItemID: %d -> %d, LabelID: %d -> %d, Count: %d): %v", oldPackItemID, newPackItemID, oldLabelID, newLabelID, count, err)
+			logger.Error("Failed to copy item label assignment",
+				"old_pack_item_id", oldPackItemID,
+				"new_pack_item_id", newPackItemID,
+				"old_label_id", oldLabelID,
+				"new_label_id", newLabelID,
+				"count", count,
+				"error", err)
 			tx.Rollback()
 			return nil, fmt.Errorf("failed to copy item label assignment: %w", err)
 		}
 
 		assignmentCount++
-		log.Printf("[DUPLICATE] Copied item label assignment - PackItemID: %d -> %d, LabelID: %d -> %d, Count: %d", oldPackItemID, newPackItemID, oldLabelID, newLabelID, count)
+		logger.Debug("Copied item label assignment",
+			"old_pack_item_id", oldPackItemID,
+			"new_pack_item_id", newPackItemID,
+			"old_label_id", oldLabelID,
+			"new_label_id", newLabelID,
+			"count", count)
 	}
-	log.Printf("[DUPLICATE] Successfully copied %d item label assignments", assignmentCount)
+	logger.Info("Successfully copied item label assignments", "count", assignmentCount)
 
 	// Commit the transaction
 	err = tx.Commit()
 	if err != nil {
-		log.Printf("[DUPLICATE] Failed to commit transaction: %v", err)
+		logger.Error("Failed to commit transaction", "error", err)
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
-	log.Printf("[DUPLICATE] Transaction committed successfully")
-	log.Printf("[DUPLICATE] Pack duplication completed successfully - New Pack ID: %s, Name: '%s'", newPack.ID, newPack.Name)
+	logger.Debug("Transaction committed successfully")
+	logger.Info("Pack duplication completed successfully",
+		"new_pack_id", newPack.ID,
+		"pack_name", newPack.Name)
 
 	return newPack, nil
 }

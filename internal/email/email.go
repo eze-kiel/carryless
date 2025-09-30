@@ -3,10 +3,10 @@ package email
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	"carryless/internal/config"
+	"carryless/internal/logger"
 	"carryless/internal/models"
 
 	"github.com/mailgun/mailgun-go/v5"
@@ -71,7 +71,10 @@ func (s *Service) SendWelcomeEmail(user *models.User, activationToken string) er
 		return fmt.Errorf("failed to send welcome email to %s: %w", user.Email, err)
 	}
 
-	log.Printf("Welcome email sent to %s (Message ID: %s)", user.Email, resp)
+	logger.Info("Welcome email sent",
+		"email", user.Email,
+		"user_id", user.ID,
+		"message_id", resp)
 	return nil
 }
 
@@ -101,6 +104,11 @@ func (s *Service) SendAdminNotificationEmail(admin *models.User, newUser *models
 		return fmt.Errorf("failed to send admin notification email to %s: %w", admin.Email, err)
 	}
 
-	log.Printf("Admin notification email sent to %s (Message ID: %s)", admin.Email, resp)
+	logger.Info("Admin notification email sent",
+		"admin_email", admin.Email,
+		"admin_id", admin.ID,
+		"new_user_email", newUser.Email,
+		"new_user_id", newUser.ID,
+		"message_id", resp)
 	return nil
 }

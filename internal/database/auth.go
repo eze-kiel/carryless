@@ -5,9 +5,9 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"fmt"
-	"log"
 	"time"
 
+	"carryless/internal/logger"
 	"carryless/internal/models"
 
 	"github.com/google/uuid"
@@ -156,13 +156,17 @@ func ValidateSession(db *sql.DB, sessionID string, sessionDuration time.Duration
 		_, err = db.Exec(updateLastSeenQuery, user.ID)
 		if err != nil {
 			// Log but don't fail the request if we can't update last_seen
-			log.Printf("Failed to update last_seen for user %d: %v", user.ID, err)
+			logger.Warn("Failed to update last_seen",
+				"user_id", user.ID,
+				"error", err)
 		}
 	}
 
 	err = RenewSession(db, sessionID, sessionDuration)
 	if err != nil {
-		log.Printf("Failed to renew session %s: %v", sessionID[:8], err)
+		logger.Warn("Failed to renew session",
+			"session_id", sessionID,
+			"error", err)
 	}
 
 	return user, nil

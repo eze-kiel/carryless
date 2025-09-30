@@ -12,6 +12,7 @@ import (
 	"carryless/internal/database"
 	"carryless/internal/email"
 	"carryless/internal/handlers"
+	"carryless/internal/logger"
 	"carryless/internal/middleware"
 	"carryless/internal/models"
 
@@ -21,21 +22,33 @@ import (
 func main() {
 	cfg := config.Load()
 
+	// Initialize logger with configured level
+	logLevel := logger.ParseLevel(cfg.LogLevel)
+	isDev := cfg.Environment == "development"
+	logger.Initialize(logLevel, isDev)
+
+	// Set Gin mode based on environment
+	if !isDev {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
 	db, err := database.Initialize(cfg.DatabasePath)
 	if err != nil {
+		logger.Error("Failed to initialize database", "error", err)
 		log.Fatal("Failed to initialize database:", err)
 	}
 	defer db.Close()
 
 	if err := database.Migrate(db); err != nil {
+		logger.Error("Failed to run migrations", "error", err)
 		log.Fatal("Failed to run migrations:", err)
 	}
 
 	emailService := email.NewService(cfg)
 	if emailService.IsEnabled() {
-		log.Println("Email service enabled with Mailgun")
+		logger.Info("Email service enabled with Mailgun")
 	} else {
-		log.Println("Email service disabled - Mailgun not configured")
+		logger.Info("Email service disabled - Mailgun not configured")
 	}
 
 	r := gin.Default()
@@ -142,6 +155,9 @@ func main() {
 
 	handlers.SetupRoutes(r, db, emailService, cfg)
 
-	log.Printf("Server starting on port %s", cfg.Port)
-	log.Fatal(r.Run(":" + cfg.Port))
+	logger.Info("Server starting", "port", cfg.Port)
+	if err := r.Run(":" + cfg.Port); err != nil {
+		logger.Error("Server failed to start", "error", err)
+		log.Fatal(err)
+	}
 }

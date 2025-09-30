@@ -2,12 +2,12 @@ package handlers
 
 import (
 	"database/sql"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
 
 	"carryless/internal/database"
+	"carryless/internal/logger"
 
 	"github.com/gin-gonic/gin"
 )
@@ -648,27 +648,42 @@ func handleDuplicatePack(c *gin.Context) {
 	db := c.MustGet("db").(*sql.DB)
 	packID := c.Param("id")
 
-	log.Printf("[HANDLER] Duplicate pack request - UserID: %d, PackID: %s, IP: %s", userID, packID, c.ClientIP())
+	logger.Debug("Duplicate pack request",
+		"user_id", userID,
+		"pack_id", packID,
+		"ip", c.ClientIP())
 
 	newPack, err := database.DuplicatePack(db, userID, packID)
 	if err != nil {
-		log.Printf("[HANDLER] Duplicate pack failed - UserID: %d, PackID: %s, Error: %v", userID, packID, err)
+		logger.Error("Duplicate pack failed",
+			"user_id", userID,
+			"pack_id", packID,
+			"error", err)
 		if strings.Contains(err.Error(), "not found") {
-			log.Printf("[HANDLER] Pack not found - redirecting to packs page")
+			logger.Debug("Pack not found - redirecting to packs page")
 			c.Redirect(http.StatusFound, "/packs")
 			return
 		}
 		if strings.Contains(err.Error(), "unauthorized") {
-			log.Printf("[HANDLER] Unauthorized access attempt - redirecting to packs page")
+			logger.Warn("Unauthorized access attempt",
+				"user_id", userID,
+				"pack_id", packID)
 			c.Redirect(http.StatusFound, "/packs")
 			return
 		}
-		log.Printf("[HANDLER] Unknown error during duplication - redirecting to packs page")
+		logger.Error("Unknown error during duplication",
+			"user_id", userID,
+			"pack_id", packID,
+			"error", err)
 		c.Redirect(http.StatusFound, "/packs")
 		return
 	}
 
-	log.Printf("[HANDLER] Pack duplication successful - UserID: %d, OriginalPackID: %s, NewPackID: %s, NewPackName: '%s'", userID, packID, newPack.ID, newPack.Name)
+	logger.Info("Pack duplication successful",
+		"user_id", userID,
+		"original_pack_id", packID,
+		"new_pack_id", newPack.ID,
+		"new_pack_name", newPack.Name)
 	c.Redirect(http.StatusFound, "/packs")
 }
 
