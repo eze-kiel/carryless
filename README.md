@@ -77,24 +77,21 @@ export ALLOWED_ORIGINS="https://yourdomain.com,https://app.yourdomain.com"
 ```
 
 ### Session Configuration
-Control user session behavior and automatic extension for active users:
+Control user session behavior with sliding window sessions:
 
 ```bash
-export SESSION_DURATION=168        # Session duration in hours (default: 168 = 7 days)
-export SESSION_EXTENSION_THRESHOLD=24  # Hours before expiration to auto-extend (default: 24)
+export SESSION_DURATION=336        # Session duration in hours (default: 336 = 14 days)
 ```
 
 You can also use Go duration strings:
 ```bash
 export SESSION_DURATION="30d"      # 30 days
-export SESSION_EXTENSION_THRESHOLD="2h"  # 2 hours
 ```
 
-**Session Extension Behavior:**
-- Active users get automatically extended sessions - they stay logged in as long as they're active
-- Sessions are only extended when they're close to expiring (within threshold)
-- Reduces unnecessary database writes while keeping active users logged in
-- Default: 7-day sessions, extended when within 1 day of expiration
+**Session Behavior:**
+- Sessions use a sliding window approach - each request automatically extends the session by the full duration
+- Active users stay logged in as long as they're active
+- Default: 14-day sessions that reset to 14 days on each request
 
 ### Email Configuration (Mailgun)
 For user activation emails and admin notifications:

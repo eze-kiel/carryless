@@ -66,8 +66,7 @@ func TestSessionManagement(t *testing.T) {
 	}
 
 	sessionDuration := 7 * 24 * time.Hour
-	extensionThreshold := 24 * time.Hour
-	
+
 	session, err := CreateSession(db, user.ID, sessionDuration)
 	if err != nil {
 		t.Fatal("Failed to create session:", err)
@@ -77,7 +76,7 @@ func TestSessionManagement(t *testing.T) {
 		t.Error("Session ID should not be empty")
 	}
 
-	validatedUser, err := ValidateSession(db, session.ID, sessionDuration, extensionThreshold)
+	validatedUser, err := ValidateSession(db, session.ID, sessionDuration)
 	if err != nil {
 		t.Fatal("Failed to validate session:", err)
 	}
@@ -91,7 +90,7 @@ func TestSessionManagement(t *testing.T) {
 		t.Fatal("Failed to delete session:", err)
 	}
 
-	_, err = ValidateSession(db, session.ID, sessionDuration, extensionThreshold)
+	_, err = ValidateSession(db, session.ID, sessionDuration)
 	if err == nil {
 		t.Error("Expected session validation to fail after deletion")
 	}

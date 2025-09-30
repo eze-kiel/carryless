@@ -119,7 +119,7 @@ func CreateSession(db *sql.DB, userID int, sessionDuration time.Duration) (*mode
 	return session, nil
 }
 
-func ValidateSession(db *sql.DB, sessionID string, sessionDuration time.Duration, extensionThreshold time.Duration) (*models.User, error) {
+func ValidateSession(db *sql.DB, sessionID string, sessionDuration time.Duration) (*models.User, error) {
 	user := &models.User{}
 	query := `
 		SELECT u.id, u.username, u.email, COALESCE(u.currency, '$'), COALESCE(u.is_admin, false), COALESCE(u.is_activated, false), u.created_at, u.updated_at
@@ -145,7 +145,7 @@ func ValidateSession(db *sql.DB, sessionID string, sessionDuration time.Duration
 		return nil, fmt.Errorf("failed to validate session: %w", err)
 	}
 
-	err = RenewSession(db, sessionID, sessionDuration, extensionThreshold)
+	err = RenewSession(db, sessionID, sessionDuration)
 	if err != nil {
 		log.Printf("Failed to renew session %s: %v", sessionID[:8], err)
 	}
@@ -194,9 +194,8 @@ func UpdateUserCurrency(db *sql.DB, userID int, currency string) error {
 	return nil
 }
 
-func RenewSession(db *sql.DB, sessionID string, sessionDuration time.Duration, extensionThreshold time.Duration) error {
-	// Note: extensionThreshold parameter kept for backwards compatibility but not used
-	// Implementing true sliding window - always extend on activity
+func RenewSession(db *sql.DB, sessionID string, sessionDuration time.Duration) error {
+	// Implementing sliding window - always extend on activity
 	now := time.Now()
 	newExpiresAt := now.Add(sessionDuration)
 

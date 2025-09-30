@@ -300,7 +300,7 @@ func AuthRequired(db *sql.DB, cfg *config.Config) gin.HandlerFunc {
 			return
 		}
 
-		user, err := database.ValidateSession(db, sessionCookie, cfg.SessionDuration, cfg.SessionExtensionThreshold)
+		user, err := database.ValidateSession(db, sessionCookie, cfg.SessionDuration)
 		if err != nil {
 			c.SetSameSite(http.SameSiteStrictMode)
 			c.SetCookie("session_id", "", -1, "/", "", true, true)
@@ -320,7 +320,7 @@ func AuthOptional(db *sql.DB, cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		sessionCookie, err := c.Cookie("session_id")
 		if err == nil {
-			user, err := database.ValidateSession(db, sessionCookie, cfg.SessionDuration, cfg.SessionExtensionThreshold)
+			user, err := database.ValidateSession(db, sessionCookie, cfg.SessionDuration)
 			if err == nil {
 				c.Set("user", user)
 				c.Set("user_id", user.ID)
@@ -410,7 +410,7 @@ func AdminRequired(db *sql.DB, cfg *config.Config) gin.HandlerFunc {
 			return
 		}
 
-		user, err := database.ValidateSession(db, sessionCookie, cfg.SessionDuration, cfg.SessionExtensionThreshold)
+		user, err := database.ValidateSession(db, sessionCookie, cfg.SessionDuration)
 		if err != nil {
 			c.SetSameSite(http.SameSiteStrictMode)
 			c.SetCookie("session_id", "", -1, "/", "", true, true)
