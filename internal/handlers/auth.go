@@ -183,7 +183,9 @@ func handleLogin(c *gin.Context) {
 	}
 
 	c.SetSameSite(http.SameSiteStrictMode)
-	c.SetCookie("session_id", session.ID, 86400, "/", "", true, true)
+	// Set cookie expiry to match session duration
+	cookieMaxAge := int(cfg.SessionDuration.Seconds())
+	c.SetCookie("session_id", session.ID, cookieMaxAge, "/", "", true, true)
 	c.Redirect(http.StatusFound, "/dashboard")
 }
 

@@ -195,31 +195,17 @@ func UpdateUserCurrency(db *sql.DB, userID int, currency string) error {
 }
 
 func RenewSession(db *sql.DB, sessionID string, sessionDuration time.Duration, extensionThreshold time.Duration) error {
+	// Note: extensionThreshold parameter kept for backwards compatibility but not used
+	// Implementing true sliding window - always extend on activity
 	now := time.Now()
-	
-	var currentExpiresAt time.Time
-	query := `SELECT expires_at FROM sessions WHERE id = ?`
-	err := db.QueryRow(query, sessionID).Scan(&currentExpiresAt)
-	if err != nil {
-		return fmt.Errorf("failed to get session expiration: %w", err)
-	}
-	
-	timeUntilExpiration := currentExpiresAt.Sub(now)
-	if timeUntilExpiration > extensionThreshold {
-		return nil
-	}
-	
 	newExpiresAt := now.Add(sessionDuration)
+
 	updateQuery := `UPDATE sessions SET expires_at = ? WHERE id = ?`
-	_, err = db.Exec(updateQuery, newExpiresAt, sessionID)
+	_, err := db.Exec(updateQuery, newExpiresAt, sessionID)
 	if err != nil {
 		return fmt.Errorf("failed to renew session: %w", err)
 	}
-	
-	log.Printf("Extended session %s from %v to %v (time until expiration was %v)", 
-		sessionID[:8], currentExpiresAt.Format("2006-01-02 15:04:05"), 
-		newExpiresAt.Format("2006-01-02 15:04:05"), timeUntilExpiration)
-	
+
 	return nil
 }
 

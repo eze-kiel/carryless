@@ -16,7 +16,7 @@ type Config struct {
 	MailgunSenderName          string
 	MailgunRegion              string
 	SessionDuration            time.Duration
-	SessionExtensionThreshold  time.Duration
+	SessionExtensionThreshold  time.Duration // Deprecated: Not used with sliding window sessions
 }
 
 func Load() *Config {
@@ -30,7 +30,7 @@ func Load() *Config {
 		MailgunSenderName:         getEnv("MAILGUN_SENDER_NAME", "Carryless"),
 		MailgunRegion:             getEnv("MAILGUN_REGION", "EU"),
 		SessionDuration:           getDurationEnv("SESSION_DURATION", 14*24*time.Hour),
-		SessionExtensionThreshold: getDurationEnv("SESSION_EXTENSION_THRESHOLD", 48*time.Hour),
+		SessionExtensionThreshold: getDurationEnv("SESSION_EXTENSION_THRESHOLD", 48*time.Hour), // Deprecated: kept for compatibility
 	}
 	return cfg
 }
