@@ -121,8 +121,9 @@ func CreateSession(db *sql.DB, userID int, sessionDuration time.Duration) (*mode
 
 func ValidateSession(db *sql.DB, sessionID string, sessionDuration time.Duration) (*models.User, error) {
 	user := &models.User{}
+	var lastSeen sql.NullTime
 	query := `
-		SELECT u.id, u.username, u.email, COALESCE(u.currency, '$'), COALESCE(u.is_admin, false), COALESCE(u.is_activated, false), u.created_at, u.updated_at
+		SELECT u.id, u.username, u.email, COALESCE(u.currency, '$'), COALESCE(u.is_admin, false), COALESCE(u.is_activated, false), u.created_at, u.updated_at, u.last_seen
 		FROM users u
 		INNER JOIN sessions s ON u.id = s.user_id
 		WHERE s.id = ? AND s.expires_at > CURRENT_TIMESTAMP
@@ -137,12 +138,26 @@ func ValidateSession(db *sql.DB, sessionID string, sessionDuration time.Duration
 		&user.IsActivated,
 		&user.CreatedAt,
 		&user.UpdatedAt,
+		&lastSeen,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("session not found or expired")
 		}
 		return nil, fmt.Errorf("failed to validate session: %w", err)
+	}
+
+	// Update last_seen if it's been more than 5 minutes since the last update
+	now := time.Now()
+	shouldUpdateLastSeen := !lastSeen.Valid || now.Sub(lastSeen.Time) > 5*time.Minute
+
+	if shouldUpdateLastSeen {
+		updateLastSeenQuery := `UPDATE users SET last_seen = CURRENT_TIMESTAMP WHERE id = ?`
+		_, err = db.Exec(updateLastSeenQuery, user.ID)
+		if err != nil {
+			// Log but don't fail the request if we can't update last_seen
+			log.Printf("Failed to update last_seen for user %d: %v", user.ID, err)
+		}
 	}
 
 	err = RenewSession(db, sessionID, sessionDuration)

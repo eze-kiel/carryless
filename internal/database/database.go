@@ -161,6 +161,11 @@ func Migrate(db *sql.DB) error {
 		return fmt.Errorf("failed to create activation_tokens table: %w", err)
 	}
 
+	// Add last_seen column to users table if it doesn't exist
+	if err := addUserLastSeenColumn(db); err != nil {
+		return fmt.Errorf("failed to add last_seen column to users: %w", err)
+	}
+
 	return nil
 }
 
@@ -687,6 +692,38 @@ func createActivationTokensTable(db *sql.DB) error {
 	_, err = db.Exec(expireIndexQuery)
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func addUserLastSeenColumn(db *sql.DB) error {
+	// Check if last_seen column exists
+	rows, err := db.Query("PRAGMA table_info(users)")
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	hasLastSeen := false
+	for rows.Next() {
+		var cid int
+		var name, dataType, notNull, defaultValue, pk string
+		err := rows.Scan(&cid, &name, &dataType, &notNull, &defaultValue, &pk)
+		if err != nil {
+			continue
+		}
+		if name == "last_seen" {
+			hasLastSeen = true
+			break
+		}
+	}
+
+	if !hasLastSeen {
+		_, err = db.Exec("ALTER TABLE users ADD COLUMN last_seen DATETIME DEFAULT NULL")
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

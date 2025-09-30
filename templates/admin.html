@@ -94,6 +94,7 @@
                                 <th>Admin</th>
                                 <th>Activated</th>
                                 <th>Packs</th>
+                                <th>Last Seen</th>
                                 <th>Created At</th>
                                 <th>Actions</th>
                             </tr>
@@ -107,6 +108,13 @@
                                 <td>{{if .IsAdmin}}Yes{{else}}No{{end}}</td>
                                 <td>{{if .IsActivated}}<span style="color: green;">Yes</span>{{else}}<span style="color: red;">No</span>{{end}}</td>
                                 <td>{{.PackCount}}</td>
+                                <td>
+                                    {{if .LastSeen.Valid}}
+                                        <span class="last-seen" data-timestamp="{{.LastSeen.Time.Format "2006-01-02T15:04:05Z07:00"}}">{{.LastSeen.Time.Format "2006-01-02 15:04:05"}}</span>
+                                    {{else}}
+                                        <span style="color: #999;">Never</span>
+                                    {{end}}
+                                </td>
                                 <td>{{.CreatedAt.Format "2006-01-02 15:04:05"}}</td>
                                 <td>
                                     <div class="dropdown">
@@ -471,6 +479,48 @@ document.addEventListener('DOMContentLoaded', function() {
     <script src="/static/js/app.js"></script>
 
 <script>
+// Function to format timestamps as relative time
+function formatRelativeTime(timestamp) {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffInMillis = now - date;
+    const diffInSeconds = Math.floor(diffInMillis / 1000);
+    const diffInMinutes = Math.floor(diffInSeconds / 60);
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    const diffInDays = Math.floor(diffInHours / 24);
+    const diffInWeeks = Math.floor(diffInDays / 7);
+    const diffInMonths = Math.floor(diffInDays / 30);
+
+    if (diffInSeconds < 60) {
+        return 'Just now';
+    } else if (diffInMinutes < 60) {
+        return `${diffInMinutes} minute${diffInMinutes > 1 ? 's' : ''} ago`;
+    } else if (diffInHours < 24) {
+        return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
+    } else if (diffInDays < 7) {
+        return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
+    } else if (diffInWeeks < 4) {
+        return `${diffInWeeks} week${diffInWeeks > 1 ? 's' : ''} ago`;
+    } else if (diffInMonths < 12) {
+        return `${diffInMonths} month${diffInMonths > 1 ? 's' : ''} ago`;
+    } else {
+        return date.toLocaleDateString();
+    }
+}
+
+// Update all last seen timestamps to relative time on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const lastSeenElements = document.querySelectorAll('.last-seen');
+    lastSeenElements.forEach(element => {
+        const timestamp = element.getAttribute('data-timestamp');
+        if (timestamp) {
+            const relativeTime = formatRelativeTime(timestamp);
+            element.textContent = relativeTime;
+            element.title = new Date(timestamp).toLocaleString(); // Show full date on hover
+        }
+    });
+});
+
 // Weight unit cookie management (for consistency across pages)
 function setCookie(name, value, days = 365) {
     const expires = new Date();

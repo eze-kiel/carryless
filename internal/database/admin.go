@@ -14,15 +14,16 @@ type AdminStats struct {
 }
 
 type UserWithStats struct {
-	ID          int       `json:"id"`
-	Username    string    `json:"username"`
-	Email       string    `json:"email"`
-	Currency    string    `json:"currency"`
-	IsAdmin     bool      `json:"is_admin"`
-	IsActivated bool      `json:"is_activated"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
-	PackCount   int       `json:"pack_count"`
+	ID          int            `json:"id"`
+	Username    string         `json:"username"`
+	Email       string         `json:"email"`
+	Currency    string         `json:"currency"`
+	IsAdmin     bool           `json:"is_admin"`
+	IsActivated bool           `json:"is_activated"`
+	CreatedAt   time.Time      `json:"created_at"`
+	UpdatedAt   time.Time      `json:"updated_at"`
+	PackCount   int            `json:"pack_count"`
+	LastSeen    sql.NullTime   `json:"last_seen"`
 }
 
 func GetAdminStats(db *sql.DB) (*AdminStats, error) {
@@ -84,28 +85,29 @@ func GetAllUsers(db *sql.DB) ([]models.User, error) {
 
 func GetAllUsersWithStats(db *sql.DB) ([]UserWithStats, error) {
 	query := `
-		SELECT 
-			u.id, 
-			u.username, 
-			u.email, 
-			COALESCE(u.currency, '$'), 
-			COALESCE(u.is_admin, false), 
-			COALESCE(u.is_activated, false), 
-			u.created_at, 
+		SELECT
+			u.id,
+			u.username,
+			u.email,
+			COALESCE(u.currency, '$'),
+			COALESCE(u.is_admin, false),
+			COALESCE(u.is_activated, false),
+			u.created_at,
 			u.updated_at,
+			u.last_seen,
 			COUNT(p.id) as pack_count
 		FROM users u
 		LEFT JOIN packs p ON u.id = p.user_id
-		GROUP BY u.id, u.username, u.email, u.currency, u.is_admin, u.is_activated, u.created_at, u.updated_at
+		GROUP BY u.id, u.username, u.email, u.currency, u.is_admin, u.is_activated, u.created_at, u.updated_at, u.last_seen
 		ORDER BY u.created_at ASC
 	`
-	
+
 	rows, err := db.Query(query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query users with stats: %w", err)
 	}
 	defer rows.Close()
-	
+
 	var users []UserWithStats
 	for rows.Next() {
 		var user UserWithStats
@@ -118,6 +120,7 @@ func GetAllUsersWithStats(db *sql.DB) ([]UserWithStats, error) {
 			&user.IsActivated,
 			&user.CreatedAt,
 			&user.UpdatedAt,
+			&user.LastSeen,
 			&user.PackCount,
 		)
 		if err != nil {
