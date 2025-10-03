@@ -14,6 +14,36 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+func GetUserByID(db *sql.DB, userID int) (*models.User, error) {
+	user := &models.User{}
+	query := `
+		SELECT id, username, email, password_hash, COALESCE(currency, '$'), COALESCE(is_admin, false),
+		       COALESCE(is_activated, false), created_at, updated_at
+		FROM users
+		WHERE id = ?
+	`
+
+	err := db.QueryRow(query, userID).Scan(
+		&user.ID,
+		&user.Username,
+		&user.Email,
+		&user.PasswordHash,
+		&user.Currency,
+		&user.IsAdmin,
+		&user.IsActivated,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("user not found")
+		}
+		return nil, fmt.Errorf("failed to query user: %w", err)
+	}
+
+	return user, nil
+}
+
 func CreateUser(db *sql.DB, username, email, password string) (*models.User, error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
@@ -392,6 +422,50 @@ func ActivateUser(db *sql.DB, userID int, token string) error {
 	}
 
 	return nil
+}
+
+func ResendActivationToken(db *sql.DB, userID int) (*models.ActivationToken, error) {
+	// Start a transaction to ensure atomicity
+	tx, err := db.Begin()
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// Delete any existing activation tokens for this user
+	deleteQuery := `DELETE FROM activation_tokens WHERE user_id = ?`
+	_, err = tx.Exec(deleteQuery, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to delete old activation tokens: %w", err)
+	}
+
+	// Generate new activation token
+	tokenUUID := uuid.New().String()
+	expiresAt := time.Now().Add(24 * time.Hour)
+
+	// Insert new token
+	insertQuery := `
+		INSERT INTO activation_tokens (token, user_id, expires_at)
+		VALUES (?, ?, ?)
+	`
+	_, err = tx.Exec(insertQuery, tokenUUID, userID, expiresAt)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create new activation token: %w", err)
+	}
+
+	// Commit transaction
+	if err = tx.Commit(); err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	token := &models.ActivationToken{
+		Token:     tokenUUID,
+		UserID:    userID,
+		ExpiresAt: expiresAt,
+		CreatedAt: time.Now(),
+	}
+
+	return token, nil
 }
 
 func CleanupExpiredActivationTokens(db *sql.DB) error {

@@ -133,6 +133,11 @@
                                                 <a href="#" class="dropdown-item" onclick="toggleActivation({{.ID}})">
                                                     {{if .IsActivated}}Deactivate User{{else}}Activate User{{end}}
                                                 </a>
+                                                {{if not .IsActivated}}
+                                                <a href="#" class="dropdown-item" onclick="resendActivation({{.ID}}, '{{.Email}}')">
+                                                    Resend Activation Email
+                                                </a>
+                                                {{end}}
                                                 <a href="#" class="dropdown-item dropdown-item-danger" onclick="banUser({{.ID}}, '{{.Username}}')">
                                                     Ban User
                                                 </a>
@@ -333,6 +338,30 @@ document.addEventListener('DOMContentLoaded', function() {
                 .catch(error => {
                     console.error('Error:', error);
                     alert('An error occurred while toggling registration');
+                });
+            }
+        }
+
+        function resendActivation(userId, userEmail) {
+            if (confirm(`Resend activation email to ${userEmail}?`)) {
+                fetch(`/admin/users/${userId}/resend-activation`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': '{{.CSRFToken}}'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert('Error: ' + data.error);
+                    } else {
+                        alert(data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while resending activation email');
                 });
             }
         }

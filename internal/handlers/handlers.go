@@ -95,6 +95,7 @@ func SetupRoutes(r *gin.Engine, db *sql.DB, emailService *email.Service, cfg *co
 		admin.GET("/", handleAdminPanel)
 		admin.POST("/users/:id/toggle-admin", handleToggleUserAdmin)
 		admin.POST("/users/:id/toggle-activation", handleToggleUserActivation)
+		admin.POST("/users/:id/resend-activation", handleResendActivationEmail)
 		admin.POST("/users/:id/ban", handleBanUser)
 		admin.POST("/toggle-registration", handleToggleRegistration)
 	}

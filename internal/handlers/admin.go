@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"carryless/internal/database"
+	"carryless/internal/email"
 	"carryless/internal/models"
 
 	"github.com/gin-gonic/gin"
@@ -141,4 +142,56 @@ func handleToggleUserActivation(c *gin.Context) {
 	}
 	
 	c.JSON(http.StatusOK, gin.H{"message": "User activation status toggled successfully"})
+}
+
+func handleResendActivationEmail(c *gin.Context) {
+	db := c.MustGet("db").(*sql.DB)
+	emailService := c.MustGet("email_service").(*email.Service)
+
+	// Get user ID from URL parameter
+	userIDStr := c.Param("id")
+	userID, err := strconv.Atoi(userIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	// Check if email service is enabled
+	if !emailService.IsEnabled() {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Email service is not configured"})
+		return
+	}
+
+	// Get the user details
+	targetUser, err := database.GetUserByID(db, userID)
+	if err != nil {
+		if err.Error() == "user not found" {
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user details"})
+		}
+		return
+	}
+
+	// Check if user is already activated
+	if targetUser.IsActivated {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "User is already activated"})
+		return
+	}
+
+	// Generate new activation token
+	activationToken, err := database.ResendActivationToken(db, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate new activation token"})
+		return
+	}
+
+	// Send the activation email
+	err = emailService.SendWelcomeEmail(targetUser, activationToken.Token)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send activation email"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Activation email resent successfully"})
 }
