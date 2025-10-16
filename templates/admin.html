@@ -74,10 +74,20 @@
                 <div class="settings-grid">
                     <div class="setting-card">
                         <h3>User Registration</h3>
-                        <p class="setting-description">{{if .RegistrationEnabled}}Registration is currently enabled{{else}}Registration is currently disabled{{end}}</p>
-                        <button class="btn {{if .RegistrationEnabled}}btn-danger{{else}}btn-success{{end}}" onclick="toggleRegistration()">
-                            {{if .RegistrationEnabled}}Disable Registration{{else}}Enable Registration{{end}}
-                        </button>
+                        <p class="setting-description">Control whether new users can register for accounts</p>
+                        <div style="display: flex; align-items: center; gap: 1rem; margin-top: 1rem;">
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="registrationToggle" {{if .RegistrationEnabled}}checked{{end}} onchange="toggleRegistration(this)">
+                                <div class="toggle-switch-track">
+                                    <div class="toggle-switch-slider"></div>
+                                </div>
+                                <span class="toggle-switch-label">{{if .RegistrationEnabled}}Enabled{{else}}Disabled{{end}}</span>
+                            </label>
+                            <span class="toggle-status {{if .RegistrationEnabled}}enabled{{end}}">
+                                <span class="status-indicator"></span>
+                                <span id="registrationStatusText">{{if .RegistrationEnabled}}New users can register{{else}}Registration is closed{{end}}</span>
+                            </span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -219,6 +229,9 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <script>
+        // Store the current CSRF token - used by all admin actions
+        let currentCSRFToken = '{{.CSRFToken}}';
+
         // Close other dropdowns when one is opened
         document.addEventListener('click', function(event) {
             if (event.target.closest('summary')) {
@@ -248,16 +261,27 @@ document.addEventListener('DOMContentLoaded', function() {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-Token': '{{.CSRFToken}}'
+                        'X-CSRF-Token': currentCSRFToken
                     }
                 })
-                .then(response => response.json())
+                .then(response => {
+                    if (response.status === 403) {
+                        alert('Security token expired. Please refresh the page and try again.');
+                        location.reload();
+                        return null;
+                    }
+                    return response.json();
+                })
                 .then(data => {
+                    if (data === null) return;
+
                     if (data.error) {
                         alert('Error: ' + data.error);
                     } else {
-                        alert(data.message);
-                        location.reload();
+                        showSuccessMessage(data.message);
+                        fetchNewCSRFToken();
+                        // Reload after a short delay to show the success message
+                        setTimeout(() => location.reload(), 1500);
                     }
                 })
                 .catch(error => {
@@ -273,16 +297,27 @@ document.addEventListener('DOMContentLoaded', function() {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-Token': '{{.CSRFToken}}'
+                        'X-CSRF-Token': currentCSRFToken
                     }
                 })
-                .then(response => response.json())
+                .then(response => {
+                    if (response.status === 403) {
+                        alert('Security token expired. Please refresh the page and try again.');
+                        location.reload();
+                        return null;
+                    }
+                    return response.json();
+                })
                 .then(data => {
+                    if (data === null) return;
+
                     if (data.error) {
                         alert('Error: ' + data.error);
                     } else {
-                        alert(data.message);
-                        location.reload();
+                        showSuccessMessage(data.message);
+                        fetchNewCSRFToken();
+                        // Reload after a short delay to show the success message
+                        setTimeout(() => location.reload(), 1500);
                     }
                 })
                 .catch(error => {
@@ -298,16 +333,27 @@ document.addEventListener('DOMContentLoaded', function() {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-Token': '{{.CSRFToken}}'
+                        'X-CSRF-Token': currentCSRFToken
                     }
                 })
-                .then(response => response.json())
+                .then(response => {
+                    if (response.status === 403) {
+                        alert('Security token expired. Please refresh the page and try again.');
+                        location.reload();
+                        return null;
+                    }
+                    return response.json();
+                })
                 .then(data => {
+                    if (data === null) return;
+
                     if (data.error) {
                         alert('Error: ' + data.error);
                     } else {
-                        alert(data.message);
-                        location.reload();
+                        showSuccessMessage(data.message);
+                        fetchNewCSRFToken();
+                        // Reload after a short delay to show the success message
+                        setTimeout(() => location.reload(), 1500);
                     }
                 })
                 .catch(error => {
@@ -317,29 +363,148 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
-        function toggleRegistration() {
-            if (confirm('Are you sure you want to toggle user registration?')) {
+        function toggleRegistration(checkbox) {
+            const isEnabled = checkbox.checked;
+            const action = isEnabled ? 'enable' : 'disable';
+
+            if (confirm(`Are you sure you want to ${action} user registration?`)) {
                 fetch('/admin/toggle-registration', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-Token': '{{.CSRFToken}}'
+                        'X-CSRF-Token': currentCSRFToken
                     }
                 })
-                .then(response => response.json())
+                .then(response => {
+                    if (response.status === 403) {
+                        // CSRF token might be invalid, reload the page to get a new one
+                        alert('Security token expired. Please refresh the page and try again.');
+                        location.reload();
+                        return null;
+                    }
+                    return response.json();
+                })
                 .then(data => {
+                    if (data === null) return; // Handled by reload above
+
                     if (data.error) {
                         alert('Error: ' + data.error);
+                        // Revert the checkbox on error
+                        checkbox.checked = !isEnabled;
                     } else {
-                        alert(data.message);
-                        location.reload();
+                        // Update the UI without reloading
+                        updateRegistrationUI(isEnabled);
+                        // Show success message briefly
+                        showSuccessMessage(data.message);
+                        // Request a new CSRF token for next operation
+                        fetchNewCSRFToken();
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
                     alert('An error occurred while toggling registration');
+                    // Revert the checkbox on error
+                    checkbox.checked = !isEnabled;
                 });
+            } else {
+                // User cancelled, revert the checkbox
+                checkbox.checked = !isEnabled;
             }
+        }
+
+        function fetchNewCSRFToken() {
+            fetch('/api/csrf-token', {
+                method: 'GET',
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.token) {
+                    currentCSRFToken = data.token;
+                }
+            })
+            .catch(error => {
+                console.error('Failed to fetch new CSRF token:', error);
+            });
+        }
+
+        function updateRegistrationUI(isEnabled) {
+            const label = document.querySelector('.toggle-switch-label');
+            const statusText = document.getElementById('registrationStatusText');
+            const toggleStatus = document.querySelector('.toggle-status');
+
+            if (label) {
+                label.textContent = isEnabled ? 'Enabled' : 'Disabled';
+            }
+
+            if (statusText) {
+                statusText.textContent = isEnabled ? 'New users can register' : 'Registration is closed';
+            }
+
+            if (toggleStatus) {
+                if (isEnabled) {
+                    toggleStatus.classList.add('enabled');
+                } else {
+                    toggleStatus.classList.remove('enabled');
+                }
+            }
+        }
+
+        function showSuccessMessage(message) {
+            // Create a temporary success notification
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #059669;
+                color: white;
+                padding: 12px 20px;
+                border-radius: 8px;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                z-index: 10000;
+                animation: slideIn 0.3s ease;
+            `;
+            notification.textContent = message;
+
+            // Add animation keyframes if not already present
+            if (!document.getElementById('notificationStyles')) {
+                const style = document.createElement('style');
+                style.id = 'notificationStyles';
+                style.textContent = `
+                    @keyframes slideIn {
+                        from {
+                            transform: translateX(100%);
+                            opacity: 0;
+                        }
+                        to {
+                            transform: translateX(0);
+                            opacity: 1;
+                        }
+                    }
+                    @keyframes slideOut {
+                        from {
+                            transform: translateX(0);
+                            opacity: 1;
+                        }
+                        to {
+                            transform: translateX(100%);
+                            opacity: 0;
+                        }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+
+            document.body.appendChild(notification);
+
+            // Remove the notification after 3 seconds
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 3000);
         }
 
         function resendActivation(userId, userEmail) {
@@ -348,15 +513,25 @@ document.addEventListener('DOMContentLoaded', function() {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-Token': '{{.CSRFToken}}'
+                        'X-CSRF-Token': currentCSRFToken
                     }
                 })
-                .then(response => response.json())
+                .then(response => {
+                    if (response.status === 403) {
+                        alert('Security token expired. Please refresh the page and try again.');
+                        location.reload();
+                        return null;
+                    }
+                    return response.json();
+                })
                 .then(data => {
+                    if (data === null) return;
+
                     if (data.error) {
                         alert('Error: ' + data.error);
                     } else {
-                        alert(data.message);
+                        showSuccessMessage(data.message);
+                        fetchNewCSRFToken();
                     }
                 })
                 .catch(error => {

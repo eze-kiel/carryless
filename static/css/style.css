@@ -502,6 +502,19 @@ a:hover {
     color: var(--color-white);
 }
 
+/* Success button */
+.btn-success {
+    background: var(--color-success);
+    color: var(--color-white);
+    border-color: var(--color-success);
+}
+
+.btn-success:hover {
+    background: #047857; /* Slightly darker green for hover */
+    border-color: #047857;
+    color: var(--color-white);
+}
+
 /* Danger button */
 .btn-danger {
     background: var(--color-danger);
@@ -546,6 +559,134 @@ a:hover {
 .btn[disabled]:hover {
     transform: none;
     box-shadow: var(--shadow-sm);
+}
+
+/* ============================================
+   Toggle Switch Component
+   ============================================ */
+
+/* Toggle switch container */
+.toggle-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
+    cursor: pointer;
+    user-select: none;
+}
+
+/* Hide the default checkbox */
+.toggle-switch input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+/* Toggle switch track */
+.toggle-switch-track {
+    position: relative;
+    width: 56px;
+    height: 28px;
+    background: var(--color-gray-300);
+    border-radius: 34px;
+    transition: background-color var(--transition-base);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Toggle switch slider */
+.toggle-switch-slider {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 24px;
+    height: 24px;
+    background: var(--color-white);
+    border-radius: 50%;
+    transition: transform var(--transition-base);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* When checked */
+.toggle-switch input[type="checkbox"]:checked + .toggle-switch-track {
+    background: var(--color-success);
+}
+
+.toggle-switch input[type="checkbox"]:checked + .toggle-switch-track .toggle-switch-slider {
+    transform: translateX(28px);
+}
+
+/* Hover state */
+.toggle-switch:hover .toggle-switch-track {
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.toggle-switch:hover input[type="checkbox"]:not(:checked) + .toggle-switch-track {
+    background: var(--color-gray-400);
+}
+
+.toggle-switch:hover input[type="checkbox"]:checked + .toggle-switch-track {
+    background: #047857;
+}
+
+/* Focus state for accessibility */
+.toggle-switch input[type="checkbox"]:focus + .toggle-switch-track {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+/* Disabled state */
+.toggle-switch input[type="checkbox"]:disabled + .toggle-switch-track {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.toggle-switch input[type="checkbox"]:disabled ~ .toggle-switch-label {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Toggle switch label */
+.toggle-switch-label {
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-gray-700);
+    transition: color var(--transition-fast);
+}
+
+.toggle-switch:hover .toggle-switch-label {
+    color: var(--color-gray-900);
+}
+
+/* Status text styling */
+.toggle-status {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-left: var(--space-3);
+    font-size: var(--font-size-sm);
+    color: var(--color-gray-600);
+}
+
+.toggle-status .status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--color-gray-400);
+    transition: background-color var(--transition-fast);
+}
+
+.toggle-status.enabled .status-indicator {
+    background: var(--color-success);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
 }
 
 /* ============================================
