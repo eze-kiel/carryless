@@ -9,8 +9,9 @@ import (
 )
 
 type AdminStats struct {
-	TotalUsers int `json:"total_users"`
-	TotalPacks int `json:"total_packs"`
+	TotalUsers  int `json:"total_users"`
+	TotalPacks  int `json:"total_packs"`
+	ActiveUsers int `json:"active_users"`
 }
 
 type UserWithStats struct {
@@ -28,19 +29,30 @@ type UserWithStats struct {
 
 func GetAdminStats(db *sql.DB) (*AdminStats, error) {
 	stats := &AdminStats{}
-	
+
 	// Get total users
 	err := db.QueryRow("SELECT COUNT(*) FROM users").Scan(&stats.TotalUsers)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user count: %w", err)
 	}
-	
+
 	// Get total packs
 	err = db.QueryRow("SELECT COUNT(*) FROM packs").Scan(&stats.TotalPacks)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get pack count: %w", err)
 	}
-	
+
+	// Get active users (last seen within 30 days)
+	err = db.QueryRow(`
+		SELECT COUNT(DISTINCT id)
+		FROM users
+		WHERE last_seen IS NOT NULL
+		AND last_seen > datetime('now', '-30 days')
+	`).Scan(&stats.ActiveUsers)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get active user count: %w", err)
+	}
+
 	return stats, nil
 }
 
