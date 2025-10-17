@@ -139,6 +139,12 @@ function confirmAction(message, callback) {
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize dropdown navigation
+    initializeDropdown();
+
+    // Initialize weight unit selector
+    initializeWeightUnitSelector();
+
     // Close modals when clicking outside
     document.addEventListener('click', function(event) {
         if (event.target.classList.contains('modal')) {
@@ -295,6 +301,270 @@ function formatDate(dateString) {
     return date.toLocaleDateString();
 }
 
+// Dropdown navigation functionality
+function initializeDropdown() {
+    const dropdown = document.querySelector('.nav-links .dropdown');
+    const dropdownToggle = document.querySelector('.nav-links .dropdown-toggle');
+    const dropdownMenu = document.querySelector('.nav-links .dropdown-menu');
+
+    if (!dropdown || !dropdownToggle || !dropdownMenu) {
+        return; // No dropdown on this page
+    }
+
+    // Toggle dropdown on button click
+    dropdownToggle.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        dropdown.classList.toggle('active');
+        dropdownToggle.setAttribute('aria-expanded', dropdown.classList.contains('active'));
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!dropdown.contains(e.target)) {
+            dropdown.classList.remove('active');
+            dropdownToggle.setAttribute('aria-expanded', 'false');
+        }
+    });
+
+    // Close dropdown on escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && dropdown.classList.contains('active')) {
+            dropdown.classList.remove('active');
+            dropdownToggle.setAttribute('aria-expanded', 'false');
+            dropdownToggle.focus();
+        }
+    });
+
+    // Handle arrow keys for dropdown navigation
+    dropdownToggle.addEventListener('keydown', function(e) {
+        if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            dropdown.classList.add('active');
+            dropdownToggle.setAttribute('aria-expanded', 'true');
+            const firstItem = dropdownMenu.querySelector('.dropdown-item');
+            if (firstItem) {
+                firstItem.focus();
+            }
+        }
+    });
+
+    // Handle navigation within dropdown
+    const dropdownItems = dropdownMenu.querySelectorAll('.dropdown-item');
+    dropdownItems.forEach((item, index) => {
+        item.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                const nextIndex = (index + 1) % dropdownItems.length;
+                dropdownItems[nextIndex].focus();
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                const prevIndex = (index - 1 + dropdownItems.length) % dropdownItems.length;
+                dropdownItems[prevIndex].focus();
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                dropdown.classList.remove('active');
+                dropdownToggle.setAttribute('aria-expanded', 'false');
+                dropdownToggle.focus();
+            }
+        });
+    });
+}
+
+// Initialize weight unit selector
+function initializeWeightUnitSelector() {
+    const selector = document.getElementById('weightUnitSelector');
+    if (!selector) {
+        return; // No selector on this page
+    }
+
+    // Get saved unit preference
+    let savedUnit = getCookie('weightUnit') || 'g';
+
+    // Validate and set
+    if (!isValidWeightUnit(savedUnit)) {
+        savedUnit = 'g';
+        setCookie('weightUnit', 'g');
+    }
+
+    selector.value = savedUnit;
+
+    // Convert displays on page load if not grams
+    if (savedUnit !== 'g') {
+        convertWeightDisplays(savedUnit);
+    }
+}
+
+/* ============================================
+   Mobile Bottom Sheet Modals
+   ============================================ */
+
+// Check if viewport is mobile
+function isMobileViewport() {
+    return window.innerWidth <= 768;
+}
+
+// Show bottom sheet action modal
+function showActionSheet(title, actions) {
+    if (!isMobileViewport()) {
+        return false; // Don't show on desktop
+    }
+
+    // Remove existing action sheet if any
+    const existing = document.querySelector('.mobile-action-sheet');
+    if (existing) {
+        existing.remove();
+    }
+
+    // Create action sheet
+    const sheet = document.createElement('div');
+    sheet.className = 'mobile-action-sheet';
+
+    // Build actions HTML
+    const actionsHTML = actions.map(action => {
+        const dangerClass = action.danger ? ' danger' : '';
+        return `<button class="action-sheet-item${dangerClass}" onclick="${action.onclick}; closeActionSheet();">
+            ${action.label}
+        </button>`;
+    }).join('');
+
+    sheet.innerHTML = `
+        <div class="action-sheet-backdrop" onclick="closeActionSheet()"></div>
+        <div class="action-sheet-content">
+            <div class="action-sheet-header">
+                <h3>${title}</h3>
+                <button onclick="closeActionSheet()" class="btn-close">×</button>
+            </div>
+            <div class="action-sheet-body">
+                ${actionsHTML}
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(sheet);
+
+    // Trigger animation
+    requestAnimationFrame(() => {
+        sheet.classList.add('active');
+    });
+
+    return true;
+}
+
+// Close action sheet
+function closeActionSheet() {
+    const sheet = document.querySelector('.mobile-action-sheet');
+    if (sheet) {
+        sheet.classList.remove('active');
+        setTimeout(() => sheet.remove(), 300);
+    }
+}
+
+// Admin user actions (for admin.html)
+function showAdminUserActions(userId, username, isAdmin, isActivated) {
+    if (!isMobileViewport()) {
+        return false; // Desktop uses inline dropdowns
+    }
+
+    const actions = [
+        {
+            label: isAdmin ? 'Remove Admin' : 'Make Admin',
+            onclick: `toggleAdmin(${userId})`,
+            danger: false
+        },
+        {
+            label: isActivated ? 'Deactivate User' : 'Activate User',
+            onclick: `toggleActivation(${userId})`,
+            danger: false
+        }
+    ];
+
+    // Add resend activation email option if not activated
+    if (!isActivated) {
+        actions.push({
+            label: 'Resend Activation Email',
+            onclick: `resendActivation(${userId}, '${username}')`,
+            danger: false
+        });
+    }
+
+    // Add ban user option
+    actions.push({
+        label: 'Ban User',
+        onclick: `banUser(${userId}, '${username}')`,
+        danger: true
+    });
+
+    showActionSheet(`${username} Actions`, actions);
+    return true;
+}
+
+// Pack actions (for packs.html)
+function showPackActions(packId, packName) {
+    if (!isMobileViewport()) {
+        return false;
+    }
+
+    const actions = [
+        {
+            label: 'View Pack',
+            onclick: `window.location.href='/packs/${packId}'`,
+            danger: false
+        },
+        {
+            label: 'Edit Pack',
+            onclick: `window.location.href='/packs/${packId}/edit'`,
+            danger: false
+        },
+        {
+            label: 'Duplicate Pack',
+            onclick: `submitPackAction(${packId}, 'duplicate')`,
+            danger: false
+        },
+        {
+            label: 'Delete Pack',
+            onclick: `confirmDeletePack(${packId}, '${packName}')`,
+            danger: true
+        }
+    ];
+
+    showActionSheet(`${packName}`, actions);
+    return true;
+}
+
+// Helper function to submit pack actions
+function submitPackAction(packId, action) {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/packs/${packId}/${action}`;
+
+    // Add CSRF token
+    if (csrfToken) {
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrf_token';
+        csrfInput.value = csrfToken;
+        form.appendChild(csrfInput);
+    }
+
+    document.body.appendChild(form);
+    form.submit();
+}
+
+// Confirm pack deletion
+function confirmDeletePack(packId, packName) {
+    if (confirm(`Are you sure you want to delete "${packName}"? This action cannot be undone.`)) {
+        submitPackAction(packId, 'delete');
+    }
+}
+
+// Close action sheet when pressing Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeActionSheet();
+    }
+});
+
 // Export for use in other scripts
 window.Carryless = {
     fetchCSRFToken,
@@ -313,5 +583,23 @@ window.Carryless = {
     getCookie,
     isValidWeightUnit,
     convertWeightDisplays,
-    changeWeightUnit
+    changeWeightUnit,
+    initializeDropdown,
+    initializeWeightUnitSelector,
+    // Mobile action sheets
+    isMobileViewport,
+    showActionSheet,
+    closeActionSheet,
+    showAdminUserActions,
+    showPackActions,
+    submitPackAction,
+    confirmDeletePack
 };
+
+// Make action sheet functions globally available
+window.showActionSheet = showActionSheet;
+window.closeActionSheet = closeActionSheet;
+window.showAdminUserActions = showAdminUserActions;
+window.showPackActions = showPackActions;
+window.submitPackAction = submitPackAction;
+window.confirmDeletePack = confirmDeletePack;

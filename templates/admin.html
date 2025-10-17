@@ -99,6 +99,7 @@
             
             <div class="admin-users">
                 <h2>All Users</h2>
+                <!-- Desktop table -->
                 <div class="table-container">
                     <table class="users-table">
                         <thead>
@@ -165,73 +166,84 @@
                         </tbody>
                     </table>
                 </div>
+
+                <!-- Mobile card layout -->
+                <div class="mobile-card-list">
+                    {{range .Users}}
+                    <div class="mobile-card">
+                        <div class="card-header">
+                            <h3 class="card-title">{{.Username}}</h3>
+                            <span class="status-badge {{if .IsActivated}}status-active{{else}}status-inactive{{end}}">
+                                {{if .IsActivated}}Active{{else}}Inactive{{end}}
+                            </span>
+                        </div>
+
+                        <div class="card-body">
+                            <dl class="card-data">
+                                <div class="data-item">
+                                    <dt>ID</dt>
+                                    <dd>{{.ID}}</dd>
+                                </div>
+                                <div class="data-item">
+                                    <dt>Email</dt>
+                                    <dd>{{redactEmail .Email}}</dd>
+                                </div>
+                                <div class="data-item">
+                                    <dt>Role</dt>
+                                    <dd>{{if .IsAdmin}}<span class="status-badge status-admin">Administrator</span>{{else}}User{{end}}</dd>
+                                </div>
+                                <div class="data-item">
+                                    <dt>Packs</dt>
+                                    <dd>{{.PackCount}}</dd>
+                                </div>
+                            </dl>
+
+                            <!-- Expandable section for timestamps -->
+                            <details class="card-expandable">
+                                <summary>
+                                    <span>View Details</span>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M6 9l6 6 6-6"/>
+                                    </svg>
+                                </summary>
+                                <div class="card-expand-content">
+                                    <dl class="card-data">
+                                        <div class="data-item">
+                                            <dt>Last Seen</dt>
+                                            <dd>
+                                                {{if .LastSeen.Valid}}
+                                                    <span class="last-seen" data-timestamp="{{.LastSeen.Time.Format "2006-01-02T15:04:05Z07:00"}}">
+                                                        {{.LastSeen.Time.Format "Jan 2, 2006 15:04"}}
+                                                    </span>
+                                                {{else}}
+                                                    Never
+                                                {{end}}
+                                            </dd>
+                                        </div>
+                                        <div class="data-item">
+                                            <dt>Created</dt>
+                                            <dd>{{.CreatedAt.Format "Jan 2, 2006"}}</dd>
+                                        </div>
+                                    </dl>
+                                </div>
+                            </details>
+                        </div>
+
+                        <div class="card-footer">
+                            <button class="btn btn-secondary" onclick="showAdminUserActions({{.ID}}, '{{.Username}}', {{.IsAdmin}}, {{.IsActivated}})">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="1"></circle>
+                                    <circle cx="12" cy="5" r="1"></circle>
+                                    <circle cx="12" cy="19" r="1"></circle>
+                                </svg>
+                                Actions
+                            </button>
+                        </div>
+                    </div>
+                    {{end}}
+                </div>
             </div>
         </div>
-
-<script>
-// Dropdown functionality
-document.addEventListener('DOMContentLoaded', function() {
-    const dropdown = document.querySelector('.nav-links .dropdown');
-    const dropdownToggle = document.querySelector('.nav-links .dropdown-toggle');
-    const dropdownMenu = document.querySelector('.nav-links .dropdown-menu');
-    
-    if (dropdown && dropdownToggle && dropdownMenu) {
-        // Toggle dropdown on button click
-        dropdownToggle.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            dropdown.classList.toggle('active');
-        });
-        
-        // Close dropdown when clicking outside
-        document.addEventListener('click', function(e) {
-            if (!dropdown.contains(e.target)) {
-                dropdown.classList.remove('active');
-            }
-        });
-        
-        // Close dropdown on escape key
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                dropdown.classList.remove('active');
-                dropdownToggle.focus();
-            }
-        });
-        
-        // Handle arrow keys for dropdown navigation
-        dropdownToggle.addEventListener('keydown', function(e) {
-            if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                dropdown.classList.add('active');
-                const firstItem = dropdownMenu.querySelector('.dropdown-item');
-                if (firstItem) {
-                    firstItem.focus();
-                }
-            }
-        });
-        
-        // Handle navigation within dropdown
-        const dropdownItems = dropdownMenu.querySelectorAll('.dropdown-item');
-        dropdownItems.forEach((item, index) => {
-            item.addEventListener('keydown', function(e) {
-                if (e.key === 'ArrowDown') {
-                    e.preventDefault();
-                    const nextIndex = (index + 1) % dropdownItems.length;
-                    dropdownItems[nextIndex].focus();
-                } else if (e.key === 'ArrowUp') {
-                    e.preventDefault();
-                    const prevIndex = (index - 1 + dropdownItems.length) % dropdownItems.length;
-                    dropdownItems[prevIndex].focus();
-                } else if (e.key === 'Escape') {
-                    e.preventDefault();
-                    dropdown.classList.remove('active');
-                    dropdownToggle.focus();
-                }
-            });
-        });
-    }
-});
-</script>
 
 <script>
         // Store the current CSRF token - used by all admin actions

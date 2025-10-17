@@ -10,54 +10,20 @@
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
-    <header class="header">
-        <nav class="nav">
-            <div class="nav-brand">
-                <a href="/">Carryless</a>
-            </div>
-            <div class="nav-links">
-                {{if .User}}
-                    <a href="/dashboard">Dashboard</a>
-                    <div class="dropdown">
-                        <button class="dropdown-toggle" type="button" aria-haspopup="true" aria-expanded="false">
-                            Inventory
-                            <svg class="dropdown-arrow" width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
-                                <path d="M2.5 4.5L6 8L9.5 4.5"></path>
-                            </svg>
-                        </button>
-                        <div class="dropdown-menu">
-                            <a href="/inventory" class="dropdown-item">Items</a>
-                            <a href="/categories" class="dropdown-item">Categories</a>
-                            <a href="/packs" class="dropdown-item">Packs</a>
-                        </div>
-                    </div>
-                    {{if .User.IsAdmin}}
-                        <a href="/admin">Admin</a>
-                    {{end}}
-                    <a href="/account">Account</a>
-                    <form class="logout-form" action="/logout" method="POST">
-                        <button type="submit" class="btn btn-secondary">Logout</button>
-                    </form>
-                {{else}}
-                    <a href="/login">Login</a>
-                    <a href="/register">Register</a>
-                {{end}}
-            </div>
-        </nav>
-    </header>
+    {{template "header" .}}
 
     <main class="main">
         {{if .Error}}
             <div class="alert alert-error">{{.Error}}</div>
         {{end}}
-        
+
         <div class="legal-document">
             <h1>Terms of Service</h1>
             <p><strong>Last updated:</strong> September 1, 2025</p>
-            
+
             <h2>1. Acceptance of Terms</h2>
             <p>By accessing and using Carryless, you accept and agree to be bound by the terms and provision of this agreement. These terms are governed by European Union law and applicable national legislation.</p>
-            
+
             <h2>2. Service Description</h2>
             <p>Carryless is a free, open-source outdoor gear catalog and pack planner created and maintained by Serac Alpine Gear. The service allows users to:</p>
             <ul>
@@ -66,13 +32,13 @@
                 <li>Analyze weight distribution by category</li>
                 <li>Share packs publicly with other users</li>
             </ul>
-            
+
             <h2>3. Free Service and Open Source</h2>
             <p>Carryless is provided free of charge under the MIT License. The source code is available at <a href="https://github.com/eze-kiel/carryless" target="_blank">GitHub</a>. We are committed to keeping this service free forever.</p>
-            
+
             <h2>4. Funding Model</h2>
             <p>This service operates entirely on voluntary donations to Serac Alpine Gear. We do not sell user data, display advertisements, or generate revenue through any other means. Donations help cover infrastructure costs and development time.</p>
-            
+
             <h2>5. User Responsibilities</h2>
             <p>As a user of Carryless, you agree to:</p>
             <ul>
@@ -82,159 +48,33 @@
                 <li>Respect other users when sharing public content</li>
                 <li>Not use the service for commercial purposes without explicit permission</li>
             </ul>
-            
+
             <h2>6. Data and Privacy</h2>
             <p>We collect only the minimum data necessary to provide our service. Please refer to our <a href="/privacy">Privacy Policy</a> for detailed information about how we handle your personal data in compliance with GDPR and other applicable privacy laws.</p>
-            
+
             <h2>7. Service Availability</h2>
             <p>While we strive to maintain high availability, Carryless is provided "as is" without warranties. We may occasionally need to perform maintenance or updates that temporarily affect service availability.</p>
-            
+
             <h2>8. Intellectual Property</h2>
             <p>The Carryless platform is licensed under the MIT License. Users retain ownership of their gear data and pack configurations. By making packs public, users grant other users the right to view and learn from their configurations.</p>
-            
+
             <h2>9. Limitation of Liability</h2>
             <p>To the extent permitted by applicable law, Carryless and Serac Alpine Gear shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of the service.</p>
-            
+
             <h2>10. Modifications to Terms</h2>
             <p>We reserve the right to modify these terms at any time. Users will be notified of significant changes through the platform. Continued use of the service after modifications constitutes acceptance of the updated terms.</p>
-            
+
             <h2>11. Governing Law and Jurisdiction</h2>
             <p>These terms are governed by the laws of the European Union and the applicable national legislation where the service is operated. Any disputes shall be resolved in the competent courts within the EU.</p>
-            
+
             <h2>12. Contact Information</h2>
             <p>For questions about these terms, please contact us at <a href="mailto:carryless@plop.name">carryless@plop.name</a>.</p>
         </div>
     </main>
 
-    <footer class="footer">
-        <div class="footer-content">
-            <p>Built with love by Hugo Blanc. Free and <a href="https://github.com/eze-kiel/carryless">open-source</a>, forever. <a href="https://ko-fi.com/carryless" class="donate-link" target="_blank" rel="noopener noreferrer">Support Carryless <i class="fas fa-heart"></i></a></p>
-            <div class="legal-links">
-                <a href="/terms">Terms of Service</a> | <a href="/privacy">Privacy Policy</a>
-            </div>
-            <div class="weight-unit-selector">
-                <label for="weightUnitSelector">Units:</label>
-                <select id="weightUnitSelector" onchange="changeWeightUnit(this.value)">
-                    <option value="g">Grams</option>
-                    <option value="oz">Ounces</option>
-                </select>
-            </div>
-        </div>
-    </footer>
+    {{template "footer" .}}
 
     <script src="/static/js/app.js"></script>
-
-<script>
-// Weight unit cookie management (for consistency across pages)
-function setCookie(name, value, days = 365) {
-    const expires = new Date();
-    expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
-    document.cookie = name + '=' + value + ';expires=' + expires.toUTCString() + ';path=/';
-}
-
-function getCookie(name) {
-    const nameEQ = name + "=";
-    const ca = document.cookie.split(';');
-    for (let i = 0; i < ca.length; i++) {
-        let c = ca[i];
-        while (c.charAt(0) === ' ') c = c.substring(1, c.length);
-        if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
-    }
-    return null;
-}
-
-function isValidWeightUnit(unit) {
-    return unit === 'g' || unit === 'oz';
-}
-
-function changeWeightUnit(unit) {
-    if (!isValidWeightUnit(unit)) {
-        console.warn('Invalid weight unit:', unit, 'Defaulting to grams');
-        unit = 'g';
-    }
-    setCookie('weightUnit', unit);
-}
-
-// Initialize unit preference on page load
-document.addEventListener('DOMContentLoaded', function() {
-    let savedUnit = getCookie('weightUnit') || 'g';
-    
-    if (!isValidWeightUnit(savedUnit)) {
-        savedUnit = 'g';
-        setCookie('weightUnit', 'g');
-    }
-    
-    const selector = document.getElementById('weightUnitSelector');
-    if (selector) {
-        selector.value = savedUnit;
-    }
-});
-</script>
-
-<script>
-// Dropdown functionality
-document.addEventListener('DOMContentLoaded', function() {
-    const dropdown = document.querySelector('.nav-links .dropdown');
-    const dropdownToggle = document.querySelector('.nav-links .dropdown-toggle');
-    const dropdownMenu = document.querySelector('.nav-links .dropdown-menu');
-    
-    if (dropdown && dropdownToggle && dropdownMenu) {
-        // Toggle dropdown on button click
-        dropdownToggle.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            dropdown.classList.toggle('active');
-        });
-        
-        // Close dropdown when clicking outside
-        document.addEventListener('click', function(e) {
-            if (!dropdown.contains(e.target)) {
-                dropdown.classList.remove('active');
-            }
-        });
-        
-        // Close dropdown on escape key
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                dropdown.classList.remove('active');
-                dropdownToggle.focus();
-            }
-        });
-        
-        // Handle arrow keys for dropdown navigation
-        dropdownToggle.addEventListener('keydown', function(e) {
-            if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                dropdown.classList.add('active');
-                const firstItem = dropdownMenu.querySelector('.dropdown-item');
-                if (firstItem) {
-                    firstItem.focus();
-                }
-            }
-        });
-        
-        // Handle navigation within dropdown
-        const dropdownItems = dropdownMenu.querySelectorAll('.dropdown-item');
-        dropdownItems.forEach((item, index) => {
-            item.addEventListener('keydown', function(e) {
-                if (e.key === 'ArrowDown') {
-                    e.preventDefault();
-                    const nextIndex = (index + 1) % dropdownItems.length;
-                    dropdownItems[nextIndex].focus();
-                } else if (e.key === 'ArrowUp') {
-                    e.preventDefault();
-                    const prevIndex = (index - 1 + dropdownItems.length) % dropdownItems.length;
-                    dropdownItems[prevIndex].focus();
-                } else if (e.key === 'Escape') {
-                    e.preventDefault();
-                    dropdown.classList.remove('active');
-                    dropdownToggle.focus();
-                }
-            });
-        });
-    }
-});
-</script>
 </body>
 </html>
 {{end}}

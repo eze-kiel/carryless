@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html/template"
 	"log"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -145,7 +146,11 @@ func main() {
 	}
 
 	r.SetFuncMap(funcMap)
-	r.LoadHTMLGlob("templates/*.html")
+	// Load templates using a pattern that includes subdirectories
+	files, _ := filepath.Glob("templates/*.html")
+	partials, _ := filepath.Glob("templates/partials/*.html")
+	allFiles := append(files, partials...)
+	r.LoadHTMLFiles(allFiles...)
 	r.Static("/static", "./static")
 
 	r.Use(middleware.CORS(cfg.AllowedOrigins))

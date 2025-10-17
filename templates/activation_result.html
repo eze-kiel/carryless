@@ -3,6 +3,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{.Title}}</title>
     <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
@@ -10,25 +11,19 @@
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
-    <header class="header">
-        <nav class="nav">
-            <div class="nav-brand">
-                <a href="/">Carryless</a>
-            </div>
-            <div class="nav-links">
-                <a href="/login">Login</a>
-                <a href="/register">Register</a>
-            </div>
-        </nav>
-    </header>
+    {{template "header" .}}
 
     <main class="main">
+        {{if .Error}}
+            <div class="alert alert-error">{{.Error}}</div>
+        {{end}}
+
         <div class="container">
             <div class="form-container">
                 <div class="form-header">
                     <h1>Account Activation</h1>
                 </div>
-                
+
                 <div class="alert {{if .Success}}alert-success{{else}}alert-error{{end}}">
                     {{if .Success}}
                         <i class="fas fa-check-circle"></i>
@@ -43,7 +38,7 @@
                     <a href="/login" class="btn btn-primary">Log In to Your Account</a>
                 </div>
                 {{end}}
-                
+
                 <div style="text-align: center; margin-top: 2rem;">
                     <a href="/" class="btn btn-secondary">Back to Home</a>
                 </div>
@@ -51,11 +46,9 @@
         </div>
     </main>
 
-    <footer class="footer">
-        <div class="footer-content">
-            <p>Built with love by Hugo Blanc. Free and <a href="https://github.com/eze-kiel/carryless">open-source</a>, forever.</p>
-        </div>
-    </footer>
+    {{template "footer" .}}
+
+    <script src="/static/js/app.js"></script>
 </body>
 </html>
 {{end}}

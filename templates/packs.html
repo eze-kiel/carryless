@@ -57,6 +57,7 @@
         </div>
 
         {{if .Packs}}
+            <!-- Desktop table -->
             <div class="packs-table">
                 <table>
                     <thead>
@@ -115,6 +116,42 @@
                         {{end}}
                     </tbody>
                 </table>
+            </div>
+
+            <!-- Mobile compact card layout -->
+            <div class="mobile-compact-list">
+                {{range .Packs}}
+                <div class="compact-card">
+                    <div class="compact-content">
+                        <h3 class="compact-title">
+                            <a href="/packs/{{.ID}}">{{.Name}}</a>
+                        </h3>
+                        <p class="compact-meta">
+                            {{if .IsPublic}}
+                                <span class="badge-public-small">Public</span>
+                            {{else}}
+                                <span class="badge-private-small">Private</span>
+                            {{end}}
+                            <span class="text-secondary-mobile">• {{.CreatedAt.Format "Jan 2, 2006"}}</span>
+                        </p>
+                    </div>
+                    <div class="compact-actions">
+                        <a href="/packs/{{.ID}}/edit" class="icon-btn" aria-label="Edit {{.Name}}">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                            </svg>
+                        </a>
+                        <button class="icon-btn" onclick="showPackActions({{.ID}}, '{{.Name}}')" aria-label="More actions">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="1"></circle>
+                                <circle cx="12" cy="5" r="1"></circle>
+                                <circle cx="12" cy="19" r="1"></circle>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                {{end}}
             </div>
         {{else}}
             <div class="empty-state">
@@ -198,71 +235,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const selector = document.getElementById('weightUnitSelector');
     if (selector) {
         selector.value = savedUnit;
-    }
-});
-</script>
-
-<script>
-// Dropdown functionality
-document.addEventListener('DOMContentLoaded', function() {
-    const dropdown = document.querySelector('.nav-links .dropdown');
-    const dropdownToggle = document.querySelector('.nav-links .dropdown-toggle');
-    const dropdownMenu = document.querySelector('.nav-links .dropdown-menu');
-    
-    if (dropdown && dropdownToggle && dropdownMenu) {
-        // Toggle dropdown on button click
-        dropdownToggle.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            dropdown.classList.toggle('active');
-        });
-        
-        // Close dropdown when clicking outside
-        document.addEventListener('click', function(e) {
-            if (!dropdown.contains(e.target)) {
-                dropdown.classList.remove('active');
-            }
-        });
-        
-        // Close dropdown on escape key
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                dropdown.classList.remove('active');
-                dropdownToggle.focus();
-            }
-        });
-        
-        // Handle arrow keys for dropdown navigation
-        dropdownToggle.addEventListener('keydown', function(e) {
-            if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                dropdown.classList.add('active');
-                const firstItem = dropdownMenu.querySelector('.dropdown-item');
-                if (firstItem) {
-                    firstItem.focus();
-                }
-            }
-        });
-        
-        // Handle navigation within dropdown
-        const dropdownItems = dropdownMenu.querySelectorAll('.dropdown-item');
-        dropdownItems.forEach((item, index) => {
-            item.addEventListener('keydown', function(e) {
-                if (e.key === 'ArrowDown') {
-                    e.preventDefault();
-                    const nextIndex = (index + 1) % dropdownItems.length;
-                    dropdownItems[nextIndex].focus();
-                } else if (e.key === 'ArrowUp') {
-                    e.preventDefault();
-                    const prevIndex = (index - 1 + dropdownItems.length) % dropdownItems.length;
-                    dropdownItems[prevIndex].focus();
-                } else if (e.key === 'Escape') {
-                    e.preventDefault();
-                    dropdown.classList.remove('active');
-                    dropdownToggle.focus();
-                }
-            });
-        });
     }
 });
 </script>

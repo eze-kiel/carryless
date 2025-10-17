@@ -2506,3 +2506,501 @@ th .dropdown-menu {
 .admin-stats .stat-number {
     color: var(--color-primary);
 }
+
+/* ============================================
+   Mobile-First Table Patterns
+   ============================================ */
+
+/* Hide mobile patterns by default (shown only on mobile) */
+.main .mobile-card-list,
+.main .mobile-compact-list,
+.main .mobile-enhanced-list {
+    display: none !important;
+}
+
+/* Mobile breakpoint: Show mobile layouts, hide desktop tables */
+@media (max-width: 768px) {
+    /* Hide desktop tables on mobile - only within main content area */
+    .main .table-container,
+    .main .categories-table,
+    .main .packs-table,
+    .main .inventory-table,
+    .admin-users .table-container {
+        display: none !important;
+    }
+
+    /* Show mobile alternatives - only within main content area */
+    .main .mobile-card-list {
+        display: flex !important;
+    }
+
+    .main .mobile-compact-list {
+        display: flex !important;
+    }
+
+    .main .mobile-enhanced-list {
+        display: block !important;
+    }
+}
+
+/* ============================================
+   Pattern A: Card-Based Layout (Complex Tables)
+   ============================================ */
+
+.mobile-card-list {
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.mobile-card {
+    background: var(--color-white);
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    transition: box-shadow var(--transition-fast);
+}
+
+.mobile-card:active {
+    box-shadow: var(--shadow-md);
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-4);
+    background: var(--color-gray-50);
+    border-bottom: 1px solid var(--color-gray-200);
+    gap: var(--space-3);
+}
+
+.card-title {
+    margin: 0;
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-gray-900);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.card-badge {
+    flex-shrink: 0;
+}
+
+.card-body {
+    padding: var(--space-4);
+}
+
+.card-data {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    margin: 0;
+}
+
+.data-item {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+}
+
+.data-item dt {
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-gray-600);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    min-width: 80px;
+    flex-shrink: 0;
+}
+
+.data-item dd {
+    margin: 0;
+    font-size: var(--font-size-sm);
+    color: var(--color-gray-900);
+    flex: 1;
+    word-break: break-word;
+}
+
+/* Expandable sections for secondary data */
+.card-expandable {
+    border-top: 1px solid var(--color-gray-200);
+}
+
+.card-expandable summary {
+    width: 100%;
+    padding: var(--space-3);
+    background: none;
+    border: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-primary);
+    transition: background-color var(--transition-fast);
+    list-style: none;
+}
+
+.card-expandable summary::-webkit-details-marker {
+    display: none;
+}
+
+.card-expandable summary:active {
+    background: var(--color-gray-50);
+}
+
+.card-expandable[open] summary {
+    border-bottom: 1px solid var(--color-gray-200);
+}
+
+.card-expand-content {
+    padding: var(--space-4);
+}
+
+.card-footer {
+    display: flex;
+    gap: var(--space-2);
+    padding: var(--space-4);
+    border-top: 1px solid var(--color-gray-200);
+    background: var(--color-gray-50);
+}
+
+.card-footer .btn {
+    flex: 1;
+    min-height: 48px; /* Touch-friendly */
+    font-size: var(--font-size-sm);
+}
+
+/* Status badges in cards */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-base);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-medium);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.status-badge.status-active {
+    background: var(--color-success-light);
+    color: var(--color-success);
+}
+
+.status-badge.status-inactive {
+    background: var(--color-danger-light);
+    color: var(--color-danger);
+}
+
+.status-badge.status-warning {
+    background: var(--color-warning-light);
+    color: var(--color-warning);
+}
+
+.status-badge.status-admin {
+    background: var(--color-primary-light);
+    color: var(--color-primary);
+}
+
+/* ============================================
+   Pattern B: Compact Card Layout (Moderate Tables)
+   ============================================ */
+
+.mobile-compact-list {
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.compact-card {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    background: var(--color-white);
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-md);
+    transition: all var(--transition-fast);
+}
+
+.compact-card:active {
+    background: var(--color-gray-50);
+}
+
+.compact-content {
+    flex: 1;
+    min-width: 0; /* Allow text truncation */
+}
+
+.compact-title {
+    margin: 0 0 var(--space-1) 0;
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-gray-900);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.compact-title a {
+    color: var(--color-gray-900);
+    text-decoration: none;
+}
+
+.compact-title a:hover {
+    color: var(--color-primary);
+}
+
+.compact-meta {
+    margin: 0;
+    font-size: var(--font-size-xs);
+    color: var(--color-gray-600);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+}
+
+.compact-actions {
+    display: flex;
+    gap: var(--space-2);
+    flex-shrink: 0;
+}
+
+.icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    background: var(--color-white);
+    border: 1px solid var(--color-gray-300);
+    border-radius: var(--radius-md);
+    color: var(--color-gray-600);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    text-decoration: none;
+}
+
+.icon-btn:active {
+    background: var(--color-gray-100);
+    border-color: var(--color-gray-400);
+    transform: scale(0.95);
+}
+
+.icon-btn svg {
+    flex-shrink: 0;
+}
+
+/* ============================================
+   Pattern C: Enhanced List Layout (Simple Tables)
+   ============================================ */
+
+.mobile-enhanced-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    background: var(--color-white);
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-4);
+    border-bottom: 1px solid var(--color-gray-100);
+    transition: background-color var(--transition-fast);
+    gap: var(--space-3);
+}
+
+.list-item:last-child {
+    border-bottom: none;
+}
+
+.list-item:active {
+    background: var(--color-gray-50);
+}
+
+.list-title {
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-gray-900);
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.list-actions {
+    display: flex;
+    gap: var(--space-2);
+    flex-shrink: 0;
+}
+
+/* ============================================
+   Bottom Sheet Modal (Mobile Actions)
+   ============================================ */
+
+.mobile-action-sheet {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 9999;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--transition-base), visibility var(--transition-base);
+}
+
+.mobile-action-sheet.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.action-sheet-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+}
+
+.action-sheet-content {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--color-white);
+    border-top-left-radius: var(--radius-xl);
+    border-top-right-radius: var(--radius-xl);
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+    transform: translateY(100%);
+    transition: transform var(--transition-base);
+}
+
+.mobile-action-sheet.active .action-sheet-content {
+    transform: translateY(0);
+}
+
+.action-sheet-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-4);
+    border-bottom: 1px solid var(--color-gray-200);
+}
+
+.action-sheet-header h3 {
+    margin: 0;
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-gray-900);
+}
+
+.btn-close {
+    background: none;
+    border: none;
+    font-size: var(--font-size-2xl);
+    color: var(--color-gray-500);
+    cursor: pointer;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-md);
+    transition: background-color var(--transition-fast);
+}
+
+.btn-close:active {
+    background: var(--color-gray-100);
+}
+
+.action-sheet-body {
+    padding: var(--space-2);
+}
+
+.action-sheet-item {
+    display: block;
+    width: 100%;
+    padding: var(--space-4);
+    background: none;
+    border: none;
+    text-align: left;
+    cursor: pointer;
+    color: var(--color-gray-700);
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-medium);
+    border-radius: var(--radius-md);
+    transition: background-color var(--transition-fast);
+    margin-bottom: var(--space-2);
+    min-height: 48px; /* Touch-friendly */
+}
+
+.action-sheet-item:last-child {
+    margin-bottom: 0;
+}
+
+.action-sheet-item:active {
+    background: var(--color-gray-100);
+}
+
+.action-sheet-item.danger {
+    color: var(--color-danger);
+}
+
+.action-sheet-item.danger:active {
+    background: var(--color-danger-light);
+}
+
+/* ============================================
+   Utility Classes for Mobile Patterns
+   ============================================ */
+
+.text-truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.text-secondary-mobile {
+    color: var(--color-gray-600);
+    font-size: var(--font-size-sm);
+}
+
+/* Small badge for "Public/Private" indicators */
+.badge-small {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px var(--space-2);
+    border-radius: var(--radius-sm);
+    font-size: 0.65rem;
+    font-weight: var(--font-weight-medium);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.badge-public-small {
+    background: var(--color-success-light);
+    color: var(--color-success);
+}
+
+.badge-private-small {
+    background: var(--color-gray-200);
+    color: var(--color-gray-700);
+}
