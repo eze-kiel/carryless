@@ -528,14 +528,27 @@ a:hover {
     color: var(--color-white);
 }
 
-/* Button sizes */
-.btn-small {
+/* Button sizes
+ * .btn-xs  - Extra small (28px height) - for compact UIs
+ * .btn-sm  - Small (32px height) - for tight spaces
+ * .btn     - Default (40px height) - standard size
+ * .btn-lg  - Large (48px height) - for emphasis
+ */
+.btn-xs {
+    padding: var(--space-1) var(--space-2);
+    font-size: var(--font-size-xs);
+    min-height: 28px;
+}
+
+.btn-sm,
+.btn-small {  /* Keep .btn-small for backwards compatibility */
     padding: var(--space-2) var(--space-3);
     font-size: var(--font-size-xs);
     min-height: 32px;
 }
 
-.btn-large {
+.btn-lg,
+.btn-large {  /* Keep .btn-large for backwards compatibility */
     padding: var(--space-4) var(--space-6);
     font-size: var(--font-size-base);
     min-height: 48px;

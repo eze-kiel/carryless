@@ -118,7 +118,6 @@
         </div>
 
         {{if .Items}}
-            <!-- Desktop table -->
             <div class="inventory-table">
                 <table>
                     <thead>
@@ -165,52 +164,6 @@
                     </tbody>
                 </table>
             </div>
-
-            <!-- Mobile card layout -->
-            <div class="mobile-card-list">
-                {{range .Items}}
-                <div class="mobile-card {{if .WeightToVerify}}item-needs-verification{{end}}" data-id="{{.ID}}" data-item-name="{{.Name}}">
-                    <div class="card-header">
-                        <h3 class="card-title">{{.Name}}</h3>
-                        {{if .WeightToVerify}}
-                        <span class="status-badge status-warning">Verify</span>
-                        {{end}}
-                    </div>
-
-                    <div class="card-body">
-                        <dl class="card-data">
-                            <div class="data-item">
-                                <dt>Category</dt>
-                                <dd>{{.Category.Name}}</dd>
-                            </div>
-                            <div class="data-item">
-                                <dt>Weight</dt>
-                                <dd><span data-weight="{{.WeightGrams}}">{{.WeightGrams}}g</span></dd>
-                            </div>
-                            <div class="data-item">
-                                <dt>Price</dt>
-                                <dd>{{printf "%.2f" .Price}} {{$.User.Currency}}</dd>
-                            </div>
-                            {{if .Note}}
-                            <div class="data-item">
-                                <dt>Notes</dt>
-                                <dd>{{.Note}}</dd>
-                            </div>
-                            {{end}}
-                        </dl>
-                    </div>
-
-                    <div class="card-footer">
-                        <a href="/inventory/items/{{.ID}}/edit" class="btn btn-secondary">
-                            Edit
-                        </a>
-                        <button class="btn btn-danger" onclick="handleDeleteItem(event, {{.ID}}, '{{$.CSRFToken}}')">
-                            Delete
-                        </button>
-                    </div>
-                </div>
-                {{end}}
-            </div>
         {{else}}
             <div class="empty-state">No items yet. Add your first piece of gear to get started.</div>
         {{end}}
@@ -256,6 +209,9 @@
                 </div>
             </div>
         </div>
+
+<script>
+</script>
 
 <script>
         function filterItems(query) {
