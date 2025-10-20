@@ -255,7 +255,7 @@
             <textarea id="packNote" placeholder="Add notes about this pack..." maxlength="500">{{.Pack.Note}}</textarea>
             <div class="notes-controls">
                 <span id="charCount" class="char-count">{{len .Pack.Note}}/500</span>
-                <button type="button" class="btn btn-primary" onclick="savePackNote()">Save Note</button>
+                <span id="packNoteStatus" class="pack-note-status" style="display: none;"></span>
             </div>
         </div>
     </div>
@@ -1067,68 +1067,109 @@ document.addEventListener('DOMContentLoaded', function() {
         convertWeightDisplays('oz');
     }
     
-    // Initialize character counter for pack notes
+    // Initialize character counter and autosave for pack notes
     const noteTextarea = document.getElementById('packNote');
     const charCount = document.getElementById('charCount');
-    
-    if (noteTextarea && charCount) {
+    const packNoteStatus = document.getElementById('packNoteStatus');
+
+    if (noteTextarea && charCount && packNoteStatus) {
+        // Store original note value for diff checking
+        let packNoteOriginal = noteTextarea.value;
+        let packNoteSaveTimeout = null;
+        let packNoteIsSaving = false;
+
         noteTextarea.addEventListener('input', function() {
             const length = this.value.length;
             charCount.textContent = length + '/500';
-            
+
             if (length > 450) {
                 charCount.style.color = '#dc3545'; // Red when approaching limit
             } else {
                 charCount.style.color = '#6c757d'; // Default gray
             }
+
+            // Clear existing autosave timeout
+            if (packNoteSaveTimeout) {
+                clearTimeout(packNoteSaveTimeout);
+            }
+
+            // Hide status when user is typing
+            packNoteStatus.style.display = 'none';
+
+            // Set new timeout for autosave (1 second after user stops typing)
+            packNoteSaveTimeout = setTimeout(async () => {
+                const currentValue = noteTextarea.value;
+
+                // Only save if there's a difference from the original value
+                if (currentValue !== packNoteOriginal) {
+                    await autoSavePackNote(noteTextarea, packNoteStatus, packNoteOriginal);
+                    // Update original value after successful save
+                    packNoteOriginal = currentValue;
+                }
+            }, 1000);
         });
+
+        // Autosave function
+        async function autoSavePackNote(textarea, statusElement) {
+            if (packNoteIsSaving) return; // Prevent concurrent saves
+
+            packNoteIsSaving = true;
+
+            const note = textarea.value;
+
+            // Validate note length
+            if (note.length > 500) {
+                statusElement.textContent = 'Note too long (max 500 chars)';
+                statusElement.style.color = '#dc3545';
+                statusElement.style.display = 'inline';
+                packNoteIsSaving = false;
+                return;
+            }
+
+            // Show "Saving..." indicator
+            statusElement.textContent = 'Saving...';
+            statusElement.style.color = '#6c757d';
+            statusElement.style.display = 'inline';
+
+            await fetchCSRFToken();
+
+            const formData = new FormData();
+            formData.append('note', note);
+            formData.append('csrf_token', csrfToken);
+
+            try {
+                const response = await fetch(`/packs/${packId}/note`, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRF-Token': csrfToken
+                    }
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    // Show success feedback
+                    statusElement.textContent = 'Saved';
+                    statusElement.style.color = '#28a745';
+
+                    // Hide status after 2 seconds
+                    setTimeout(() => {
+                        statusElement.style.display = 'none';
+                    }, 2000);
+                } else {
+                    statusElement.textContent = data.error || 'Failed to save';
+                    statusElement.style.color = '#dc3545';
+                }
+            } catch (error) {
+                statusElement.textContent = 'Failed to save';
+                statusElement.style.color = '#dc3545';
+            } finally {
+                packNoteIsSaving = false;
+            }
+        }
     }
 });
 
-async function savePackNote() {
-    const noteTextarea = document.getElementById('packNote');
-    if (!noteTextarea) return;
-    
-    const note = noteTextarea.value;
-    if (note.length > 500) {
-        alert('Note must be less than 500 characters');
-        return;
-    }
-    
-    await fetchCSRFToken();
-    
-    const formData = new FormData();
-    formData.append('note', note);
-    formData.append('csrf_token', csrfToken);
-    
-    try {
-        const response = await fetch(`/packs/${packId}/note`, {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-CSRF-Token': csrfToken
-            }
-        });
-        
-        const data = await response.json();
-        if (response.ok) {
-            // Show success feedback
-            const saveButton = document.querySelector('.pack-notes-section .btn-primary');
-            const originalText = saveButton.textContent;
-            saveButton.textContent = 'Saved!';
-            saveButton.style.backgroundColor = '#28a745';
-            
-            setTimeout(() => {
-                saveButton.textContent = originalText;
-                saveButton.style.backgroundColor = '';
-            }, 2000);
-        } else {
-            alert(data.error || 'Failed to save note');
-        }
-    } catch (error) {
-        alert('Failed to save note');
-    }
-}
 </script>
 
 <style>
@@ -1806,6 +1847,7 @@ async function savePackNote() {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 0.75rem;
 }
 
 .char-count {
@@ -1814,22 +1856,10 @@ async function savePackNote() {
     font-weight: 500;
 }
 
-.notes-form .btn {
-    padding: 0.5rem 1.5rem;
-    font-size: 0.9rem;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.15s ease;
-}
-
-.notes-form .btn-primary {
-    background-color: var(--color-primary);
-    color: white;
-}
-
-.notes-form .btn-primary:hover {
-    background-color: var(--color-primary-hover);
+.pack-note-status {
+    font-size: 0.8rem;
+    font-weight: 500;
+    transition: opacity 0.2s ease;
 }
 
 @media (max-width: 600px) {
@@ -1837,21 +1867,19 @@ async function savePackNote() {
         margin: 1.5rem 0 1rem 0;
         padding: 1rem;
     }
-    
+
     .notes-form textarea {
         min-height: 100px;
         font-size: 0.85rem;
     }
-    
+
     .notes-controls {
-        flex-direction: column;
         gap: 0.5rem;
-        align-items: stretch;
     }
-    
-    .notes-form .btn {
-        width: 100%;
-        text-align: center;
+
+    .char-count,
+    .pack-note-status {
+        font-size: 0.75rem;
     }
 }
 </style>
