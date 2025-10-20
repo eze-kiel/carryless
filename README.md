@@ -47,3 +47,22 @@ MAILGUN_API_KEY=your-api-key
 4. Share packs publicly or keep them private
 
 The database is created automatically on first run.
+
+## Screenshots
+
+<details>
+<summary>View Screenshots</summary>
+
+### Homepage
+![Homepage](img/home.png)
+
+### Inventory Management
+![Inventory Management](img/inventory.png)
+
+### Pack Statistics
+![Pack Statistics](img/pack-stats.png)
+
+### Pack Content
+![Pack Content](img/pack-content.png)
+
+</details>
