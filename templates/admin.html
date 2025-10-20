@@ -65,7 +65,7 @@
                     <div class="stat-card">
                         <h3>Active Users</h3>
                         <p class="stat-number">{{.Stats.ActiveUsers}}</p>
-                        <small style="color: #6c757d; font-size: 0.75rem;">Last 30 days</small>
+                        <small class="stat-label">Last 30 days</small>
                     </div>
                     <div class="stat-card">
                         <h3>Total Packs</h3>
@@ -120,14 +120,14 @@
                                 <td>{{.ID}}</td>
                                 <td>{{.Username}}</td>
                                 <td>{{redactEmail .Email}}</td>
-                                <td>{{if .IsAdmin}}Yes{{else}}No{{end}}</td>
-                                <td>{{if .IsActivated}}<span style="color: green;">Yes</span>{{else}}<span style="color: red;">No</span>{{end}}</td>
+                                <td>{{if .IsAdmin}}<span class="badge badge-success"><i class="fas fa-check"></i> Yes</span>{{else}}No{{end}}</td>
+                                <td>{{if .IsActivated}}<span class="badge badge-success"><i class="fas fa-check"></i> Yes</span>{{else}}<span class="badge badge-danger"><i class="fas fa-times"></i> No</span>{{end}}</td>
                                 <td>{{.PackCount}}</td>
                                 <td>
                                     {{if .LastSeen.Valid}}
                                         <span class="last-seen" data-timestamp="{{.LastSeen.Time.Format "2006-01-02T15:04:05Z07:00"}}">{{.LastSeen.Time.Format "2006-01-02 15:04:05"}}</span>
                                     {{else}}
-                                        <span style="color: #999;">Never</span>
+                                        <span class="text-muted">Never</span>
                                     {{end}}
                                 </td>
                                 <td>{{.CreatedAt.Format "2006-01-02 15:04:05"}}</td>
@@ -396,11 +396,13 @@
         function showSuccessMessage(message) {
             // Create a temporary success notification
             const notification = document.createElement('div');
+            // Get success color from CSS variable
+            const successColor = getComputedStyle(document.documentElement).getPropertyValue('--color-success').trim() || '#059669';
             notification.style.cssText = `
                 position: fixed;
                 top: 20px;
                 right: 20px;
-                background: #059669;
+                background: ${successColor};
                 color: white;
                 padding: 12px 20px;
                 border-radius: 8px;
@@ -502,21 +504,21 @@
 }
 
 .setting-card {
-    background: #f8f9fa;
-    padding: 1.5rem;
+    background: var(--color-gray-50); /* Was #f8f9fa */
+    padding: var(--space-6);
     border-radius: 8px;
-    border: 1px solid #dee2e6;
+    border: 1px solid var(--color-gray-200); /* Was #dee2e6 */
 }
 
 .setting-card h3 {
-    margin: 0 0 0.5rem 0;
-    color: #495057;
+    margin: 0 0 var(--space-2) 0;
+    color: var(--color-gray-600); /* Was #495057 */
     font-size: 1.1rem;
 }
 
 .setting-description {
-    margin: 0 0 1rem 0;
-    color: #6c757d;
+    margin: 0 0 var(--space-4) 0;
+    color: var(--color-gray-600); /* Was #6c757d */
     font-size: 0.9rem;
 }
 
@@ -528,24 +530,33 @@
 }
 
 .stat-card {
-    background: #f8f9fa;
-    padding: 1.5rem;
+    background: var(--color-gray-50); /* Was #f8f9fa */
+    padding: var(--space-6);
     border-radius: 8px;
     text-align: center;
-    border: 1px solid #dee2e6;
+    border: 1px solid var(--color-gray-200); /* Was #dee2e6 */
 }
 
 .stat-card h3 {
-    margin: 0 0 0.5rem 0;
-    color: #495057;
+    margin: 0 0 var(--space-2) 0;
+    color: var(--color-gray-600); /* Was #495057 */
     font-size: 1rem;
 }
 
 .stat-number {
     font-size: 2rem;
     font-weight: bold;
-    color: #28a745;
+    color: var(--color-success); /* Unified with design system (was #28a745) */
     margin: 0;
+}
+
+.stat-label {
+    color: var(--color-gray-600);
+    font-size: 0.75rem;
+}
+
+.text-muted {
+    color: var(--color-gray-400); /* Was #999 */
 }
 
 .admin-users {
@@ -569,19 +580,19 @@
 
 .users-table th,
 .users-table td {
-    padding: 0.75rem;
+    padding: var(--space-3);
     text-align: left;
-    border-bottom: 1px solid #dee2e6;
+    border-bottom: 1px solid var(--color-gray-200); /* Was #dee2e6 */
 }
 
 .users-table th {
-    background: #f8f9fa;
+    background: var(--color-gray-50); /* Was #f8f9fa */
     font-weight: 600;
-    color: #495057;
+    color: var(--color-gray-600); /* Was #495057 */
 }
 
 .users-table tr:hover {
-    background: #f8f9fa;
+    background: var(--color-gray-50); /* Was #f8f9fa */
 }
 
 .users-table tr:last-child td {

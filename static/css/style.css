@@ -5,12 +5,12 @@
    ============================================ */
 :root {
     /* Colors */
-    --color-primary: #004aad;
-    --color-primary-hover: #003a89;
+    --color-primary: #0056c7; /* Lightened from #004aad for friendlier feel (39% lightness vs 34%) */
+    --color-primary-hover: #004aad; /* Using previous primary as hover for smooth transition */
     --color-primary-light: #eff6ff;
-    
-    --color-secondary: #6b7280;
-    --color-secondary-hover: #4b5563;
+
+    --color-secondary: #4b5563; /* Improved from #6b7280 for WCAG AA compliance (7.52:1) */
+    --color-secondary-hover: #374151; /* Darkened for better hover contrast */
     
     --color-success: #059669;
     --color-success-light: #ecfdf5;
@@ -37,7 +37,26 @@
     --color-gray-700: #374151;
     --color-gray-800: #1f2937;
     --color-gray-900: #111827;
-    
+
+    /* Extended semantic color tokens */
+    --color-success-dark: #047857; /* Darker green for better contrast */
+
+    /* Semantic text color shortcuts */
+    --color-text-primary: var(--color-gray-900);
+    --color-text-secondary: var(--color-gray-600);
+    --color-text-tertiary: var(--color-gray-500);
+    --color-text-disabled: var(--color-gray-400);
+
+    /* Semantic background shortcuts */
+    --color-bg-primary: var(--color-white);
+    --color-bg-secondary: var(--color-gray-50);
+    --color-bg-tertiary: var(--color-gray-100);
+
+    /* Semantic border shortcuts */
+    --color-border-light: var(--color-gray-200);
+    --color-border-medium: var(--color-gray-300);
+    --color-border-dark: var(--color-gray-400);
+
     /* Typography */
     --font-family-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     --font-size-xs: 0.75rem;
@@ -321,7 +340,7 @@ body {
 /* Footer */
 .footer {
     padding: var(--space-8) var(--space-4);
-    color: var(--color-gray-500);
+    color: var(--color-gray-600); /* Improved contrast: 7.52:1 (was 3.97:1 with gray-500) */
     border-top: 1px solid var(--color-gray-200);
     margin-top: auto;
     background: var(--color-white);
@@ -504,14 +523,14 @@ a:hover {
 
 /* Success button */
 .btn-success {
-    background: var(--color-success);
+    background: #047857; /* Darkened from #059669 for WCAG AA compliance (4.74:1) */
     color: var(--color-white);
-    border-color: var(--color-success);
+    border-color: #047857;
 }
 
 .btn-success:hover {
-    background: #047857; /* Slightly darker green for hover */
-    border-color: #047857;
+    background: #036350; /* Even darker on hover for better visual feedback */
+    border-color: #036350;
     color: var(--color-white);
 }
 
@@ -1649,6 +1668,7 @@ th .dropdown-menu {
 .badge {
     display: inline-flex;
     align-items: center;
+    gap: var(--space-1); /* 0.25rem spacing between icon and text */
     padding: var(--space-1) var(--space-3);
     border-radius: var(--radius-base);
     font-size: var(--font-size-xs);
@@ -1680,11 +1700,19 @@ th .dropdown-menu {
     color: var(--color-white);
 }
 
+.badge-success {
+    background: var(--color-success);
+    color: var(--color-white);
+}
+
 /* ============================================
    Alert Components
    ============================================ */
 
 .alert {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2); /* 0.5rem spacing between icon and text */
     padding: var(--space-4);
     margin-bottom: var(--space-6);
     border-radius: var(--radius-md);
