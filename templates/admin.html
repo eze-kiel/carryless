@@ -120,7 +120,7 @@
                                 <td>{{.ID}}</td>
                                 <td>{{.Username}}</td>
                                 <td>{{redactEmail .Email}}</td>
-                                <td>{{if .IsAdmin}}<span class="badge badge-success"><i class="fas fa-check"></i> Yes</span>{{else}}No{{end}}</td>
+                                <td>{{if .IsAdmin}}<span class="badge badge-success"><i class="fas fa-check"></i> Yes</span>{{else}}<span class="badge badge-danger"><i class="fas fa-times"></i> No</span>{{end}}</td>
                                 <td>{{if .IsActivated}}<span class="badge badge-success"><i class="fas fa-check"></i> Yes</span>{{else}}<span class="badge badge-danger"><i class="fas fa-times"></i> No</span>{{end}}</td>
                                 <td>{{.PackCount}}</td>
                                 <td>
