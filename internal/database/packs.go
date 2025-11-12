@@ -115,7 +115,7 @@ func CreatePackWithPublic(db *sql.DB, userID int, name string, isPublic bool) (*
 
 func GetPacks(db *sql.DB, userID int) ([]models.Pack, error) {
 	query := `
-		SELECT id, user_id, name, COALESCE(note, ''), is_public, COALESCE(short_id, ''), created_at, updated_at
+		SELECT id, user_id, name, COALESCE(note, ''), is_public, COALESCE(is_locked, FALSE), COALESCE(short_id, ''), created_at, updated_at
 		FROM packs
 		WHERE user_id = ?
 		ORDER BY updated_at DESC
@@ -136,6 +136,7 @@ func GetPacks(db *sql.DB, userID int) ([]models.Pack, error) {
 			&pack.Name,
 			&pack.Note,
 			&pack.IsPublic,
+			&pack.IsLocked,
 			&pack.ShortID,
 			&pack.CreatedAt,
 			&pack.UpdatedAt,
@@ -156,7 +157,7 @@ func GetPacks(db *sql.DB, userID int) ([]models.Pack, error) {
 func GetPack(db *sql.DB, packID string) (*models.Pack, error) {
 	pack := &models.Pack{}
 	query := `
-		SELECT id, user_id, name, COALESCE(note, ''), is_public, COALESCE(short_id, ''), created_at, updated_at
+		SELECT id, user_id, name, COALESCE(note, ''), is_public, COALESCE(is_locked, FALSE), COALESCE(short_id, ''), created_at, updated_at
 		FROM packs
 		WHERE id = ?
 	`
@@ -167,6 +168,7 @@ func GetPack(db *sql.DB, packID string) (*models.Pack, error) {
 		&pack.Name,
 		&pack.Note,
 		&pack.IsPublic,
+		&pack.IsLocked,
 		&pack.ShortID,
 		&pack.CreatedAt,
 		&pack.UpdatedAt,
@@ -184,7 +186,7 @@ func GetPack(db *sql.DB, packID string) (*models.Pack, error) {
 func GetPackByShortID(db *sql.DB, shortID string) (*models.Pack, error) {
 	pack := &models.Pack{}
 	query := `
-		SELECT id, user_id, name, COALESCE(note, ''), is_public, COALESCE(short_id, ''), created_at, updated_at
+		SELECT id, user_id, name, COALESCE(note, ''), is_public, COALESCE(is_locked, FALSE), COALESCE(short_id, ''), created_at, updated_at
 		FROM packs
 		WHERE short_id = ?
 	`
@@ -195,6 +197,7 @@ func GetPackByShortID(db *sql.DB, shortID string) (*models.Pack, error) {
 		&pack.Name,
 		&pack.Note,
 		&pack.IsPublic,
+		&pack.IsLocked,
 		&pack.ShortID,
 		&pack.CreatedAt,
 		&pack.UpdatedAt,
@@ -560,6 +563,30 @@ func TogglePackItemWorn(db *sql.DB, packID string, itemID, userID int, isWorn bo
 	// Update pack timestamp since items were modified
 	if err := updatePackTimestamp(db, packID); err != nil {
 		return fmt.Errorf("failed to update pack timestamp: %w", err)
+	}
+
+	return nil
+}
+
+func TogglePackLock(db *sql.DB, userID int, packID string, isLocked bool) error {
+	query := `
+		UPDATE packs
+		SET is_locked = ?, updated_at = CURRENT_TIMESTAMP
+		WHERE id = ? AND user_id = ?
+	`
+
+	result, err := db.Exec(query, isLocked, packID, userID)
+	if err != nil {
+		return fmt.Errorf("failed to update pack lock status: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("pack not found or unauthorized")
 	}
 
 	return nil

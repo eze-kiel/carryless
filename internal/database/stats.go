@@ -24,6 +24,7 @@ type RecentPack struct {
 	ID          string    `json:"id"`
 	Name        string    `json:"name"`
 	IsPublic    bool      `json:"is_public"`
+	IsLocked    bool      `json:"is_locked"`
 	ShortID     string    `json:"short_id"`
 	UpdatedAt   time.Time `json:"updated_at"`
 	ItemCount   int       `json:"item_count"`
@@ -124,10 +125,11 @@ func GetUserStats(db *sql.DB, userID int) (*UserStats, error) {
 
 func GetRecentPacks(db *sql.DB, userID int, limit int) ([]RecentPack, error) {
 	query := `
-		SELECT 
-			p.id, 
-			p.name, 
+		SELECT
+			p.id,
+			p.name,
 			p.is_public,
+			COALESCE(p.is_locked, FALSE),
 			COALESCE(p.short_id, ''),
 			p.updated_at,
 			COALESCE(SUM(pi.count), 0) as item_count,
@@ -137,17 +139,17 @@ func GetRecentPacks(db *sql.DB, userID int, limit int) ([]RecentPack, error) {
 		LEFT JOIN pack_items pi ON p.id = pi.pack_id
 		LEFT JOIN items i ON pi.item_id = i.id
 		WHERE p.user_id = ?
-		GROUP BY p.id, p.name, p.is_public, p.short_id, p.updated_at
+		GROUP BY p.id, p.name, p.is_public, p.is_locked, p.short_id, p.updated_at
 		ORDER BY p.updated_at DESC
 		LIMIT ?
 	`
-	
+
 	rows, err := db.Query(query, userID, limit)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query recent packs: %w", err)
 	}
 	defer rows.Close()
-	
+
 	var recentPacks []RecentPack
 	for rows.Next() {
 		var pack RecentPack
@@ -155,6 +157,7 @@ func GetRecentPacks(db *sql.DB, userID int, limit int) ([]RecentPack, error) {
 			&pack.ID,
 			&pack.Name,
 			&pack.IsPublic,
+			&pack.IsLocked,
 			&pack.ShortID,
 			&pack.UpdatedAt,
 			&pack.ItemCount,

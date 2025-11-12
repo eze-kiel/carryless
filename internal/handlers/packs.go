@@ -989,3 +989,24 @@ func handlePackChecklistByShortID(c *gin.Context) {
 		"IsOwner":    isOwner,
 	})
 }
+
+func handleTogglePackLock(c *gin.Context) {
+	userID := c.MustGet("user_id").(int)
+	db := c.MustGet("db").(*sql.DB)
+	packID := c.Param("id")
+
+	isLockedStr := c.PostForm("is_locked")
+	isLocked := isLockedStr == "true" || isLockedStr == "1"
+
+	err := database.TogglePackLock(db, userID, packID, isLocked)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "unauthorized") {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Pack not found or unauthorized"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update lock status"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Lock status updated successfully"})
+}

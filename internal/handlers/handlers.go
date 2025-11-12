@@ -79,7 +79,8 @@ func SetupRoutes(r *gin.Engine, db *sql.DB, emailService *email.Service, cfg *co
 		activated.DELETE("/packs/:id/items/:item_id", handleRemoveItemFromPack)
 		activated.PUT("/packs/:id/items/:item_id/worn", handleToggleWorn)
 		activated.PUT("/packs/:id/items/:item_id/worn-count", handleUpdateWornCount)
-		
+		activated.POST("/packs/:id/lock", handleTogglePackLock)
+
 		activated.POST("/packs/:id/labels", handleCreatePackLabel)
 		activated.POST("/packs/:id/labels/:label_id", handleUpdatePackLabel)
 		activated.DELETE("/packs/:id/labels/:label_id", handleDeletePackLabel)

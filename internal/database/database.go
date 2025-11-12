@@ -166,6 +166,11 @@ func Migrate(db *sql.DB) error {
 		return fmt.Errorf("failed to add last_seen column to users: %w", err)
 	}
 
+	// Add is_locked column to packs table if it doesn't exist
+	if err := addPackIsLockedColumn(db); err != nil {
+		return fmt.Errorf("failed to add is_locked column to packs: %w", err)
+	}
+
 	return nil
 }
 
@@ -721,6 +726,39 @@ func addUserLastSeenColumn(db *sql.DB) error {
 
 	if !hasLastSeen {
 		_, err = db.Exec("ALTER TABLE users ADD COLUMN last_seen DATETIME DEFAULT NULL")
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func addPackIsLockedColumn(db *sql.DB) error {
+	// Check if is_locked column exists
+	rows, err := db.Query("PRAGMA table_info(packs)")
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	hasIsLocked := false
+	for rows.Next() {
+		var cid int
+		var name, dataType string
+		var notNull, dfltValue, pk interface{}
+		if err := rows.Scan(&cid, &name, &dataType, &notNull, &dfltValue, &pk); err != nil {
+			return err
+		}
+		if name == "is_locked" {
+			hasIsLocked = true
+			break
+		}
+	}
+
+	if !hasIsLocked {
+		// Add is_locked column to packs table
+		_, err = db.Exec("ALTER TABLE packs ADD COLUMN is_locked BOOLEAN DEFAULT FALSE")
 		if err != nil {
 			return err
 		}

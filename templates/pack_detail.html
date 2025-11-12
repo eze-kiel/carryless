@@ -54,12 +54,15 @@
 <div class="pack-detail">
     <div class="pack-header">
         <div class="page-header">
-            <h1>{{.Pack.Name}}</h1>
+            <h1>{{.Pack.Name}} {{if .Pack.IsLocked}}<i class="fas fa-lock" title="Pack is locked"></i>{{end}}</h1>
             <div>
                 {{if .Pack.IsPublic}}
                     <a href="{{if .Pack.ShortID}}/p/{{.Pack.ShortID}}{{else}}/p/packs/{{.Pack.ID}}{{end}}" class="btn btn-secondary">Public View</a>
                 {{end}}
                 <a href="{{if and .Pack.IsPublic .Pack.ShortID}}/p/{{.Pack.ShortID}}/checklist{{else}}/packs/{{.Pack.ID}}/checklist{{end}}" class="btn btn-secondary">Prep Mode</a>
+                <button type="button" class="btn btn-secondary" onclick="togglePackLock('{{.Pack.ID}}', {{if .Pack.IsLocked}}false{{else}}true{{end}})">
+                    {{if .Pack.IsLocked}}<i class="fas fa-unlock"></i> Unlock{{else}}<i class="fas fa-lock"></i> Lock{{end}}
+                </button>
             </div>
         </div>
         <a href="/packs" class="back-link">< Back to packs</a>
@@ -105,6 +108,7 @@
     <div class="labels-section">
         <div class="section-header">
             <h3>Labels</h3>
+            {{if not .Pack.IsLocked}}
             <div class="label-header-buttons">
                 <button type="button" class="btn-label-compact" onclick="showManageLabelsModal()">
                     Manage
@@ -113,18 +117,21 @@
                     + Add
                 </button>
             </div>
+            {{end}}
         </div>
-        
+
         <p class="labels-description">Use labels to organize items in your pack.</p>
     </div>
 
     <!-- Add Item Search -->
+    {{if not .Pack.IsLocked}}
     <div class="add-item-search">
         <div class="search-container">
             <input type="text" id="addItemSearch" placeholder="Search and add items to pack..." autocomplete="off">
             <div id="itemSuggestions" class="autocomplete-suggestions"></div>
         </div>
     </div>
+    {{end}}
 
     {{if .Pack.Items}}
         {{$categoryWeights := .CategoryWeights}}
@@ -145,37 +152,43 @@
                             <div class="item-controls">
                                 <div class="control-group">
                                     <label class="control-label">Qty:</label>
+                                    {{if not $.Pack.IsLocked}}
                                     <div class="quantity-controls">
                                         <button type="button" class="qty-btn qty-minus" onclick="decrementQuantity(packId, {{.Item.ID}}, {{.Count}})">-</button>
                                         <span class="qty-value">{{.Count}}</span>
                                         <button type="button" class="qty-btn qty-plus" onclick="incrementQuantity(packId, {{.Item.ID}})">+</button>
                                     </div>
+                                    {{else}}
+                                    <span class="qty-value">{{.Count}}</span>
+                                    {{end}}
                                 </div>
                                 <div class="control-group">
                                     <label class="control-label">Worn:</label>
                                     {{if eq .Count 1}}
-                                        <input type="checkbox" {{if .IsWorn}}checked{{end}} 
-                                               onchange="toggleWorn(packId, {{.Item.ID}}, this.checked)">
+                                        <input type="checkbox" {{if .IsWorn}}checked{{end}}
+                                               {{if $.Pack.IsLocked}}disabled{{else}}onchange="toggleWorn(packId, {{.Item.ID}}, this.checked)"{{end}}>
                                     {{else}}
-                                        <input type="number" min="0" max="{{.Count}}" value="{{.WornCount}}" 
-                                               onchange="updateWornCount(packId, {{.Item.ID}}, this.value)"
+                                        <input type="number" min="0" max="{{.Count}}" value="{{.WornCount}}"
+                                               {{if $.Pack.IsLocked}}disabled{{else}}onchange="updateWornCount(packId, {{.Item.ID}}, this.value)"{{end}}
                                                class="worn-count-input">
                                     {{end}}
                                 </div>
                             </div>
-                            
+
                             <!-- Item Labels -->
                             <div class="item-labels">
                                 {{if .Labels}}
                                     {{$packItemID := .ID}}
                                     {{range .Labels}}
-                                        <span class="label-tag" style="background-color: {{.PackLabel.Color}};" 
-                                              onclick="removeLabelFromItem({{$packItemID}}, {{.PackLabelID}})">
-                                            {{.PackLabel.Name}}{{if gt .Count 1}} ({{.Count}}){{end}} ×
+                                        <span class="label-tag" style="background-color: {{.PackLabel.Color}};"
+                                              {{if not $.Pack.IsLocked}}onclick="removeLabelFromItem({{$packItemID}}, {{.PackLabelID}})"{{end}}>
+                                            {{.PackLabel.Name}}{{if gt .Count 1}} ({{.Count}}){{end}}{{if not $.Pack.IsLocked}} ×{{end}}
                                         </span>
                                     {{end}}
                                 {{end}}
+                                {{if not $.Pack.IsLocked}}
                                 <button type="button" class="btn-add-label" onclick="showAddLabelModal({{.ID}})">+ Label</button>
+                                {{end}}
                             </div>
                         </div>
                     {{end}}
@@ -202,19 +215,23 @@
                                         <td>{{.Item.Note}}</td>
                                         <td>{{if .Item.WeightToVerify}}<abbr class="weight-to-verify" title="weight not verified" data-weight="{{.Item.WeightGrams}}">{{.Item.WeightGrams}}g</abbr>{{else}}<span data-weight="{{.Item.WeightGrams}}">{{.Item.WeightGrams}}g</span>{{end}}</td>
                                         <td>
+                                            {{if not $.Pack.IsLocked}}
                                             <div class="quantity-controls">
                                                 <button type="button" class="qty-btn qty-minus" onclick="decrementQuantity(packId, {{.Item.ID}}, {{.Count}})">-</button>
                                                 <span class="qty-value">{{.Count}}</span>
                                                 <button type="button" class="qty-btn qty-plus" onclick="incrementQuantity(packId, {{.Item.ID}})">+</button>
                                             </div>
+                                            {{else}}
+                                            <span class="qty-value">{{.Count}}</span>
+                                            {{end}}
                                         </td>
                                         <td>
                                             {{if eq .Count 1}}
-                                                <input type="checkbox" {{if .IsWorn}}checked{{end}} 
-                                                       onchange="toggleWorn(packId, {{.Item.ID}}, this.checked)">
+                                                <input type="checkbox" {{if .IsWorn}}checked{{end}}
+                                                       {{if $.Pack.IsLocked}}disabled{{else}}onchange="toggleWorn(packId, {{.Item.ID}}, this.checked)"{{end}}>
                                             {{else}}
-                                                <input type="number" min="0" max="{{.Count}}" value="{{.WornCount}}" 
-                                                       onchange="updateWornCount(packId, {{.Item.ID}}, this.value)"
+                                                <input type="number" min="0" max="{{.Count}}" value="{{.WornCount}}"
+                                                       {{if $.Pack.IsLocked}}disabled{{else}}onchange="updateWornCount(packId, {{.Item.ID}}, this.value)"{{end}}
                                                        class="worn-count-input">
                                             {{end}}
                                         </td>
@@ -223,13 +240,15 @@
                                                 {{if .Labels}}
                                                     {{$packItemID := .ID}}
                                                     {{range .Labels}}
-                                                        <span class="label-tag" style="background-color: {{.PackLabel.Color}};" 
-                                                              onclick="removeLabelFromItem({{$packItemID}}, {{.PackLabelID}})">
-                                                            {{.PackLabel.Name}}{{if gt .Count 1}} ({{.Count}}){{end}} ×
+                                                        <span class="label-tag" style="background-color: {{.PackLabel.Color}};"
+                                                              {{if not $.Pack.IsLocked}}onclick="removeLabelFromItem({{$packItemID}}, {{.PackLabelID}})"{{end}}>
+                                                            {{.PackLabel.Name}}{{if gt .Count 1}} ({{.Count}}){{end}}{{if not $.Pack.IsLocked}} ×{{end}}
                                                         </span>
                                                     {{end}}
                                                 {{end}}
+                                                {{if not $.Pack.IsLocked}}
                                                 <button type="button" class="btn-add-label" onclick="showAddLabelModal({{.ID}})">+ Label</button>
+                                                {{end}}
                                             </div>
                                         </td>
                                     </tr>
@@ -252,7 +271,7 @@
             <h3>Pack Notes</h3>
         </div>
         <div class="notes-form">
-            <textarea id="packNote" placeholder="Add notes about this pack..." maxlength="500">{{.Pack.Note}}</textarea>
+            <textarea id="packNote" placeholder="Add notes about this pack..." maxlength="500" {{if .Pack.IsLocked}}disabled{{end}}>{{.Pack.Note}}</textarea>
             <div class="notes-controls">
                 <span id="charCount" class="char-count">{{len .Pack.Note}}/500</span>
                 <span id="packNoteStatus" class="pack-note-status" style="display: none;"></span>
@@ -771,7 +790,7 @@ async function decrementQuantity(packId, itemId, currentCount) {
     }
 
     await fetchCSRFToken();
-    
+
     try {
         const response = await fetch(`/packs/${packId}/items/${itemId}`, {
             method: 'DELETE',
@@ -788,6 +807,33 @@ async function decrementQuantity(packId, itemId, currentCount) {
         }
     } catch (error) {
         alert('Failed to remove item');
+    }
+}
+
+async function togglePackLock(packId, isLocked) {
+    await fetchCSRFToken();
+
+    const formData = new FormData();
+    formData.append('is_locked', isLocked);
+    formData.append('csrf_token', csrfToken);
+
+    try {
+        const response = await fetch(`/packs/${packId}/lock`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRF-Token': csrfToken
+            }
+        });
+
+        if (response.ok) {
+            location.reload();
+        } else {
+            const data = await response.json();
+            alert(data.error || 'Failed to update lock status');
+        }
+    } catch (error) {
+        alert('Failed to update lock status');
     }
 }
 

@@ -72,6 +72,7 @@
                                 <td>
                                     <div class="pack-name-cell">
                                         <a href="/packs/{{.ID}}" class="pack-name">{{.Name}}</a>
+                                        {{if .IsLocked}}<i class="fas fa-lock" title="Locked"></i>{{end}}
                                         {{if .IsPublic}}
                                             <small>(Public)</small>
                                         {{else}}
@@ -93,6 +94,13 @@
                                             <div class="dropdown-menu">
                                                 <form action="/packs/{{.ID}}/edit" method="GET">
                                                     <button type="submit" class="dropdown-item">Edit</button>
+                                                </form>
+                                                <form action="/packs/{{.ID}}/lock" method="POST">
+                                                    <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                                                    <input type="hidden" name="is_locked" value="{{if .IsLocked}}false{{else}}true{{end}}">
+                                                    <button type="submit" class="dropdown-item">
+                                                        {{if .IsLocked}}<i class="fas fa-unlock"></i> Unlock{{else}}<i class="fas fa-lock"></i> Lock{{end}}
+                                                    </button>
                                                 </form>
                                                 <form action="/packs/{{.ID}}/duplicate" method="POST">
                                                     <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">

@@ -44,6 +44,7 @@ type Pack struct {
 	Name      string    `json:"name" db:"name"`
 	Note      string    `json:"note" db:"note"`
 	IsPublic  bool      `json:"is_public" db:"is_public"`
+	IsLocked  bool      `json:"is_locked" db:"is_locked"`
 	ShortID   string    `json:"short_id,omitempty" db:"short_id"`
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`

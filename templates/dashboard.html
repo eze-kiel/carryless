@@ -103,6 +103,11 @@
                                         </div>
                                     </div>
                                     <div class="pack-actions">
+                                        {{if .IsLocked}}
+                                            <span class="lock-indicator" title="Locked pack">
+                                                <i class="fas fa-lock"></i>
+                                            </span>
+                                        {{end}}
                                         {{if .IsPublic}}
                                             <span class="public-indicator" title="Public pack">
                                                 <i class="fas fa-globe"></i>
