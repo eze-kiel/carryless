@@ -172,8 +172,8 @@
                             <tr class="item-row{{if .WeightToVerify}} item-needs-verification{{end}}" data-id="{{.ID}}" data-item-name="{{.Name}}" data-item-category="{{.Category.Name}}" data-item-description="{{.Note}}" data-item-brand="{{if .Brand}}{{.Brand}}{{end}}" data-item-model="{{if .Model}}{{.Model}}{{end}}" data-item-weight="{{.WeightGrams}}" data-item-price="{{printf "%.2f" .Price}}" data-item-capacity="{{if .Capacity}}{{.Capacity}}{{end}}" data-item-capacity-unit="{{if .CapacityUnit}}{{.CapacityUnit}}{{end}}" data-item-link="{{if .Link}}{{.Link}}{{end}}" data-item-purchase-date="{{if .PurchaseDate}}{{.PurchaseDate.Format "2006-01-02"}}{{end}}" data-item-weight-verify="{{.WeightToVerify}}" onclick="showItemModal(this)">
                                 <td class="checkbox-col" onclick="event.stopPropagation()"><input type="checkbox" class="item-checkbox" value="{{.ID}}" onclick="updateBulkSelection(event)"></td>
                                 <td>{{.Name}}</td>
-                                <td>{{if .Brand}}{{.Brand}}{{else}}-{{end}}</td>
-                                <td>{{if .Model}}{{.Model}}{{else}}-{{end}}</td>
+                                <td>{{if .Brand}}{{.Brand}}{{end}}</td>
+                                <td>{{if .Model}}{{.Model}}{{end}}</td>
                                 <td>{{.Note}}</td>
                                 <td><span data-weight="{{.WeightGrams}}">{{.WeightGrams}}g</span></td>
                             </tr>
@@ -1190,6 +1190,20 @@
 </script>
 
 <style>
+/* Inventory table column widths */
+.inventory-table table th:nth-child(1),
+.inventory-table table td:nth-child(1) { width: 40px; } /* Checkbox */
+.inventory-table table th:nth-child(2),
+.inventory-table table td:nth-child(2) { width: 15%; } /* Item */
+.inventory-table table th:nth-child(3),
+.inventory-table table td:nth-child(3) { width: 22%; } /* Brand */
+.inventory-table table th:nth-child(4),
+.inventory-table table td:nth-child(4) { width: 22%; } /* Model */
+.inventory-table table th:nth-child(5),
+.inventory-table table td:nth-child(5) { width: 18%; } /* Notes */
+.inventory-table table th:nth-child(6),
+.inventory-table table td:nth-child(6) { width: 12%; } /* Weight */
+
 /* Item row clickable */
 .item-row {
     cursor: pointer;
@@ -1364,8 +1378,8 @@ input[type="checkbox"] {
 
 input[type="checkbox"].standard-checkbox {
     display: inline-block;
-    width: 16px;
-    height: 16px;
+    width: 13px;
+    height: 13px;
     cursor: pointer;
 }
 

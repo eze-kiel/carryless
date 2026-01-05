@@ -597,7 +597,7 @@
                                 <div class="item-row item-group-parent">
                                     <div class="checkbox" onclick="toggleParentCheck(this)" data-parent-id="{{$itemId}}" data-count="{{$packItem.Count}}"></div>
                                     <div class="item-content">
-                                        <span class="item-name">{{$packItem.Item.Name}}</span>
+                                        <span class="item-name">{{$packItem.Item.Name}}{{if or $packItem.Item.Brand $packItem.Item.Model}}: {{if $packItem.Item.Brand}}{{$packItem.Item.Brand}}{{end}}{{if $packItem.Item.Model}} {{$packItem.Item.Model}}{{end}}{{end}}</span>
                                         <div class="item-details">
                                             <span class="item-weight">{{$packItem.Item.WeightGrams}}g</span>
                                             {{if $packItem.Item.Note}}
@@ -612,7 +612,7 @@
                                         <div class="checkbox" onclick="toggleCheck(this)" data-item-id="{{$itemId}}-{{$itemIndex}}" data-parent-id="{{$itemId}}"></div>
                                         <div class="item-content">
                                             <span class="item-name-continuation">
-                                                {{$packItem.Item.Name}} ({{add $itemIndex 1}} of {{$packItem.Count}})
+                                                {{$packItem.Item.Name}}{{if or $packItem.Item.Brand $packItem.Item.Model}}: {{if $packItem.Item.Brand}}{{$packItem.Item.Brand}}{{end}}{{if $packItem.Item.Model}} {{$packItem.Item.Model}}{{end}}{{end}} ({{add $itemIndex 1}} of {{$packItem.Count}})
                                             </span>
                                             <div class="item-details">
                                                 {{$assignedLabel := getLabelForItem $packItem.Labels $itemIndex}}
@@ -632,7 +632,7 @@
                                 <div class="item-row">
                                     <div class="checkbox" onclick="toggleCheck(this)" data-item-id="{{$itemId}}-0"></div>
                                     <div class="item-content">
-                                        <span class="item-name">{{$packItem.Item.Name}}</span>
+                                        <span class="item-name">{{$packItem.Item.Name}}{{if or $packItem.Item.Brand $packItem.Item.Model}}: {{if $packItem.Item.Brand}}{{$packItem.Item.Brand}}{{end}}{{if $packItem.Item.Model}} {{$packItem.Item.Model}}{{end}}{{end}}</span>
                                         <div class="item-details">
                                             <span class="item-weight">{{$packItem.Item.WeightGrams}}g</span>
                                             {{if $packItem.Item.Note}}
