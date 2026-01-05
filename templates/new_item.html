@@ -49,29 +49,32 @@
         <div class="form-container">
             <form action="/inventory/items" method="POST" class="form">
                 <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-                <div class="form-group">
-                    <label for="name">Item Name *</label>
-                    <input type="text" id="name" name="name" required maxlength="200" placeholder="Enter item name">
-                </div>
 
-                <div class="form-group">
-                    <label for="brand">Brand (optional)</label>
-                    <input type="text" id="brand" name="brand" maxlength="100" placeholder="Enter brand name">
-                </div>
-
-                <div class="form-group">
-                    <label for="model">Model (optional)</label>
-                    <input type="text" id="model" name="model" maxlength="100" placeholder="Enter model name">
-                </div>
-
-                <div class="form-group">
-                    <label for="category_name">Category *</label>
-                    <div class="autocomplete-container">
-                        <input type="text" id="category_name" name="category_name" required maxlength="100"
-                               placeholder="Type category name..." autocomplete="off">
-                        <div id="category-suggestions" class="autocomplete-suggestions"></div>
+                <div class="form-row">
+                    <div class="form-group" style="flex: 1;">
+                        <label for="name">Item Name *</label>
+                        <input type="text" id="name" name="name" required maxlength="200" placeholder="Enter item name">
                     </div>
-                    <small class="form-help">Type to search existing categories or create a new one</small>
+                    <div class="form-group" style="flex: 1;">
+                        <label for="category_name">Category *</label>
+                        <div class="autocomplete-container">
+                            <input type="text" id="category_name" name="category_name" required maxlength="100"
+                                   placeholder="Type category name..." autocomplete="off">
+                            <div id="category-suggestions" class="autocomplete-suggestions"></div>
+                        </div>
+                        <small class="form-help">Type to search existing categories or create a new one</small>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group" style="flex: 1;">
+                        <label for="brand">Brand</label>
+                        <input type="text" id="brand" name="brand" maxlength="100" placeholder="Enter brand name">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label for="model">Model</label>
+                        <input type="text" id="model" name="model" maxlength="100" placeholder="Enter model name">
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -203,6 +206,10 @@
         margin-top: var(--space-1);
         font-size: var(--font-size-xs);
         color: var(--color-gray-500);
+    }
+
+    .form-container {
+        max-width: 700px;
     }
 
     .form-row {

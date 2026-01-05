@@ -133,8 +133,9 @@
                                         <tr>
                                             <th>Item</th>
                                             <th>Brand</th>
+                                            <th>Model</th>
+                                            <th>Notes</th>
                                             <th>Capacity</th>
-                                            <th>Description</th>
                                             <th>Weight</th>
                                             <th>Qty</th>
                                             <th>Worn</th>
@@ -146,8 +147,9 @@
                                             <tr>
                                                 <td>{{.Item.Name}}</td>
                                                 <td>{{if .Item.Brand}}{{.Item.Brand}}{{end}}</td>
-                                                <td>{{if .Item.Capacity}}{{.Item.Capacity}}{{if .Item.CapacityUnit}}{{.Item.CapacityUnit}}{{end}}{{end}}</td>
+                                                <td>{{if .Item.Model}}{{.Item.Model}}{{end}}</td>
                                                 <td>{{.Item.Note}}</td>
+                                                <td>{{if .Item.Capacity}}{{.Item.Capacity}}{{if .Item.CapacityUnit}}{{.Item.CapacityUnit}}{{end}}{{end}}</td>
                                                 <td>{{if .Item.WeightToVerify}}<abbr class="weight-to-verify" title="weight not verified" data-weight="{{.Item.WeightGrams}}">{{.Item.WeightGrams}}g</abbr>{{else}}<span data-weight="{{.Item.WeightGrams}}">{{.Item.WeightGrams}}g</span>{{end}}</td>
                                                 <td>{{.Count}}</td>
                                                 <td>{{.WornCount}}</td>
@@ -556,7 +558,7 @@
     /* Table column width adjustments */
     .desktop-table table th:nth-child(1), /* Item */
     .desktop-table table td:nth-child(1) {
-        width: 18%;
+        width: 12%;
     }
 
     .desktop-table table th:nth-child(2), /* Brand */
@@ -564,19 +566,24 @@
         width: 10%;
     }
 
-    .desktop-table table th:nth-child(3), /* Capacity */
+    .desktop-table table th:nth-child(3), /* Model */
     .desktop-table table td:nth-child(3) {
         width: 8%;
     }
 
-    .desktop-table table th:nth-child(4), /* Description */
+    .desktop-table table th:nth-child(4), /* Notes */
     .desktop-table table td:nth-child(4) {
-        width: 18%;
+        width: 16%;
     }
 
-    .desktop-table table th:nth-child(8), /* Labels */
-    .desktop-table table td:nth-child(8) {
-        width: 18%;
+    .desktop-table table th:nth-child(5), /* Capacity */
+    .desktop-table table td:nth-child(5) {
+        width: 6%;
+    }
+
+    .desktop-table table th:nth-child(9), /* Labels */
+    .desktop-table table td:nth-child(9) {
+        width: 22%;
     }
 
     .badge {

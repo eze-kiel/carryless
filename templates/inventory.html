@@ -141,15 +141,15 @@
         <div class="filter-row">
             <span class="filter-text">Show items...</span>
             <label class="filter-label">
-                <input type="checkbox" id="verifyOnlyFilter" class="standard-checkbox"{{if .VerifyOnly}} checked{{end}}>
+                <input type="checkbox" id="verifyOnlyFilter" class="standard-checkbox">
                 needing weight verification
             </label>
             <label class="filter-label">
-                <input type="checkbox" id="emptyBrandFilter" class="standard-checkbox"{{if .EmptyBrand}} checked{{end}}>
+                <input type="checkbox" id="emptyBrandFilter" class="standard-checkbox">
                 without brand
             </label>
             <label class="filter-label">
-                <input type="checkbox" id="emptyModelFilter" class="standard-checkbox"{{if .EmptyModel}} checked{{end}}>
+                <input type="checkbox" id="emptyModelFilter" class="standard-checkbox">
                 without model
             </label>
         </div>
@@ -579,34 +579,6 @@
 </script>
 
 <script>
-        function filterItems(query) {
-            const rows = document.querySelectorAll('.item-row');
-            const categories = document.querySelectorAll('.category-section');
-
-            rows.forEach(row => {
-                const itemName = row.dataset.itemName.toLowerCase();
-                const itemBrand = (row.dataset.itemBrand || '').toLowerCase();
-                const itemModel = (row.dataset.itemModel || '').toLowerCase();
-                const searchQuery = query.toLowerCase();
-
-                if (itemName.includes(searchQuery) || itemBrand.includes(searchQuery) || itemModel.includes(searchQuery)) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
-            });
-
-            // Hide empty categories
-            categories.forEach(category => {
-                const visibleRows = category.querySelectorAll('.item-row[style=""], .item-row:not([style])');
-                if (visibleRows.length === 0) {
-                    category.style.display = 'none';
-                } else {
-                    category.style.display = '';
-                }
-            });
-        }
-
         // Close other dropdowns when one is opened
         document.addEventListener('click', function(event) {
             if (event.target.closest('summary')) {
@@ -721,8 +693,8 @@
         document.addEventListener('DOMContentLoaded', function() {
             const searchInput = document.getElementById('itemSearch');
             if (searchInput) {
-                searchInput.addEventListener('input', (e) => {
-                    filterItems(e.target.value);
+                searchInput.addEventListener('input', () => {
+                    applyFilters();
                 });
             }
         });
@@ -824,50 +796,86 @@
         }
     });
 
-    // Filter functionality
-    document.getElementById('verifyOnlyFilter').addEventListener('change', function() {
-        const isChecked = this.checked;
+    // Filter functionality - client-side filtering with combined filters
+    function applyFilters() {
+        const verifyOnly = document.getElementById('verifyOnlyFilter').checked;
+        const emptyBrand = document.getElementById('emptyBrandFilter').checked;
+        const emptyModel = document.getElementById('emptyModelFilter').checked;
+        const searchQuery = document.getElementById('itemSearch').value.toLowerCase().trim();
+
+        const rows = document.querySelectorAll('.item-row');
+        const categories = document.querySelectorAll('.category-section');
+
+        rows.forEach(row => {
+            let visible = true;
+
+            // Apply verify filter - show only items needing verification
+            if (verifyOnly) {
+                if (row.dataset.itemWeightVerify !== 'true') {
+                    visible = false;
+                }
+            }
+
+            // Apply empty brand filter - show only items WITHOUT brand (AND logic)
+            if (visible && emptyBrand) {
+                const brand = (row.dataset.itemBrand || '').trim();
+                if (brand !== '') {
+                    visible = false;
+                }
+            }
+
+            // Apply empty model filter - show only items WITHOUT model (AND logic)
+            if (visible && emptyModel) {
+                const model = (row.dataset.itemModel || '').trim();
+                if (model !== '') {
+                    visible = false;
+                }
+            }
+
+            // Apply search filter
+            if (visible && searchQuery) {
+                const itemName = row.dataset.itemName.toLowerCase();
+                const itemBrand = (row.dataset.itemBrand || '').toLowerCase();
+                const itemModel = (row.dataset.itemModel || '').toLowerCase();
+                if (!itemName.includes(searchQuery) && !itemBrand.includes(searchQuery) && !itemModel.includes(searchQuery)) {
+                    visible = false;
+                }
+            }
+
+            row.style.display = visible ? '' : 'none';
+        });
+
+        // Hide empty categories
+        categories.forEach(category => {
+            const visibleRows = category.querySelectorAll('.item-row[style=""], .item-row:not([style])');
+            category.style.display = visibleRows.length === 0 ? 'none' : '';
+        });
+
+        // Update URL for bookmarking (without page reload)
         const currentUrl = new URL(window.location);
+        verifyOnly ? currentUrl.searchParams.set('verify_only', 'true') : currentUrl.searchParams.delete('verify_only');
+        emptyBrand ? currentUrl.searchParams.set('empty_brand', 'true') : currentUrl.searchParams.delete('empty_brand');
+        emptyModel ? currentUrl.searchParams.set('empty_model', 'true') : currentUrl.searchParams.delete('empty_model');
+        window.history.replaceState({}, '', currentUrl.toString());
+    }
 
-        if (isChecked) {
-            currentUrl.searchParams.set('verify_only', 'true');
-            currentUrl.searchParams.delete('empty_brand');
-            currentUrl.searchParams.delete('empty_model');
-        } else {
-            currentUrl.searchParams.delete('verify_only');
+    document.getElementById('verifyOnlyFilter').addEventListener('change', applyFilters);
+    document.getElementById('emptyBrandFilter').addEventListener('change', applyFilters);
+    document.getElementById('emptyModelFilter').addEventListener('change', applyFilters);
+
+    // Apply filters on page load if URL has filter params
+    document.addEventListener('DOMContentLoaded', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('verify_only') === 'true') {
+            document.getElementById('verifyOnlyFilter').checked = true;
         }
-
-        window.location.href = currentUrl.toString();
-    });
-
-    document.getElementById('emptyBrandFilter').addEventListener('change', function() {
-        const isChecked = this.checked;
-        const currentUrl = new URL(window.location);
-
-        if (isChecked) {
-            currentUrl.searchParams.set('empty_brand', 'true');
-            currentUrl.searchParams.delete('verify_only');
-            currentUrl.searchParams.delete('empty_model');
-        } else {
-            currentUrl.searchParams.delete('empty_brand');
+        if (urlParams.get('empty_brand') === 'true') {
+            document.getElementById('emptyBrandFilter').checked = true;
         }
-
-        window.location.href = currentUrl.toString();
-    });
-
-    document.getElementById('emptyModelFilter').addEventListener('change', function() {
-        const isChecked = this.checked;
-        const currentUrl = new URL(window.location);
-
-        if (isChecked) {
-            currentUrl.searchParams.set('empty_model', 'true');
-            currentUrl.searchParams.delete('verify_only');
-            currentUrl.searchParams.delete('empty_brand');
-        } else {
-            currentUrl.searchParams.delete('empty_model');
+        if (urlParams.get('empty_model') === 'true') {
+            document.getElementById('emptyModelFilter').checked = true;
         }
-
-        window.location.href = currentUrl.toString();
+        applyFilters();
     });
 
     // Bulk selection functionality

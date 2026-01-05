@@ -49,23 +49,8 @@ func handleInventory(c *gin.Context) {
 	db := c.MustGet("db").(*sql.DB)
 	user := c.MustGet("user")
 
-	// Check filters
-	verifyOnly := c.Query("verify_only") == "true"
-	emptyBrand := c.Query("empty_brand") == "true"
-	emptyModel := c.Query("empty_model") == "true"
-
-	var items []models.Item
-	var err error
-
-	if verifyOnly {
-		items, err = database.GetItemsToVerify(db, userID)
-	} else if emptyBrand {
-		items, err = database.GetItemsWithEmptyBrand(db, userID)
-	} else if emptyModel {
-		items, err = database.GetItemsWithEmptyModel(db, userID)
-	} else {
-		items, err = database.GetItems(db, userID)
-	}
+	// Load all items - filtering is done client-side via JavaScript
+	items, err := database.GetItems(db, userID)
 	
 	if err != nil {
 		c.HTML(http.StatusInternalServerError, "inventory.html", gin.H{
@@ -102,9 +87,6 @@ func handleInventory(c *gin.Context) {
 		"Items":      items,
 		"Categories": categories,
 		"CSRFToken":  csrfToken.Token,
-		"VerifyOnly": verifyOnly,
-		"EmptyBrand": emptyBrand,
-		"EmptyModel": emptyModel,
 	})
 }
 
