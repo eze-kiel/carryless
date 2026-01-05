@@ -500,8 +500,57 @@ async function addItemToPack(itemId) {
     }
 }
 
+// Calculate relative luminance of a color
+function getLuminance(r, g, b) {
+    const [rs, gs, bs] = [r, g, b].map(c => {
+        c = c / 255;
+        return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
+}
+
+// Parse hex color to RGB
+function hexToRgb(hex) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+    } : null;
+}
+
+// Get optimal text color (black or white) for a given background color
+function getContrastTextColor(bgColor) {
+    const rgb = hexToRgb(bgColor);
+    if (!rgb) return 'white';
+    const luminance = getLuminance(rgb.r, rgb.g, rgb.b);
+    return luminance > 0.179 ? '#333333' : 'white';
+}
+
+// Apply contrast text colors to all label elements
+function applyLabelContrast() {
+    const labelElements = document.querySelectorAll('.label-tag, .label-chip, .label-chip-small');
+    labelElements.forEach(el => {
+        const bgColor = el.style.backgroundColor;
+        if (bgColor) {
+            // Convert rgb() to hex if needed
+            let hex = bgColor;
+            if (bgColor.startsWith('rgb')) {
+                const matches = bgColor.match(/\d+/g);
+                if (matches && matches.length >= 3) {
+                    hex = '#' + matches.slice(0, 3).map(x => parseInt(x).toString(16).padStart(2, '0')).join('');
+                }
+            }
+            const textColor = getContrastTextColor(hex);
+            el.style.color = textColor;
+            el.style.textShadow = textColor === 'white' ? '0 1px 1px rgba(0,0,0,0.2)' : 'none';
+        }
+    });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     setupItemSearch();
+    applyLabelContrast();
 });
 
 // Label management variables
@@ -1546,8 +1595,6 @@ document.addEventListener('DOMContentLoaded', function() {
     border-radius: 10px;
     font-size: 0.75rem;
     font-weight: 500;
-    color: white;
-    text-shadow: 0 1px 1px rgba(0,0,0,0.2);
 }
 
 .labels-bar-empty {
@@ -1640,8 +1687,6 @@ document.addEventListener('DOMContentLoaded', function() {
     border-radius: 12px;
     font-size: 0.75rem;
     font-weight: 500;
-    color: white;
-    text-shadow: 0 1px 1px rgba(0,0,0,0.2);
     cursor: pointer;
     transition: opacity 0.2s;
 }
