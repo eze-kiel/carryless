@@ -456,6 +456,143 @@ func GetItemsToVerify(db *sql.DB, userID int) ([]models.Item, error) {
 	return items, nil
 }
 
+// DuplicateItem creates a copy of an item with "(duplicate)" appended to the name.
+// If a duplicate already exists, it will be named "(duplicate 2)", "(duplicate 3)", etc.
+func DuplicateItem(db *sql.DB, userID, itemID int) (*models.Item, error) {
+	// Get the original item
+	original, err := GetItem(db, userID, itemID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Generate the new name
+	baseName := original.Name
+	newName := generateDuplicateName(db, userID, baseName)
+
+	// Create the duplicate
+	duplicate := models.Item{
+		CategoryID:     original.CategoryID,
+		Name:           newName,
+		Note:           original.Note,
+		WeightGrams:    original.WeightGrams,
+		WeightToVerify: original.WeightToVerify,
+		Price:          original.Price,
+		Brand:          original.Brand,
+		PurchaseDate:   original.PurchaseDate,
+		Capacity:       original.Capacity,
+		CapacityUnit:   original.CapacityUnit,
+		Link:           original.Link,
+	}
+
+	return CreateItem(db, userID, duplicate)
+}
+
+// generateDuplicateName generates a unique duplicate name for an item
+func generateDuplicateName(db *sql.DB, userID int, baseName string) string {
+	// First try "Name (duplicate)"
+	candidateName := baseName + " (duplicate)"
+	if !itemNameExists(db, userID, candidateName) {
+		return candidateName
+	}
+
+	// Try "Name (duplicate 2)", "Name (duplicate 3)", etc.
+	for i := 2; i < 1000; i++ {
+		candidateName = fmt.Sprintf("%s (duplicate %d)", baseName, i)
+		if !itemNameExists(db, userID, candidateName) {
+			return candidateName
+		}
+	}
+
+	// Fallback with timestamp if somehow we hit 1000 duplicates
+	return fmt.Sprintf("%s (duplicate %d)", baseName, time.Now().Unix())
+}
+
+// itemNameExists checks if an item with the given name exists for the user
+func itemNameExists(db *sql.DB, userID int, name string) bool {
+	var count int
+	query := `SELECT COUNT(*) FROM items WHERE user_id = ? AND name = ?`
+	err := db.QueryRow(query, userID, name).Scan(&count)
+	if err != nil {
+		return false
+	}
+	return count > 0
+}
+
+// BulkDeleteItems deletes multiple items atomically.
+// Returns the number of items deleted.
+func BulkDeleteItems(db *sql.DB, userID int, itemIDs []int) (int, error) {
+	if len(itemIDs) == 0 {
+		return 0, fmt.Errorf("no items specified")
+	}
+
+	// Start transaction
+	tx, err := db.Begin()
+	if err != nil {
+		return 0, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// Build placeholders for item IDs
+	placeholders := make([]string, len(itemIDs))
+	idArgs := make([]interface{}, len(itemIDs))
+	for i, id := range itemIDs {
+		placeholders[i] = "?"
+		idArgs[i] = id
+	}
+	placeholderStr := strings.Join(placeholders, ",")
+
+	// First, verify ALL items belong to the user
+	countQuery := fmt.Sprintf(
+		"SELECT COUNT(*) FROM items WHERE user_id = ? AND id IN (%s)",
+		placeholderStr,
+	)
+
+	countArgs := append([]interface{}{userID}, idArgs...)
+	var count int
+	err = tx.QueryRow(countQuery, countArgs...).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to verify item ownership: %w", err)
+	}
+
+	if count != len(itemIDs) {
+		return 0, fmt.Errorf("some items not found or not owned by user (found %d of %d)", count, len(itemIDs))
+	}
+
+	// Remove items from all packs first
+	removePackItemsQuery := fmt.Sprintf(
+		"DELETE FROM pack_items WHERE item_id IN (%s)",
+		placeholderStr,
+	)
+	_, err = tx.Exec(removePackItemsQuery, idArgs...)
+	if err != nil {
+		return 0, fmt.Errorf("failed to remove items from packs: %w", err)
+	}
+
+	// Delete the items
+	deleteQuery := fmt.Sprintf(
+		"DELETE FROM items WHERE user_id = ? AND id IN (%s)",
+		placeholderStr,
+	)
+	deleteArgs := append([]interface{}{userID}, idArgs...)
+
+	result, err := tx.Exec(deleteQuery, deleteArgs...)
+	if err != nil {
+		return 0, fmt.Errorf("failed to bulk delete items: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	// Commit transaction
+	if err = tx.Commit(); err != nil {
+		return 0, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return int(rowsAffected), nil
+}
+
 // BulkUpdateItems updates multiple items atomically with the specified field updates.
 // The updates map should contain column names as keys and their new values.
 // All updates happen in a single transaction - either all succeed or all fail.

@@ -575,6 +575,32 @@ func handleDeleteItem(c *gin.Context) {
 	c.Redirect(http.StatusFound, "/inventory?success=deleted")
 }
 
+func handleDuplicateItem(c *gin.Context) {
+	userID := c.MustGet("user_id").(int)
+	db := c.MustGet("db").(*sql.DB)
+
+	itemIDStr := c.Param("id")
+	itemID, err := strconv.Atoi(itemIDStr)
+	if err != nil {
+		c.Redirect(http.StatusFound, "/inventory?error=invalid_id")
+		return
+	}
+
+	// Duplicate the item
+	_, err = database.DuplicateItem(db, userID, itemID)
+	if err != nil {
+		fmt.Printf("[DEBUG] Duplicate item failed - ID: %d, error: %v\n", itemID, err)
+		if strings.Contains(err.Error(), "not found") {
+			c.Redirect(http.StatusFound, "/inventory?error=item_not_found")
+		} else {
+			c.Redirect(http.StatusFound, "/inventory?error=duplicate_failed")
+		}
+		return
+	}
+
+	c.Redirect(http.StatusFound, "/inventory?success=duplicated")
+}
+
 func handleCheckItemPacks(c *gin.Context) {
 	userID := c.MustGet("user_id").(int)
 	db := c.MustGet("db").(*sql.DB)
@@ -1062,6 +1088,35 @@ func handleBulkEditItems(c *gin.Context) {
 	}
 
 	c.Redirect(http.StatusFound, "/inventory?success=bulk_updated")
+}
+
+func handleBulkDeleteItems(c *gin.Context) {
+	userID := c.MustGet("user_id").(int)
+	db := c.MustGet("db").(*sql.DB)
+
+	// Parse item IDs (comma-separated)
+	itemIDsStr := c.PostForm("item_ids")
+	if itemIDsStr == "" {
+		c.Redirect(http.StatusFound, "/inventory?error=no_items_selected")
+		return
+	}
+
+	itemIDs, err := parseItemIDs(itemIDsStr)
+	if err != nil || len(itemIDs) == 0 {
+		c.Redirect(http.StatusFound, "/inventory?error=invalid_item_ids")
+		return
+	}
+
+	// Call database function
+	deleted, err := database.BulkDeleteItems(db, userID, itemIDs)
+	if err != nil {
+		fmt.Printf("[DEBUG] Bulk delete failed: %v\n", err)
+		c.Redirect(http.StatusFound, "/inventory?error=bulk_delete_failed")
+		return
+	}
+
+	fmt.Printf("[DEBUG] Bulk deleted %d items\n", deleted)
+	c.Redirect(http.StatusFound, "/inventory?success=bulk_deleted")
 }
 
 // parseItemIDs parses a comma-separated string of item IDs into a slice of integers

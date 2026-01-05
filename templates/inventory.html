@@ -70,6 +70,24 @@
                 });
             }
 
+            if (urlParams.get('success') === 'duplicated') {
+                document.addEventListener('DOMContentLoaded', function() {
+                    const alert = document.createElement('div');
+                    alert.className = 'alert alert-success';
+                    alert.textContent = 'Item successfully duplicated!';
+                    document.querySelector('.page-header').after(alert);
+                });
+            }
+
+            if (urlParams.get('success') === 'bulk_deleted') {
+                document.addEventListener('DOMContentLoaded', function() {
+                    const alert = document.createElement('div');
+                    alert.className = 'alert alert-success';
+                    alert.textContent = 'Items successfully deleted!';
+                    document.querySelector('.page-header').after(alert);
+                });
+            }
+
             const error = urlParams.get('error');
             if (error) {
                 document.addEventListener('DOMContentLoaded', function() {
@@ -98,6 +116,8 @@
                         case 'invalid_price': message = 'Bulk edit failed. Price must be a positive number.'; break;
                         case 'invalid_date': message = 'Bulk edit failed. Invalid date format.'; break;
                         case 'invalid_url': message = 'Bulk edit failed. Invalid URL format.'; break;
+                        case 'duplicate_failed': message = 'Failed to duplicate item.'; break;
+                        case 'bulk_delete_failed': message = 'Failed to delete items.'; break;
                         default: message = 'An error occurred.';
                     }
                     alert.textContent = message;
@@ -121,8 +141,7 @@
         <div class="filter-container">
             <div class="filter-group">
                 <label class="filter-label">
-                    <input type="checkbox" id="verifyOnlyFilter"{{if .VerifyOnly}} checked{{end}}>
-                    <span class="checkbox-checkmark"></span>
+                    <input type="checkbox" id="verifyOnlyFilter" class="standard-checkbox"{{if .VerifyOnly}} checked{{end}}>
                     Show only items needing verification
                 </label>
             </div>
@@ -248,8 +267,12 @@
                 </div>
                 <div class="form-actions">
                     <button type="button" onclick="hideItemModal()" class="btn btn-secondary">Close</button>
+                    <button type="button" id="itemModalDuplicateBtn" onclick="duplicateItem()" class="btn btn-secondary">Duplicate</button>
                     <a id="itemModalEditBtn" href="#" class="btn btn-primary">Edit</a>
                 </div>
+                <form id="duplicateItemForm" action="" method="POST" style="display: none;">
+                    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                </form>
             </div>
         </div>
 
@@ -407,16 +430,24 @@
                         </div>
                     </div>
 
-                    <div class="form-actions">
-                        <button type="button" onclick="hideBulkEditModal()" class="btn btn-secondary">Cancel</button>
-                        <button type="submit" class="btn btn-danger" id="bulkEditSubmit">Update&nbsp;<span id="bulkEditSubmitCount">0</span>&nbsp;Items</button>
+                    <div class="form-actions bulk-edit-actions">
+                        <button type="button" onclick="confirmBulkDelete()" class="btn btn-danger-outline" id="bulkDeleteBtn">Delete (<span id="bulkDeleteCount">0</span>)</button>
+                        <div class="form-actions-right">
+                            <button type="button" onclick="hideBulkEditModal()" class="btn btn-secondary">Cancel</button>
+                            <button type="submit" class="btn btn-primary" id="bulkEditSubmit">Update (<span id="bulkEditSubmitCount">0</span>)</button>
+                        </div>
                     </div>
+                </form>
+                <form id="bulkDeleteForm" action="/inventory/items/bulk-delete" method="POST" style="display: none;">
+                    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                    <input type="hidden" name="item_ids" id="bulkDeleteItemIds">
                 </form>
             </div>
         </div>
 
 <script>
         const userCurrency = '{{.User.Currency}}';
+        let currentItemId = null;
 
         function showItemModal(row) {
             // Don't open modal if clicking on actions dropdown
@@ -425,6 +456,7 @@
             }
 
             const id = row.dataset.id;
+            currentItemId = id;
             const name = row.dataset.itemName;
             const category = row.dataset.itemCategory;
             const description = row.dataset.itemDescription;
@@ -495,6 +527,14 @@
 
         function hideItemModal() {
             document.getElementById('itemModal').style.display = 'none';
+            currentItemId = null;
+        }
+
+        function duplicateItem() {
+            if (!currentItemId) return;
+            const form = document.getElementById('duplicateItemForm');
+            form.action = `/inventory/items/${currentItemId}/duplicate`;
+            form.submit();
         }
 
         // Close modal when clicking outside
@@ -847,9 +887,11 @@
         // Update counts
         document.getElementById('bulkEditModalCount').textContent = selectedItems.size;
         document.getElementById('bulkEditSubmitCount').textContent = selectedItems.size;
+        document.getElementById('bulkDeleteCount').textContent = selectedItems.size;
 
         // Set item IDs
         document.getElementById('bulkEditItemIds').value = Array.from(selectedItems).join(',');
+        document.getElementById('bulkDeleteItemIds').value = Array.from(selectedItems).join(',');
 
         // Reset form
         document.getElementById('bulkEditForm').reset();
@@ -952,6 +994,18 @@
         }
 
         return true;
+    }
+
+    function confirmBulkDelete() {
+        const count = selectedItems.size;
+        const confirmed = confirm(
+            `WARNING: You are about to permanently delete ${count} item(s).\n\n` +
+            `This action cannot be undone.\n\n` +
+            `Are you sure you want to delete these items?`
+        );
+        if (confirmed) {
+            document.getElementById('bulkDeleteForm').submit();
+        }
     }
 
     // Close bulk edit modal when clicking outside
@@ -1247,6 +1301,13 @@ input[type="checkbox"] {
     display: none;
 }
 
+input[type="checkbox"].standard-checkbox {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
 /* Checkbox column */
 .checkbox-col {
     width: 40px;
@@ -1268,8 +1329,31 @@ input[type="checkbox"] {
 }
 
 #bulkEditBtn,
-#bulkEditSubmit {
+#bulkEditSubmit,
+#bulkDeleteBtn {
     gap: 0;
+}
+
+.bulk-edit-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.form-actions-right {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-danger-outline {
+    background: transparent;
+    color: var(--color-danger, #dc3545);
+    border: 1px solid var(--color-danger, #dc3545);
+}
+
+.btn-danger-outline:hover {
+    background: var(--color-danger, #dc3545);
+    color: white;
 }
 
 /* Bulk Edit Modal Styles */
