@@ -18,24 +18,13 @@
             </div>
             <div class="nav-links">
                 {{if .User}}
-                    <a href="/dashboard">Dashboard</a>
-                    <div class="dropdown">
-                        <button class="dropdown-toggle" type="button" aria-haspopup="true" aria-expanded="false">
-                            Inventory
-                            <svg class="dropdown-arrow" width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
-                                <path d="M2.5 4.5L6 8L9.5 4.5"></path>
-                            </svg>
-                        </button>
-                        <div class="dropdown-menu">
-                            <a href="/inventory" class="dropdown-item">Items</a>
-                            <a href="/categories" class="dropdown-item">Categories</a>
-                            <a href="/packs" class="dropdown-item">Packs</a>
-                        </div>
-                    </div>
+                    <a href="/inventory">Items</a>
+                    <a href="/categories">Categories</a>
+                    <a href="/packs">Packs</a>
+                    <a href="/account">Account</a>
                     {{if .User.IsAdmin}}
                         <a href="/admin">Admin</a>
                     {{end}}
-                    <a href="/account">Account</a>
                     <form class="logout-form" action="/logout" method="POST">
                         <button type="submit" class="btn btn-secondary">Logout</button>
                     </form>
@@ -71,7 +60,34 @@
                     document.querySelector('.page-header').after(alert);
                 });
             }
-            
+
+            if (urlParams.get('success') === 'bulk_updated') {
+                document.addEventListener('DOMContentLoaded', function() {
+                    const alert = document.createElement('div');
+                    alert.className = 'alert alert-success';
+                    alert.textContent = 'Items successfully updated!';
+                    document.querySelector('.page-header').after(alert);
+                });
+            }
+
+            if (urlParams.get('success') === 'duplicated') {
+                document.addEventListener('DOMContentLoaded', function() {
+                    const alert = document.createElement('div');
+                    alert.className = 'alert alert-success';
+                    alert.textContent = 'Item successfully duplicated!';
+                    document.querySelector('.page-header').after(alert);
+                });
+            }
+
+            if (urlParams.get('success') === 'bulk_deleted') {
+                document.addEventListener('DOMContentLoaded', function() {
+                    const alert = document.createElement('div');
+                    alert.className = 'alert alert-success';
+                    alert.textContent = 'Items successfully deleted!';
+                    document.querySelector('.page-header').after(alert);
+                });
+            }
+
             const error = urlParams.get('error');
             if (error) {
                 document.addEventListener('DOMContentLoaded', function() {
@@ -90,6 +106,18 @@
                         case 'item_in_use': message = 'Cannot delete item. It is currently used in one or more packs.'; break;
                         case 'item_not_found': message = 'Delete failed. Item not found.'; break;
                         case 'delete_failed': message = 'Delete failed. Could not delete item.'; break;
+                        case 'no_items_selected': message = 'Bulk edit failed. No items were selected.'; break;
+                        case 'invalid_item_ids': message = 'Bulk edit failed. Invalid item selection.'; break;
+                        case 'no_fields_selected': message = 'Bulk edit failed. No fields were selected to update.'; break;
+                        case 'bulk_update_failed': message = 'Bulk edit failed. Could not update items.'; break;
+                        case 'category_required': message = 'Bulk edit failed. Category name is required.'; break;
+                        case 'invalid_weight': message = 'Bulk edit failed. Weight must be a positive number.'; break;
+                        case 'invalid_capacity': message = 'Bulk edit failed. Capacity must be a positive number.'; break;
+                        case 'invalid_price': message = 'Bulk edit failed. Price must be a positive number.'; break;
+                        case 'invalid_date': message = 'Bulk edit failed. Invalid date format.'; break;
+                        case 'invalid_url': message = 'Bulk edit failed. Invalid URL format.'; break;
+                        case 'duplicate_failed': message = 'Failed to duplicate item.'; break;
+                        case 'bulk_delete_failed': message = 'Failed to delete items.'; break;
                         default: message = 'An error occurred.';
                     }
                     alert.textContent = message;
@@ -100,7 +128,10 @@
         
         <div class="page-header">
             <h1>Inventory</h1>
-            <a href="/inventory/items/new" class="btn btn-primary">Add Item</a>
+            <div class="page-header-actions">
+                <button id="bulkEditBtn" class="btn btn-secondary" style="display: none;" onclick="showBulkEditModal()">Bulk Edit (<span id="bulkEditCount">0</span>)</button>
+                <a href="/inventory/items/new" class="btn btn-primary">Add Item</a>
+            </div>
         </div>
 
         <div class="search-container">
@@ -110,8 +141,7 @@
         <div class="filter-container">
             <div class="filter-group">
                 <label class="filter-label">
-                    <input type="checkbox" id="verifyOnlyFilter"{{if .VerifyOnly}} checked{{end}}>
-                    <span class="checkbox-checkmark"></span>
+                    <input type="checkbox" id="verifyOnlyFilter" class="standard-checkbox"{{if .VerifyOnly}} checked{{end}}>
                     Show only items needing verification
                 </label>
             </div>
@@ -122,43 +152,25 @@
                 <table>
                     <thead>
                         <tr>
+                            <th class="checkbox-col"><input type="checkbox" id="selectAllItems" onclick="toggleSelectAll()" title="Select all"></th>
                             <th>Name</th>
                             <th>Description</th>
                             <th>Category</th>
+                            <th>Brand</th>
+                            <th>Capacity</th>
                             <th>Weight</th>
-                            <th>Price ({{.User.Currency}})</th>
-                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {{range .Items}}
-                            <tr class="item-row{{if .WeightToVerify}} item-needs-verification{{end}}" data-id="{{.ID}}" data-item-name="{{.Name}}" data-item-category="{{.Category.Name}}" data-item-description="{{.Note}}">
+                            <tr class="item-row{{if .WeightToVerify}} item-needs-verification{{end}}" data-id="{{.ID}}" data-item-name="{{.Name}}" data-item-category="{{.Category.Name}}" data-item-description="{{.Note}}" data-item-brand="{{if .Brand}}{{.Brand}}{{end}}" data-item-weight="{{.WeightGrams}}" data-item-price="{{printf "%.2f" .Price}}" data-item-capacity="{{if .Capacity}}{{.Capacity}}{{end}}" data-item-capacity-unit="{{if .CapacityUnit}}{{.CapacityUnit}}{{end}}" data-item-link="{{if .Link}}{{.Link}}{{end}}" data-item-purchase-date="{{if .PurchaseDate}}{{.PurchaseDate.Format "2006-01-02"}}{{end}}" data-item-weight-verify="{{.WeightToVerify}}" onclick="showItemModal(this)">
+                                <td class="checkbox-col" onclick="event.stopPropagation()"><input type="checkbox" class="item-checkbox" value="{{.ID}}" onclick="updateBulkSelection(event)"></td>
                                 <td>{{.Name}}</td>
                                 <td>{{.Note}}</td>
                                 <td>{{.Category.Name}}</td>
+                                <td>{{if .Brand}}{{.Brand}}{{else}}-{{end}}</td>
+                                <td>{{if .Capacity}}{{.Capacity}}{{if .CapacityUnit}} {{.CapacityUnit}}{{end}}{{else}}-{{end}}</td>
                                 <td><span data-weight="{{.WeightGrams}}">{{.WeightGrams}}g</span></td>
-                                <td>{{printf "%.2f" .Price}}</td>
-                                <td>
-                                    <div class="dropdown">
-                                        <details>
-                                            <summary>
-                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                    <circle cx="12" cy="12" r="1"></circle>
-                                                    <circle cx="12" cy="5" r="1"></circle>
-                                                    <circle cx="12" cy="19" r="1"></circle>
-                                                </svg>
-                                            </summary>
-                                            <div class="dropdown-menu">
-                                                <form action="/inventory/items/{{.ID}}/edit" method="GET">
-                                                    <button type="submit" class="dropdown-item">Edit</button>
-                                                </form>
-                                                <form onsubmit="return handleDeleteItem(event, {{.ID}}, '{{$.CSRFToken}}')">
-                                                    <button type="submit" class="dropdown-item dropdown-item-danger">Delete</button>
-                                                </form>
-                                            </div>
-                                        </details>
-                                    </div>
-                                </td>
                             </tr>
                         {{end}}
                     </tbody>
@@ -210,27 +222,355 @@
             </div>
         </div>
 
+        <!-- Item Details Modal -->
+        <div id="itemModal" class="modal" style="display: none;">
+            <div class="modal-content item-modal-content">
+                <div class="item-modal-header">
+                    <h3 id="itemModalName"></h3>
+                    <button type="button" class="modal-close" onclick="hideItemModal()">&times;</button>
+                </div>
+                <div class="item-modal-body">
+                    <div class="item-detail-grid">
+                        <div class="item-detail-row">
+                            <span class="item-detail-label">Category</span>
+                            <span class="item-detail-value" id="itemModalCategory"></span>
+                        </div>
+                        <div class="item-detail-row">
+                            <span class="item-detail-label">Brand</span>
+                            <span class="item-detail-value" id="itemModalBrand"></span>
+                        </div>
+                        <div class="item-detail-row">
+                            <span class="item-detail-label">Description</span>
+                            <span class="item-detail-value" id="itemModalDescription"></span>
+                        </div>
+                        <div class="item-detail-row">
+                            <span class="item-detail-label" id="itemModalWeightLabel">Weight</span>
+                            <span class="item-detail-value" id="itemModalWeight"></span>
+                        </div>
+                        <div class="item-detail-row">
+                            <span class="item-detail-label">Capacity</span>
+                            <span class="item-detail-value" id="itemModalCapacity"></span>
+                        </div>
+                        <div class="item-detail-row">
+                            <span class="item-detail-label">Price</span>
+                            <span class="item-detail-value" id="itemModalPrice"></span>
+                        </div>
+                        <div class="item-detail-row">
+                            <span class="item-detail-label">Date of Purchase</span>
+                            <span class="item-detail-value" id="itemModalPurchaseDate"></span>
+                        </div>
+                        <div class="item-detail-row">
+                            <span class="item-detail-label">Link</span>
+                            <span class="item-detail-value" id="itemModalLink"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" onclick="hideItemModal()" class="btn btn-secondary">Close</button>
+                    <button type="button" id="itemModalDuplicateBtn" onclick="duplicateItem()" class="btn btn-secondary">Duplicate</button>
+                    <a id="itemModalEditBtn" href="#" class="btn btn-primary">Edit</a>
+                </div>
+                <form id="duplicateItemForm" action="" method="POST" style="display: none;">
+                    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                </form>
+            </div>
+        </div>
+
+        <!-- Bulk Edit Modal -->
+        <div id="bulkEditModal" class="modal" style="display: none;">
+            <div class="modal-content bulk-edit-modal-content">
+                <div class="bulk-edit-header">
+                    <h3>Bulk Edit Items</h3>
+                    <button type="button" class="modal-close" onclick="hideBulkEditModal()">&times;</button>
+                </div>
+
+                <div class="bulk-edit-info">
+                    <span class="bulk-edit-count"><span id="bulkEditModalCount">0</span> items selected</span>
+                    <span class="bulk-edit-hint">Only fields with "Apply" checked will be updated</span>
+                </div>
+
+                <form id="bulkEditForm" action="/inventory/items/bulk-edit" method="POST" onsubmit="return validateBulkEditForm(event)">
+                    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                    <input type="hidden" name="item_ids" id="bulkEditItemIds">
+
+                    <div class="bulk-edit-fields">
+                        <!-- Category -->
+                        <div class="bulk-edit-field">
+                            <label class="apply-checkbox">
+                                <input type="checkbox" name="apply_category" value="1" onchange="toggleBulkField(this, 'bulk_category_name')">
+                                <span class="apply-checkmark"></span>
+                                Apply
+                            </label>
+                            <div class="field-content">
+                                <label for="bulk_category_name">Category</label>
+                                <div class="autocomplete-container">
+                                    <input type="text" id="bulk_category_name" name="category_name" maxlength="100"
+                                           placeholder="Type category name..." autocomplete="off" disabled>
+                                    <div id="bulk-category-suggestions" class="autocomplete-suggestions"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Brand -->
+                        <div class="bulk-edit-field">
+                            <label class="apply-checkbox">
+                                <input type="checkbox" name="apply_brand" value="1" onchange="toggleBulkField(this, 'bulk_brand')">
+                                <span class="apply-checkmark"></span>
+                                Apply
+                            </label>
+                            <div class="field-content">
+                                <label for="bulk_brand">Brand</label>
+                                <input type="text" id="bulk_brand" name="brand" maxlength="100" placeholder="Enter brand name" disabled>
+                            </div>
+                        </div>
+
+                        <!-- Note/Description -->
+                        <div class="bulk-edit-field">
+                            <label class="apply-checkbox">
+                                <input type="checkbox" name="apply_note" value="1" onchange="toggleBulkField(this, 'bulk_note')">
+                                <span class="apply-checkmark"></span>
+                                Apply
+                            </label>
+                            <div class="field-content">
+                                <label for="bulk_note">Description</label>
+                                <textarea id="bulk_note" name="note" rows="2" placeholder="Enter description" disabled></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Weight -->
+                        <div class="bulk-edit-field">
+                            <label class="apply-checkbox">
+                                <input type="checkbox" name="apply_weight" value="1" onchange="toggleBulkField(this, 'bulk_weight_grams')">
+                                <span class="apply-checkmark"></span>
+                                Apply
+                            </label>
+                            <div class="field-content">
+                                <label for="bulk_weight_grams">Weight (grams)</label>
+                                <input type="number" id="bulk_weight_grams" name="weight_grams" min="0" placeholder="Enter weight in grams" disabled>
+                            </div>
+                        </div>
+
+                        <!-- Weight needs verification -->
+                        <div class="bulk-edit-field">
+                            <label class="apply-checkbox">
+                                <input type="checkbox" name="apply_weight_to_verify" value="1" onchange="toggleBulkField(this, 'bulk_weight_to_verify')">
+                                <span class="apply-checkmark"></span>
+                                Apply
+                            </label>
+                            <div class="field-content field-content-checkbox">
+                                <label class="inline-checkbox-label">
+                                    <input type="checkbox" id="bulk_weight_to_verify" name="weight_to_verify" value="1" disabled>
+                                    Weight needs verification
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Capacity -->
+                        <div class="bulk-edit-field">
+                            <label class="apply-checkbox">
+                                <input type="checkbox" name="apply_capacity" value="1" onchange="toggleBulkFields(this, ['bulk_capacity', 'bulk_capacity_unit'])">
+                                <span class="apply-checkmark"></span>
+                                Apply
+                            </label>
+                            <div class="field-content field-row">
+                                <div style="flex: 2;">
+                                    <label for="bulk_capacity">Capacity</label>
+                                    <input type="number" id="bulk_capacity" name="capacity" step="0.01" min="0" placeholder="e.g., 1000" disabled>
+                                </div>
+                                <div style="flex: 1;">
+                                    <label for="bulk_capacity_unit">Unit</label>
+                                    <select id="bulk_capacity_unit" name="capacity_unit" disabled>
+                                        <option value="">--</option>
+                                        <option value="mL">mL</option>
+                                        <option value="L">L</option>
+                                        <option value="fl-oz">fl-oz</option>
+                                        <option value="mAh">mAh</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Price -->
+                        <div class="bulk-edit-field">
+                            <label class="apply-checkbox">
+                                <input type="checkbox" name="apply_price" value="1" onchange="toggleBulkField(this, 'bulk_price')">
+                                <span class="apply-checkmark"></span>
+                                Apply
+                            </label>
+                            <div class="field-content">
+                                <label for="bulk_price">Price</label>
+                                <input type="number" id="bulk_price" name="price" step="0.01" min="0" placeholder="Enter price" disabled>
+                            </div>
+                        </div>
+
+                        <!-- Purchase Date -->
+                        <div class="bulk-edit-field">
+                            <label class="apply-checkbox">
+                                <input type="checkbox" name="apply_purchase_date" value="1" onchange="toggleBulkField(this, 'bulk_purchase_date')">
+                                <span class="apply-checkmark"></span>
+                                Apply
+                            </label>
+                            <div class="field-content">
+                                <label for="bulk_purchase_date">Purchase Date</label>
+                                <input type="date" id="bulk_purchase_date" name="purchase_date" disabled>
+                            </div>
+                        </div>
+
+                        <!-- Link -->
+                        <div class="bulk-edit-field">
+                            <label class="apply-checkbox">
+                                <input type="checkbox" name="apply_link" value="1" onchange="toggleBulkField(this, 'bulk_link')">
+                                <span class="apply-checkmark"></span>
+                                Apply
+                            </label>
+                            <div class="field-content">
+                                <label for="bulk_link">Product Link</label>
+                                <input type="url" id="bulk_link" name="link" maxlength="500" placeholder="https://..." disabled>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-actions bulk-edit-actions">
+                        <button type="button" onclick="confirmBulkDelete()" class="btn btn-danger-outline" id="bulkDeleteBtn">Delete (<span id="bulkDeleteCount">0</span>)</button>
+                        <div class="form-actions-right">
+                            <button type="button" onclick="hideBulkEditModal()" class="btn btn-secondary">Cancel</button>
+                            <button type="submit" class="btn btn-primary" id="bulkEditSubmit">Update (<span id="bulkEditSubmitCount">0</span>)</button>
+                        </div>
+                    </div>
+                </form>
+                <form id="bulkDeleteForm" action="/inventory/items/bulk-delete" method="POST" style="display: none;">
+                    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                    <input type="hidden" name="item_ids" id="bulkDeleteItemIds">
+                </form>
+            </div>
+        </div>
+
 <script>
+        const userCurrency = '{{.User.Currency}}';
+        let currentItemId = null;
+
+        function showItemModal(row) {
+            // Don't open modal if clicking on actions dropdown
+            if (event.target.closest('.dropdown')) {
+                return;
+            }
+
+            const id = row.dataset.id;
+            currentItemId = id;
+            const name = row.dataset.itemName;
+            const category = row.dataset.itemCategory;
+            const description = row.dataset.itemDescription;
+            const brand = row.dataset.itemBrand;
+            const weight = row.dataset.itemWeight;
+            const price = row.dataset.itemPrice;
+            const capacity = row.dataset.itemCapacity;
+            const capacityUnit = row.dataset.itemCapacityUnit;
+            const link = row.dataset.itemLink;
+            const purchaseDate = row.dataset.itemPurchaseDate;
+            const weightVerify = row.dataset.itemWeightVerify === 'true';
+
+            document.getElementById('itemModalName').textContent = name;
+            document.getElementById('itemModalCategory').textContent = category || '-';
+            document.getElementById('itemModalEditBtn').href = `/inventory/items/${id}/edit`;
+
+            // Brand
+            document.getElementById('itemModalBrand').textContent = brand || '-';
+
+            // Description
+            document.getElementById('itemModalDescription').textContent = description || '-';
+
+            // Weight
+            const weightVal = parseInt(weight);
+            const savedUnit = getCookie('weightUnit') || 'g';
+            const weightText = formatWeightWithUnit(weightVal, savedUnit);
+            document.getElementById('itemModalWeight').textContent = weightText;
+
+            // Update weight label if needs verification
+            if (weightVerify) {
+                document.getElementById('itemModalWeightLabel').textContent = 'Weight (needs verification)';
+            } else {
+                document.getElementById('itemModalWeightLabel').textContent = 'Weight';
+            }
+
+            // Capacity
+            if (capacity) {
+                let capacityText = capacity;
+                if (capacityUnit) {
+                    capacityText += ' ' + capacityUnit;
+                }
+                document.getElementById('itemModalCapacity').textContent = capacityText;
+            } else {
+                document.getElementById('itemModalCapacity').textContent = '-';
+            }
+
+            // Price
+            document.getElementById('itemModalPrice').textContent = userCurrency + price;
+
+            // Purchase Date
+            if (purchaseDate) {
+                const date = new Date(purchaseDate);
+                const formattedDate = date.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+                document.getElementById('itemModalPurchaseDate').textContent = formattedDate;
+            } else {
+                document.getElementById('itemModalPurchaseDate').textContent = '-';
+            }
+
+            // Link
+            if (link) {
+                document.getElementById('itemModalLink').innerHTML = `<a href="${link}" target="_blank" rel="noopener noreferrer">${link}</a>`;
+            } else {
+                document.getElementById('itemModalLink').textContent = '-';
+            }
+
+            document.getElementById('itemModal').style.display = 'flex';
+        }
+
+        function hideItemModal() {
+            document.getElementById('itemModal').style.display = 'none';
+            currentItemId = null;
+        }
+
+        function duplicateItem() {
+            if (!currentItemId) return;
+            const form = document.getElementById('duplicateItemForm');
+            form.action = `/inventory/items/${currentItemId}/duplicate`;
+            form.submit();
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('itemModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                hideItemModal();
+            }
+        });
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && document.getElementById('itemModal').style.display === 'flex') {
+                hideItemModal();
+            }
+        });
 </script>
 
 <script>
         function filterItems(query) {
             const rows = document.querySelectorAll('.item-row');
             const categories = document.querySelectorAll('.category-section');
-            
+
             rows.forEach(row => {
                 const itemName = row.dataset.itemName.toLowerCase();
                 const itemCategory = row.dataset.itemCategory.toLowerCase();
                 const itemDescription = row.dataset.itemDescription.toLowerCase();
+                const itemBrand = (row.dataset.itemBrand || '').toLowerCase();
                 const searchQuery = query.toLowerCase();
-                
-                if (itemName.includes(searchQuery) || itemCategory.includes(searchQuery) || itemDescription.includes(searchQuery)) {
+
+                if (itemName.includes(searchQuery) || itemCategory.includes(searchQuery) || itemDescription.includes(searchQuery) || itemBrand.includes(searchQuery)) {
                     row.style.display = '';
                 } else {
                     row.style.display = 'none';
                 }
             });
-            
+
             // Hide empty categories
             categories.forEach(category => {
                 const visibleRows = category.querySelectorAll('.item-row[style=""], .item-row:not([style])');
@@ -463,18 +803,431 @@
     document.getElementById('verifyOnlyFilter').addEventListener('change', function() {
         const isChecked = this.checked;
         const currentUrl = new URL(window.location);
-        
+
         if (isChecked) {
             currentUrl.searchParams.set('verify_only', 'true');
         } else {
             currentUrl.searchParams.delete('verify_only');
         }
-        
+
         window.location.href = currentUrl.toString();
+    });
+
+    // Bulk selection functionality
+    const selectedItems = new Set();
+
+    function toggleSelectAll() {
+        const selectAllCheckbox = document.getElementById('selectAllItems');
+        const checkboxes = document.querySelectorAll('.item-checkbox');
+        const visibleCheckboxes = Array.from(checkboxes).filter(cb => {
+            const row = cb.closest('tr');
+            return row && row.style.display !== 'none';
+        });
+
+        if (selectAllCheckbox.checked) {
+            visibleCheckboxes.forEach(cb => {
+                cb.checked = true;
+                selectedItems.add(parseInt(cb.value));
+            });
+        } else {
+            visibleCheckboxes.forEach(cb => {
+                cb.checked = false;
+                selectedItems.delete(parseInt(cb.value));
+            });
+        }
+
+        updateBulkEditButton();
+    }
+
+    function updateBulkSelection(event) {
+        const checkbox = event.target;
+        const itemId = parseInt(checkbox.value);
+
+        if (checkbox.checked) {
+            selectedItems.add(itemId);
+        } else {
+            selectedItems.delete(itemId);
+        }
+
+        // Update select all checkbox state
+        const visibleCheckboxes = Array.from(document.querySelectorAll('.item-checkbox')).filter(cb => {
+            const row = cb.closest('tr');
+            return row && row.style.display !== 'none';
+        });
+        const allChecked = visibleCheckboxes.length > 0 && visibleCheckboxes.every(cb => cb.checked);
+        document.getElementById('selectAllItems').checked = allChecked;
+
+        updateBulkEditButton();
+    }
+
+    function updateBulkEditButton() {
+        const bulkEditBtn = document.getElementById('bulkEditBtn');
+        const bulkEditCount = document.getElementById('bulkEditCount');
+        const count = selectedItems.size;
+
+        if (count >= 2) {
+            bulkEditBtn.style.display = 'inline-flex';
+            bulkEditCount.textContent = count;
+        } else {
+            bulkEditBtn.style.display = 'none';
+        }
+    }
+
+    function clearSelection() {
+        selectedItems.clear();
+        document.querySelectorAll('.item-checkbox').forEach(cb => cb.checked = false);
+        document.getElementById('selectAllItems').checked = false;
+        updateBulkEditButton();
+    }
+
+    // Bulk Edit Modal Functions
+    function showBulkEditModal() {
+        if (selectedItems.size === 0) return;
+
+        // Update counts
+        document.getElementById('bulkEditModalCount').textContent = selectedItems.size;
+        document.getElementById('bulkEditSubmitCount').textContent = selectedItems.size;
+        document.getElementById('bulkDeleteCount').textContent = selectedItems.size;
+
+        // Set item IDs
+        document.getElementById('bulkEditItemIds').value = Array.from(selectedItems).join(',');
+        document.getElementById('bulkDeleteItemIds').value = Array.from(selectedItems).join(',');
+
+        // Reset form
+        document.getElementById('bulkEditForm').reset();
+        document.getElementById('bulkEditItemIds').value = Array.from(selectedItems).join(',');
+
+        // Disable all fields
+        document.querySelectorAll('.bulk-edit-field input:not([type="checkbox"]), .bulk-edit-field textarea, .bulk-edit-field select').forEach(el => {
+            if (!el.name.startsWith('apply_')) {
+                el.disabled = true;
+            }
+        });
+
+        document.getElementById('bulkEditModal').style.display = 'flex';
+    }
+
+    function hideBulkEditModal() {
+        document.getElementById('bulkEditModal').style.display = 'none';
+    }
+
+    function toggleBulkField(checkbox, fieldId) {
+        const field = document.getElementById(fieldId);
+        if (field) {
+            field.disabled = !checkbox.checked;
+            if (checkbox.checked) {
+                field.focus();
+            }
+        }
+    }
+
+    function toggleBulkFields(checkbox, fieldIds) {
+        fieldIds.forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                field.disabled = !checkbox.checked;
+            }
+        });
+        if (checkbox.checked && fieldIds.length > 0) {
+            const firstField = document.getElementById(fieldIds[0]);
+            if (firstField) firstField.focus();
+        }
+    }
+
+    function validateBulkEditForm(event) {
+        // Check if at least one apply checkbox is checked
+        const applyCheckboxes = document.querySelectorAll('[name^="apply_"]:checked');
+        if (applyCheckboxes.length === 0) {
+            event.preventDefault();
+            alert('Please select at least one field to apply to the selected items.');
+            return false;
+        }
+
+        // Check for empty fields that will be cleared
+        const emptyAppliedFields = [];
+        const selectedCount = selectedItems.size;
+
+        if (document.querySelector('[name="apply_brand"]').checked) {
+            if (!document.getElementById('bulk_brand').value.trim()) {
+                emptyAppliedFields.push('Brand');
+            }
+        }
+
+        if (document.querySelector('[name="apply_note"]').checked) {
+            if (!document.getElementById('bulk_note').value.trim()) {
+                emptyAppliedFields.push('Description');
+            }
+        }
+
+        if (document.querySelector('[name="apply_capacity"]').checked) {
+            if (!document.getElementById('bulk_capacity').value) {
+                emptyAppliedFields.push('Capacity');
+            }
+        }
+
+        if (document.querySelector('[name="apply_link"]').checked) {
+            if (!document.getElementById('bulk_link').value.trim()) {
+                emptyAppliedFields.push('Product Link');
+            }
+        }
+
+        if (document.querySelector('[name="apply_purchase_date"]').checked) {
+            if (!document.getElementById('bulk_purchase_date').value) {
+                emptyAppliedFields.push('Purchase Date');
+            }
+        }
+
+        if (emptyAppliedFields.length > 0) {
+            event.preventDefault();
+            const confirmed = confirm(
+                `WARNING: The following fields will be CLEARED for all ${selectedCount} items:\n\n` +
+                `- ${emptyAppliedFields.join('\n- ')}\n\n` +
+                `Are you sure you want to clear these fields?`
+            );
+            if (confirmed) {
+                // Re-submit without the onsubmit handler
+                const form = document.getElementById('bulkEditForm');
+                form.onsubmit = null;
+                form.submit();
+            }
+            return false;
+        }
+
+        return true;
+    }
+
+    function confirmBulkDelete() {
+        const count = selectedItems.size;
+        const confirmed = confirm(
+            `WARNING: You are about to permanently delete ${count} item(s).\n\n` +
+            `This action cannot be undone.\n\n` +
+            `Are you sure you want to delete these items?`
+        );
+        if (confirmed) {
+            document.getElementById('bulkDeleteForm').submit();
+        }
+    }
+
+    // Close bulk edit modal when clicking outside
+    document.getElementById('bulkEditModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            hideBulkEditModal();
+        }
+    });
+
+    // Category autocomplete for bulk edit
+    document.addEventListener('DOMContentLoaded', function() {
+        const bulkCategoryInput = document.getElementById('bulk_category_name');
+        const bulkSuggestionsContainer = document.getElementById('bulk-category-suggestions');
+
+        // Categories data from server
+        const categories = [
+            {{range .Categories}}
+            {id: {{.ID}}, name: "{{.Name}}"},
+            {{end}}
+        ];
+
+        let bulkCurrentHighlight = -1;
+
+        function showBulkSuggestions(query) {
+            if (!query) {
+                hideBulkSuggestions();
+                return;
+            }
+
+            const filtered = categories.filter(cat =>
+                cat.name.toLowerCase().includes(query.toLowerCase())
+            );
+
+            let html = '';
+
+            filtered.forEach(cat => {
+                html += `<div class="suggestion-item" data-category-name="${cat.name}">${cat.name}</div>`;
+            });
+
+            const exactMatch = filtered.find(cat =>
+                cat.name.toLowerCase() === query.toLowerCase()
+            );
+
+            if (!exactMatch && query.trim()) {
+                html += `<div class="suggestion-item new-category" data-category-name="${query}">Create "${query}"</div>`;
+            }
+
+            if (html) {
+                bulkSuggestionsContainer.innerHTML = html;
+                bulkSuggestionsContainer.classList.add('show');
+                bulkCurrentHighlight = -1;
+
+                bulkSuggestionsContainer.querySelectorAll('.suggestion-item').forEach(item => {
+                    item.addEventListener('click', () => {
+                        bulkCategoryInput.value = item.dataset.categoryName;
+                        hideBulkSuggestions();
+                        bulkCategoryInput.focus();
+                    });
+                });
+            } else {
+                hideBulkSuggestions();
+            }
+        }
+
+        function hideBulkSuggestions() {
+            bulkSuggestionsContainer.classList.remove('show');
+            bulkCurrentHighlight = -1;
+        }
+
+        if (bulkCategoryInput) {
+            bulkCategoryInput.addEventListener('input', (e) => {
+                showBulkSuggestions(e.target.value);
+            });
+
+            bulkCategoryInput.addEventListener('keydown', (e) => {
+                const isOpen = bulkSuggestionsContainer.classList.contains('show');
+                const items = bulkSuggestionsContainer.querySelectorAll('.suggestion-item');
+
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    if (isOpen && items.length > 0) {
+                        if (bulkCurrentHighlight >= 0) items[bulkCurrentHighlight].classList.remove('highlighted');
+                        bulkCurrentHighlight = (bulkCurrentHighlight + 1) % items.length;
+                        items[bulkCurrentHighlight].classList.add('highlighted');
+                    } else {
+                        showBulkSuggestions(bulkCategoryInput.value);
+                    }
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    if (isOpen && items.length > 0) {
+                        if (bulkCurrentHighlight >= 0) items[bulkCurrentHighlight].classList.remove('highlighted');
+                        bulkCurrentHighlight = bulkCurrentHighlight <= 0 ? items.length - 1 : bulkCurrentHighlight - 1;
+                        items[bulkCurrentHighlight].classList.add('highlighted');
+                    }
+                } else if (e.key === 'Enter') {
+                    if (isOpen && bulkCurrentHighlight >= 0 && items[bulkCurrentHighlight]) {
+                        e.preventDefault();
+                        bulkCategoryInput.value = items[bulkCurrentHighlight].dataset.categoryName;
+                        hideBulkSuggestions();
+                    }
+                } else if (e.key === 'Escape') {
+                    hideBulkSuggestions();
+                }
+            });
+
+            bulkCategoryInput.addEventListener('focus', () => {
+                if (bulkCategoryInput.value && !bulkCategoryInput.disabled) {
+                    showBulkSuggestions(bulkCategoryInput.value);
+                }
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!bulkCategoryInput.contains(e.target) && !bulkSuggestionsContainer.contains(e.target)) {
+                    hideBulkSuggestions();
+                }
+            });
+        }
     });
 </script>
 
 <style>
+/* Item row clickable */
+.item-row {
+    cursor: pointer;
+}
+
+.item-row:hover {
+    background-color: var(--color-gray-100);
+}
+
+/* Item Modal Styles */
+.item-modal-content {
+    max-width: 500px;
+    width: 100%;
+}
+
+.item-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--color-gray-200);
+}
+
+.item-modal-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: var(--color-gray-900);
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--color-gray-500);
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+}
+
+.modal-close:hover {
+    color: var(--color-gray-700);
+}
+
+.item-modal-body {
+    margin-bottom: 1.5rem;
+}
+
+.item-detail-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.item-detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--color-gray-100);
+}
+
+.item-detail-row:last-child {
+    border-bottom: none;
+}
+
+.item-detail-label {
+    font-weight: 500;
+    color: var(--color-gray-600);
+    font-size: 0.9rem;
+    flex-shrink: 0;
+    margin-right: 1rem;
+}
+
+.item-detail-value {
+    color: var(--color-gray-900);
+    text-align: right;
+    word-break: break-word;
+}
+
+.item-detail-value a {
+    color: var(--color-primary);
+    text-decoration: none;
+    word-break: break-all;
+}
+
+.item-detail-value a:hover {
+    text-decoration: underline;
+}
+
+@media (max-width: 480px) {
+    .item-detail-row {
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .item-detail-value {
+        text-align: left;
+    }
+}
+
 .filter-container {
     margin-bottom: 1rem;
     padding: 1rem;
@@ -546,6 +1299,277 @@ input[type="checkbox"]:checked + .checkbox-checkmark::after {
 
 input[type="checkbox"] {
     display: none;
+}
+
+input[type="checkbox"].standard-checkbox {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+/* Checkbox column */
+.checkbox-col {
+    width: 40px;
+    text-align: center;
+}
+
+.checkbox-col input[type="checkbox"] {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+/* Page header actions */
+.page-header-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+#bulkEditBtn,
+#bulkEditSubmit,
+#bulkDeleteBtn {
+    gap: 0;
+}
+
+.bulk-edit-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.form-actions-right {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-danger-outline {
+    background: transparent;
+    color: var(--color-danger, #dc3545);
+    border: 1px solid var(--color-danger, #dc3545);
+}
+
+.btn-danger-outline:hover {
+    background: var(--color-danger, #dc3545);
+    color: white;
+}
+
+/* Bulk Edit Modal Styles */
+.bulk-edit-modal-content {
+    max-width: 600px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.bulk-edit-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--color-gray-200);
+}
+
+.bulk-edit-header h3 {
+    margin: 0;
+}
+
+.bulk-edit-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--color-gray-200);
+    font-size: 0.85rem;
+}
+
+.bulk-edit-count {
+    font-weight: 600;
+    color: var(--color-gray-700);
+}
+
+.bulk-edit-hint {
+    color: var(--color-gray-500);
+}
+
+.bulk-edit-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.bulk-edit-field {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--color-gray-100);
+}
+
+.bulk-edit-field:last-child {
+    border-bottom: none;
+}
+
+.apply-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-size: 0.8rem;
+    color: var(--color-gray-500);
+    white-space: nowrap;
+    min-width: 60px;
+}
+
+.apply-checkbox input[type="checkbox"] {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+}
+
+.apply-checkmark {
+    display: none;
+}
+
+.field-content {
+    flex: 1;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.field-content label {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--color-gray-700);
+    min-width: 100px;
+    flex-shrink: 0;
+}
+
+.field-content input,
+.field-content textarea,
+.field-content select {
+    flex: 1;
+}
+
+.field-content textarea {
+    min-height: 60px;
+}
+
+.field-content input:disabled,
+.field-content textarea:disabled,
+.field-content select:disabled {
+    background: var(--color-gray-50);
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.field-content-checkbox {
+    padding-top: 0;
+}
+
+.field-content-checkbox label {
+    min-width: auto;
+}
+
+.inline-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+
+.inline-checkbox-label input[type="checkbox"] {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+}
+
+.field-row {
+    flex: 1;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.field-row > div {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.field-row > div label {
+    min-width: auto;
+}
+
+/* Autocomplete in bulk edit modal */
+.bulk-edit-modal-content .autocomplete-container {
+    position: relative;
+}
+
+.bulk-edit-modal-content .autocomplete-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--color-white);
+    border: 1px solid var(--color-gray-300);
+    border-top: none;
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+}
+
+.bulk-edit-modal-content .autocomplete-suggestions.show {
+    display: block;
+}
+
+@media (max-width: 600px) {
+    .bulk-edit-field {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .field-content {
+        flex-direction: column;
+        align-items: flex-start;
+        width: 100%;
+    }
+
+    .field-content label {
+        min-width: auto;
+    }
+
+    .field-content input,
+    .field-content textarea,
+    .field-content select {
+        width: 100%;
+    }
+
+    .field-row {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .field-row > div {
+        flex-direction: column;
+        align-items: flex-start;
+        width: 100%;
+    }
 }
 </style>
     </main>

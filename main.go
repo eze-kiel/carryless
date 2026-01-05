@@ -119,7 +119,7 @@ func main() {
 		"timeAgo": func(t time.Time) string {
 			now := time.Now()
 			duration := now.Sub(t)
-			
+
 			if duration.Minutes() < 1 {
 				return "Just now"
 			} else if duration.Hours() < 1 {
@@ -142,6 +142,12 @@ func main() {
 			} else {
 				return t.Format("Jan 2")
 			}
+		},
+		"deref": func(s *string) string {
+			if s == nil {
+				return ""
+			}
+			return *s
 		},
 	}
 
