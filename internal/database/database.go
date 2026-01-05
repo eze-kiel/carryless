@@ -171,6 +171,11 @@ func Migrate(db *sql.DB) error {
 		return fmt.Errorf("failed to add is_locked column to packs: %w", err)
 	}
 
+	// Add optional fields to items table if they don't exist
+	if err := addItemOptionalFields(db); err != nil {
+		return fmt.Errorf("failed to add optional fields to items: %w", err)
+	}
+
 	return nil
 }
 
@@ -761,6 +766,46 @@ func addPackIsLockedColumn(db *sql.DB) error {
 		_, err = db.Exec("ALTER TABLE packs ADD COLUMN is_locked BOOLEAN DEFAULT FALSE")
 		if err != nil {
 			return err
+		}
+	}
+
+	return nil
+}
+
+func addItemOptionalFields(db *sql.DB) error {
+	// Check which columns exist in items table
+	rows, err := db.Query("PRAGMA table_info(items)")
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	existingColumns := make(map[string]bool)
+	for rows.Next() {
+		var cid int
+		var name, dataType string
+		var notNull, dfltValue, pk interface{}
+		if err := rows.Scan(&cid, &name, &dataType, &notNull, &dfltValue, &pk); err != nil {
+			return err
+		}
+		existingColumns[name] = true
+	}
+
+	// Define columns to add with their SQL definitions
+	columnsToAdd := map[string]string{
+		"brand":         "ALTER TABLE items ADD COLUMN brand TEXT",
+		"purchase_date": "ALTER TABLE items ADD COLUMN purchase_date DATETIME",
+		"capacity":      "ALTER TABLE items ADD COLUMN capacity REAL",
+		"capacity_unit": "ALTER TABLE items ADD COLUMN capacity_unit TEXT",
+		"link":          "ALTER TABLE items ADD COLUMN link TEXT",
+	}
+
+	// Add each missing column
+	for column, sql := range columnsToAdd {
+		if !existingColumns[column] {
+			if _, err := db.Exec(sql); err != nil {
+				return fmt.Errorf("failed to add %s column: %w", column, err)
+			}
 		}
 	}
 

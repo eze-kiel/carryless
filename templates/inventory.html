@@ -125,19 +125,33 @@
                             <th>Name</th>
                             <th>Description</th>
                             <th>Category</th>
+                            <th>Brand</th>
                             <th>Weight</th>
+                            <th>Capacity</th>
                             <th>Price ({{.User.Currency}})</th>
+                            <th>Link</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {{range .Items}}
-                            <tr class="item-row{{if .WeightToVerify}} item-needs-verification{{end}}" data-id="{{.ID}}" data-item-name="{{.Name}}" data-item-category="{{.Category.Name}}" data-item-description="{{.Note}}">
+                            <tr class="item-row{{if .WeightToVerify}} item-needs-verification{{end}}" data-id="{{.ID}}" data-item-name="{{.Name}}" data-item-category="{{.Category.Name}}" data-item-description="{{.Note}}" data-item-brand="{{if .Brand}}{{.Brand}}{{end}}">
                                 <td>{{.Name}}</td>
                                 <td>{{.Note}}</td>
                                 <td>{{.Category.Name}}</td>
+                                <td>{{if .Brand}}{{.Brand}}{{else}}-{{end}}</td>
                                 <td><span data-weight="{{.WeightGrams}}">{{.WeightGrams}}g</span></td>
+                                <td>{{if .Capacity}}{{.Capacity}}{{if .CapacityUnit}} {{.CapacityUnit}}{{end}}{{else}}-{{end}}</td>
                                 <td>{{printf "%.2f" .Price}}</td>
+                                <td>
+                                    {{if .Link}}
+                                        <a href="{{.Link}}" target="_blank" rel="noopener noreferrer" class="item-link" title="Product link">
+                                            <i class="fas fa-external-link-alt"></i>
+                                        </a>
+                                    {{else}}
+                                        -
+                                    {{end}}
+                                </td>
                                 <td>
                                     <div class="dropdown">
                                         <details>
@@ -217,20 +231,21 @@
         function filterItems(query) {
             const rows = document.querySelectorAll('.item-row');
             const categories = document.querySelectorAll('.category-section');
-            
+
             rows.forEach(row => {
                 const itemName = row.dataset.itemName.toLowerCase();
                 const itemCategory = row.dataset.itemCategory.toLowerCase();
                 const itemDescription = row.dataset.itemDescription.toLowerCase();
+                const itemBrand = (row.dataset.itemBrand || '').toLowerCase();
                 const searchQuery = query.toLowerCase();
-                
-                if (itemName.includes(searchQuery) || itemCategory.includes(searchQuery) || itemDescription.includes(searchQuery)) {
+
+                if (itemName.includes(searchQuery) || itemCategory.includes(searchQuery) || itemDescription.includes(searchQuery) || itemBrand.includes(searchQuery)) {
                     row.style.display = '';
                 } else {
                     row.style.display = 'none';
                 }
             });
-            
+
             // Hide empty categories
             categories.forEach(category => {
                 const visibleRows = category.querySelectorAll('.item-row[style=""], .item-row:not([style])');

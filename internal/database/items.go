@@ -10,11 +10,12 @@ import (
 
 func CreateItem(db *sql.DB, userID int, item models.Item) (*models.Item, error) {
 	query := `
-		INSERT INTO items (user_id, category_id, name, note, weight_grams, weight_to_verify, price)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO items (user_id, category_id, name, note, weight_grams, weight_to_verify, price, brand, purchase_date, capacity, capacity_unit, link)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
-	result, err := db.Exec(query, userID, item.CategoryID, item.Name, item.Note, item.WeightGrams, item.WeightToVerify, item.Price)
+	result, err := db.Exec(query, userID, item.CategoryID, item.Name, item.Note, item.WeightGrams, item.WeightToVerify, item.Price,
+		item.Brand, item.PurchaseDate, item.Capacity, item.CapacityUnit, item.Link)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create item: %w", err)
 	}
@@ -34,7 +35,9 @@ func CreateItem(db *sql.DB, userID int, item models.Item) (*models.Item, error) 
 
 func GetItems(db *sql.DB, userID int) ([]models.Item, error) {
 	query := `
-		SELECT i.id, i.user_id, i.category_id, i.name, i.note, i.weight_grams, COALESCE(i.weight_to_verify, false), i.price, i.created_at, i.updated_at,
+		SELECT i.id, i.user_id, i.category_id, i.name, i.note, i.weight_grams, COALESCE(i.weight_to_verify, false), i.price,
+		       i.brand, i.purchase_date, i.capacity, i.capacity_unit, i.link,
+		       i.created_at, i.updated_at,
 		       c.id, c.name
 		FROM items i
 		LEFT JOIN categories c ON i.category_id = c.id
@@ -52,6 +55,9 @@ func GetItems(db *sql.DB, userID int) ([]models.Item, error) {
 	for rows.Next() {
 		var item models.Item
 		var category models.Category
+		var brand, capacityUnit, link sql.NullString
+		var purchaseDate sql.NullTime
+		var capacity sql.NullFloat64
 
 		err := rows.Scan(
 			&item.ID,
@@ -62,6 +68,11 @@ func GetItems(db *sql.DB, userID int) ([]models.Item, error) {
 			&item.WeightGrams,
 			&item.WeightToVerify,
 			&item.Price,
+			&brand,
+			&purchaseDate,
+			&capacity,
+			&capacityUnit,
+			&link,
 			&item.CreatedAt,
 			&item.UpdatedAt,
 			&category.ID,
@@ -69,6 +80,23 @@ func GetItems(db *sql.DB, userID int) ([]models.Item, error) {
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan item: %w", err)
+		}
+
+		// Convert nullable fields to pointer types
+		if brand.Valid {
+			item.Brand = &brand.String
+		}
+		if purchaseDate.Valid {
+			item.PurchaseDate = &purchaseDate.Time
+		}
+		if capacity.Valid {
+			item.Capacity = &capacity.Float64
+		}
+		if capacityUnit.Valid {
+			item.CapacityUnit = &capacityUnit.String
+		}
+		if link.Valid {
+			item.Link = &link.String
 		}
 
 		item.Category = &category
@@ -85,9 +113,14 @@ func GetItems(db *sql.DB, userID int) ([]models.Item, error) {
 func GetItem(db *sql.DB, userID, itemID int) (*models.Item, error) {
 	item := &models.Item{}
 	category := &models.Category{}
+	var brand, capacityUnit, link sql.NullString
+	var purchaseDate sql.NullTime
+	var capacity sql.NullFloat64
 
 	query := `
-		SELECT i.id, i.user_id, i.category_id, i.name, i.note, i.weight_grams, COALESCE(i.weight_to_verify, false), i.price, i.created_at, i.updated_at,
+		SELECT i.id, i.user_id, i.category_id, i.name, i.note, i.weight_grams, COALESCE(i.weight_to_verify, false), i.price,
+		       i.brand, i.purchase_date, i.capacity, i.capacity_unit, i.link,
+		       i.created_at, i.updated_at,
 		       c.id, c.name
 		FROM items i
 		LEFT JOIN categories c ON i.category_id = c.id
@@ -103,6 +136,11 @@ func GetItem(db *sql.DB, userID, itemID int) (*models.Item, error) {
 		&item.WeightGrams,
 		&item.WeightToVerify,
 		&item.Price,
+		&brand,
+		&purchaseDate,
+		&capacity,
+		&capacityUnit,
+		&link,
 		&item.CreatedAt,
 		&item.UpdatedAt,
 		&category.ID,
@@ -115,6 +153,23 @@ func GetItem(db *sql.DB, userID, itemID int) (*models.Item, error) {
 		return nil, fmt.Errorf("failed to query item: %w", err)
 	}
 
+	// Convert nullable fields to pointer types
+	if brand.Valid {
+		item.Brand = &brand.String
+	}
+	if purchaseDate.Valid {
+		item.PurchaseDate = &purchaseDate.Time
+	}
+	if capacity.Valid {
+		item.Capacity = &capacity.Float64
+	}
+	if capacityUnit.Valid {
+		item.CapacityUnit = &capacityUnit.String
+	}
+	if link.Valid {
+		item.Link = &link.String
+	}
+
 	item.Category = category
 	return item, nil
 }
@@ -122,11 +177,15 @@ func GetItem(db *sql.DB, userID, itemID int) (*models.Item, error) {
 func UpdateItem(db *sql.DB, userID, itemID int, updatedItem models.Item) error {
 	query := `
 		UPDATE items
-		SET category_id = ?, name = ?, note = ?, weight_grams = ?, weight_to_verify = ?, price = ?, updated_at = CURRENT_TIMESTAMP
+		SET category_id = ?, name = ?, note = ?, weight_grams = ?, weight_to_verify = ?, price = ?,
+		    brand = ?, purchase_date = ?, capacity = ?, capacity_unit = ?, link = ?,
+		    updated_at = CURRENT_TIMESTAMP
 		WHERE id = ? AND user_id = ?
 	`
 
-	result, err := db.Exec(query, updatedItem.CategoryID, updatedItem.Name, updatedItem.Note, updatedItem.WeightGrams, updatedItem.WeightToVerify, updatedItem.Price, itemID, userID)
+	result, err := db.Exec(query, updatedItem.CategoryID, updatedItem.Name, updatedItem.Note, updatedItem.WeightGrams, updatedItem.WeightToVerify, updatedItem.Price,
+		updatedItem.Brand, updatedItem.PurchaseDate, updatedItem.Capacity, updatedItem.CapacityUnit, updatedItem.Link,
+		itemID, userID)
 	if err != nil {
 		return fmt.Errorf("failed to update item: %w", err)
 	}
@@ -223,7 +282,9 @@ func GetPacksUsingItem(db *sql.DB, userID, itemID int) ([]string, error) {
 
 func GetItemsByCategory(db *sql.DB, userID, categoryID int) ([]models.Item, error) {
 	query := `
-		SELECT i.id, i.user_id, i.category_id, i.name, i.note, i.weight_grams, COALESCE(i.weight_to_verify, false), i.price, i.created_at, i.updated_at,
+		SELECT i.id, i.user_id, i.category_id, i.name, i.note, i.weight_grams, COALESCE(i.weight_to_verify, false), i.price,
+		       i.brand, i.purchase_date, i.capacity, i.capacity_unit, i.link,
+		       i.created_at, i.updated_at,
 		       c.id, c.name
 		FROM items i
 		LEFT JOIN categories c ON i.category_id = c.id
@@ -241,6 +302,9 @@ func GetItemsByCategory(db *sql.DB, userID, categoryID int) ([]models.Item, erro
 	for rows.Next() {
 		var item models.Item
 		var category models.Category
+		var brand, capacityUnit, link sql.NullString
+		var purchaseDate sql.NullTime
+		var capacity sql.NullFloat64
 
 		err := rows.Scan(
 			&item.ID,
@@ -251,6 +315,11 @@ func GetItemsByCategory(db *sql.DB, userID, categoryID int) ([]models.Item, erro
 			&item.WeightGrams,
 			&item.WeightToVerify,
 			&item.Price,
+			&brand,
+			&purchaseDate,
+			&capacity,
+			&capacityUnit,
+			&link,
 			&item.CreatedAt,
 			&item.UpdatedAt,
 			&category.ID,
@@ -258,6 +327,23 @@ func GetItemsByCategory(db *sql.DB, userID, categoryID int) ([]models.Item, erro
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan item: %w", err)
+		}
+
+		// Convert nullable fields to pointer types
+		if brand.Valid {
+			item.Brand = &brand.String
+		}
+		if purchaseDate.Valid {
+			item.PurchaseDate = &purchaseDate.Time
+		}
+		if capacity.Valid {
+			item.Capacity = &capacity.Float64
+		}
+		if capacityUnit.Valid {
+			item.CapacityUnit = &capacityUnit.String
+		}
+		if link.Valid {
+			item.Link = &link.String
 		}
 
 		item.Category = &category
@@ -294,7 +380,9 @@ func DeleteAllItems(db *sql.DB, userID int) error {
 
 func GetItemsToVerify(db *sql.DB, userID int) ([]models.Item, error) {
 	query := `
-		SELECT i.id, i.user_id, i.category_id, i.name, i.note, i.weight_grams, i.weight_to_verify, i.price, i.created_at, i.updated_at,
+		SELECT i.id, i.user_id, i.category_id, i.name, i.note, i.weight_grams, i.weight_to_verify, i.price,
+		       i.brand, i.purchase_date, i.capacity, i.capacity_unit, i.link,
+		       i.created_at, i.updated_at,
 		       c.id, c.name
 		FROM items i
 		LEFT JOIN categories c ON i.category_id = c.id
@@ -312,6 +400,9 @@ func GetItemsToVerify(db *sql.DB, userID int) ([]models.Item, error) {
 	for rows.Next() {
 		var item models.Item
 		var category models.Category
+		var brand, capacityUnit, link sql.NullString
+		var purchaseDate sql.NullTime
+		var capacity sql.NullFloat64
 
 		err := rows.Scan(
 			&item.ID,
@@ -322,6 +413,11 @@ func GetItemsToVerify(db *sql.DB, userID int) ([]models.Item, error) {
 			&item.WeightGrams,
 			&item.WeightToVerify,
 			&item.Price,
+			&brand,
+			&purchaseDate,
+			&capacity,
+			&capacityUnit,
+			&link,
 			&item.CreatedAt,
 			&item.UpdatedAt,
 			&category.ID,
@@ -329,6 +425,23 @@ func GetItemsToVerify(db *sql.DB, userID int) ([]models.Item, error) {
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan item: %w", err)
+		}
+
+		// Convert nullable fields to pointer types
+		if brand.Valid {
+			item.Brand = &brand.String
+		}
+		if purchaseDate.Valid {
+			item.PurchaseDate = &purchaseDate.Time
+		}
+		if capacity.Valid {
+			item.Capacity = &capacity.Float64
+		}
+		if capacityUnit.Valid {
+			item.CapacityUnit = &capacityUnit.String
+		}
+		if link.Valid {
+			item.Link = &link.String
 		}
 
 		item.Category = &category

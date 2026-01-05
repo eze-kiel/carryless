@@ -98,7 +98,39 @@
                     <label for="price">Price (optional)</label>
                     <input type="number" id="price" name="price" step="0.01" min="0" placeholder="Enter price">
                 </div>
-                
+
+                <div class="form-group">
+                    <label for="brand">Brand (optional)</label>
+                    <input type="text" id="brand" name="brand" maxlength="100" placeholder="Enter brand name">
+                </div>
+
+                <div class="form-group">
+                    <label for="purchase_date">Purchased (optional)</label>
+                    <input type="date" id="purchase_date" name="purchase_date">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group" style="flex: 2;">
+                        <label for="capacity">Capacity (optional)</label>
+                        <input type="number" id="capacity" name="capacity" step="0.01" min="0" placeholder="e.g., 1000">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label for="capacity_unit">Unit</label>
+                        <select id="capacity_unit" name="capacity_unit">
+                            <option value="">--</option>
+                            <option value="mL">mL</option>
+                            <option value="L">L</option>
+                            <option value="fl-oz">fl-oz</option>
+                            <option value="mAh">mAh</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="link">Product Link (optional)</label>
+                    <input type="url" id="link" name="link" maxlength="500" placeholder="https://...">
+                </div>
+
                 <div class="form-actions">
                     <a href="/inventory" class="btn btn-secondary">Cancel</a>
                     <button type="submit" class="btn btn-primary">Create Item</button>
@@ -177,6 +209,15 @@
         margin-top: var(--space-1);
         font-size: var(--font-size-xs);
         color: var(--color-gray-500);
+    }
+
+    .form-row {
+        display: flex;
+        gap: var(--space-4);
+    }
+
+    .form-row .form-group {
+        margin-bottom: var(--space-4);
     }
     </style>
     

@@ -8,14 +8,41 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"carryless/internal/database"
 	"carryless/internal/models"
 
 	"github.com/gin-gonic/gin"
 )
+
+// Valid capacity units for items
+var validCapacityUnits = map[string]bool{
+	"mL":    true,
+	"L":     true,
+	"fl-oz": true,
+	"mAh":   true,
+}
+
+// isValidCapacityUnit checks if the given unit is valid
+func isValidCapacityUnit(unit string) bool {
+	return validCapacityUnits[unit]
+}
+
+// isValidURL checks if the given string is a valid http/https URL
+func isValidURL(urlStr string) bool {
+	if urlStr == "" {
+		return true
+	}
+	u, err := url.Parse(urlStr)
+	if err != nil {
+		return false
+	}
+	return u.Scheme == "http" || u.Scheme == "https"
+}
 
 func handleInventory(c *gin.Context) {
 	userID := c.MustGet("user_id").(int)
@@ -117,6 +144,14 @@ func handleCreateItem(c *gin.Context) {
 	weightStr := c.PostForm("weight_grams")
 	priceStr := c.PostForm("price")
 	weightToVerify := c.PostForm("weight_to_verify") == "on"
+
+	// New optional fields
+	brand := strings.TrimSpace(c.PostForm("brand"))
+	purchaseDateStr := c.PostForm("purchase_date")
+	capacityStr := c.PostForm("capacity")
+	capacityUnit := c.PostForm("capacity_unit")
+	link := strings.TrimSpace(c.PostForm("link"))
+
 	categories, _ := database.GetCategories(db, userID)
 
 	errors := make(map[string]string)
@@ -148,6 +183,47 @@ func handleCreateItem(c *gin.Context) {
 		}
 	}
 
+	// Validate new optional fields
+	if len(brand) > 100 {
+		errors["brand"] = "Brand must be less than 100 characters"
+	}
+
+	var purchaseDatePtr *time.Time
+	if purchaseDateStr != "" {
+		t, err := time.Parse("2006-01-02", purchaseDateStr)
+		if err != nil {
+			errors["purchase_date"] = "Invalid date format"
+		} else {
+			purchaseDatePtr = &t
+		}
+	}
+
+	var capacityPtr *float64
+	var capacityUnitPtr *string
+	if capacityStr != "" {
+		cap, err := strconv.ParseFloat(capacityStr, 64)
+		if err != nil || cap < 0 {
+			errors["capacity"] = "Capacity must be a positive number"
+		} else {
+			capacityPtr = &cap
+			if capacityUnit == "" {
+				errors["capacity_unit"] = "Unit is required when capacity is specified"
+			} else if !isValidCapacityUnit(capacityUnit) {
+				errors["capacity_unit"] = "Invalid capacity unit"
+			} else {
+				capacityUnitPtr = &capacityUnit
+			}
+		}
+	}
+
+	if link != "" {
+		if len(link) > 500 {
+			errors["link"] = "Link must be less than 500 characters"
+		} else if !isValidURL(link) {
+			errors["link"] = "Invalid URL format (must start with http:// or https://)"
+		}
+	}
+
 	if len(errors) > 0 {
 		errorMsg := ""
 		for _, v := range errors {
@@ -175,6 +251,16 @@ func handleCreateItem(c *gin.Context) {
 		return
 	}
 
+	// Build optional field pointers
+	var brandPtr *string
+	if brand != "" {
+		brandPtr = &brand
+	}
+	var linkPtr *string
+	if link != "" {
+		linkPtr = &link
+	}
+
 	item := models.Item{
 		CategoryID:     category.ID,
 		Name:           name,
@@ -182,6 +268,11 @@ func handleCreateItem(c *gin.Context) {
 		WeightGrams:    weightGrams,
 		WeightToVerify: weightToVerify,
 		Price:          price,
+		Brand:          brandPtr,
+		PurchaseDate:   purchaseDatePtr,
+		Capacity:       capacityPtr,
+		CapacityUnit:   capacityUnitPtr,
+		Link:           linkPtr,
 	}
 
 	_, err = database.CreateItem(db, userID, item)
@@ -276,6 +367,14 @@ func handleUpdateItem(c *gin.Context) {
 	priceStr := c.PostForm("price")
 
 	weightToVerify := c.PostForm("weight_to_verify") == "on"
+
+	// New optional fields
+	brand := strings.TrimSpace(c.PostForm("brand"))
+	purchaseDateStr := c.PostForm("purchase_date")
+	capacityStr := c.PostForm("capacity")
+	capacityUnit := c.PostForm("capacity_unit")
+	link := strings.TrimSpace(c.PostForm("link"))
+
 	categories, _ := database.GetCategories(db, userID)
 	currentItem, _ := database.GetItem(db, userID, itemID)
 
@@ -308,6 +407,46 @@ func handleUpdateItem(c *gin.Context) {
 		}
 	}
 
+	// Validate new optional fields
+	if len(brand) > 100 {
+		errors["brand"] = "Brand must be less than 100 characters"
+	}
+
+	var purchaseDatePtr *time.Time
+	if purchaseDateStr != "" {
+		t, err := time.Parse("2006-01-02", purchaseDateStr)
+		if err != nil {
+			errors["purchase_date"] = "Invalid date format"
+		} else {
+			purchaseDatePtr = &t
+		}
+	}
+
+	var capacityPtr *float64
+	var capacityUnitPtr *string
+	if capacityStr != "" {
+		cap, err := strconv.ParseFloat(capacityStr, 64)
+		if err != nil || cap < 0 {
+			errors["capacity"] = "Capacity must be a positive number"
+		} else {
+			capacityPtr = &cap
+			if capacityUnit == "" {
+				errors["capacity_unit"] = "Unit is required when capacity is specified"
+			} else if !isValidCapacityUnit(capacityUnit) {
+				errors["capacity_unit"] = "Invalid capacity unit"
+			} else {
+				capacityUnitPtr = &capacityUnit
+			}
+		}
+	}
+
+	if link != "" {
+		if len(link) > 500 {
+			errors["link"] = "Link must be less than 500 characters"
+		} else if !isValidURL(link) {
+			errors["link"] = "Invalid URL format (must start with http:// or https://)"
+		}
+	}
 
 	if len(errors) > 0 {
 		errorMsg := ""
@@ -338,6 +477,16 @@ func handleUpdateItem(c *gin.Context) {
 		return
 	}
 
+	// Build optional field pointers
+	var brandPtr *string
+	if brand != "" {
+		brandPtr = &brand
+	}
+	var linkPtr *string
+	if link != "" {
+		linkPtr = &link
+	}
+
 	item := models.Item{
 		CategoryID:     category.ID,
 		Name:           name,
@@ -345,6 +494,11 @@ func handleUpdateItem(c *gin.Context) {
 		WeightGrams:    weightGrams,
 		WeightToVerify: weightToVerify,
 		Price:          price,
+		Brand:          brandPtr,
+		PurchaseDate:   purchaseDatePtr,
+		Capacity:       capacityPtr,
+		CapacityUnit:   capacityUnitPtr,
+		Link:           linkPtr,
 	}
 
 	err = database.UpdateItem(db, userID, itemID, item)
@@ -355,7 +509,7 @@ func handleUpdateItem(c *gin.Context) {
 		} else {
 			errorMsg = "Failed to update item"
 		}
-		
+
 		c.HTML(http.StatusBadRequest, "edit_item.html", gin.H{
 			"Title":      "Edit Item - Carryless",
 			"User":       user,
@@ -455,9 +609,9 @@ func handleExportInventory(c *gin.Context) {
 	// Create CSV content
 	var buf bytes.Buffer
 	writer := csv.NewWriter(&buf)
-	
-	// Write header
-	header := []string{"Name", "Category", "Weight (grams)", "Price", "Description"}
+
+	// Write header (extended with new fields)
+	header := []string{"Name", "Category", "Weight (grams)", "Price", "Description", "Brand", "Purchased", "Capacity", "Capacity Unit", "Link"}
 	if err := writer.Write(header); err != nil {
 		c.String(http.StatusInternalServerError, "Failed to generate CSV")
 		return
@@ -465,12 +619,39 @@ func handleExportInventory(c *gin.Context) {
 
 	// Write items
 	for _, item := range items {
+		// Convert optional fields to strings
+		brandStr := ""
+		if item.Brand != nil {
+			brandStr = *item.Brand
+		}
+		purchaseDateStr := ""
+		if item.PurchaseDate != nil {
+			purchaseDateStr = item.PurchaseDate.Format("2006-01-02")
+		}
+		capacityStr := ""
+		if item.Capacity != nil {
+			capacityStr = fmt.Sprintf("%.2f", *item.Capacity)
+		}
+		capacityUnitStr := ""
+		if item.CapacityUnit != nil {
+			capacityUnitStr = *item.CapacityUnit
+		}
+		linkStr := ""
+		if item.Link != nil {
+			linkStr = *item.Link
+		}
+
 		record := []string{
 			item.Name,
 			item.Category.Name,
 			strconv.Itoa(item.WeightGrams),
 			fmt.Sprintf("%.2f", item.Price),
 			item.Note,
+			brandStr,
+			purchaseDateStr,
+			capacityStr,
+			capacityUnitStr,
+			linkStr,
 		}
 		if err := writer.Write(record); err != nil {
 			c.String(http.StatusInternalServerError, "Failed to generate CSV")
@@ -584,7 +765,7 @@ func validateCSVFile(file multipart.File, header *multipart.FileHeader) error {
 
 func parseCSVFile(file multipart.File, db *sql.DB, userID int) ([]models.Item, error) {
 	reader := csv.NewReader(file)
-	reader.FieldsPerRecord = 5 // Expect exactly 5 fields
+	reader.FieldsPerRecord = -1 // Allow variable number of fields for backward compatibility
 
 	var items []models.Item
 	lineNumber := 0
@@ -610,9 +791,9 @@ func parseCSVFile(file multipart.File, db *sql.DB, userID int) ([]models.Item, e
 			return nil, fmt.Errorf("too many rows (max 10000)")
 		}
 
-		// Validate and sanitize record
-		if len(record) != 5 {
-			return nil, fmt.Errorf("invalid number of fields at line %d", lineNumber)
+		// Validate field count (5 = old format, 10 = new format)
+		if len(record) != 5 && len(record) != 10 {
+			return nil, fmt.Errorf("invalid number of fields at line %d (expected 5 or 10, got %d)", lineNumber, len(record))
 		}
 
 		name := strings.TrimSpace(record[0])
@@ -655,6 +836,57 @@ func parseCSVFile(file multipart.File, db *sql.DB, userID int) ([]models.Item, e
 			WeightGrams: weight,
 			Price:       price,
 			Note:        note,
+		}
+
+		// Parse new optional fields if present (10-field format)
+		if len(record) == 10 {
+			// Brand (index 5)
+			brand := strings.TrimSpace(record[5])
+			if brand != "" {
+				if len(brand) > 100 {
+					return nil, fmt.Errorf("brand too long at line %d", lineNumber)
+				}
+				item.Brand = &brand
+			}
+
+			// Purchase date (index 6)
+			purchaseDateStr := strings.TrimSpace(record[6])
+			if purchaseDateStr != "" {
+				t, err := time.Parse("2006-01-02", purchaseDateStr)
+				if err != nil {
+					return nil, fmt.Errorf("invalid purchase date format at line %d (expected YYYY-MM-DD)", lineNumber)
+				}
+				item.PurchaseDate = &t
+			}
+
+			// Capacity (index 7) and Capacity Unit (index 8)
+			capacityStr := strings.TrimSpace(record[7])
+			capacityUnitStr := strings.TrimSpace(record[8])
+			if capacityStr != "" {
+				cap, err := strconv.ParseFloat(capacityStr, 64)
+				if err != nil || cap < 0 {
+					return nil, fmt.Errorf("invalid capacity at line %d", lineNumber)
+				}
+				item.Capacity = &cap
+				if capacityUnitStr != "" {
+					if !isValidCapacityUnit(capacityUnitStr) {
+						return nil, fmt.Errorf("invalid capacity unit at line %d (must be mL, L, fl-oz, or mAh)", lineNumber)
+					}
+					item.CapacityUnit = &capacityUnitStr
+				}
+			}
+
+			// Link (index 9)
+			linkStr := strings.TrimSpace(record[9])
+			if linkStr != "" {
+				if len(linkStr) > 500 {
+					return nil, fmt.Errorf("link too long at line %d", lineNumber)
+				}
+				if !isValidURL(linkStr) {
+					return nil, fmt.Errorf("invalid URL format at line %d", lineNumber)
+				}
+				item.Link = &linkStr
+			}
 		}
 
 		items = append(items, item)

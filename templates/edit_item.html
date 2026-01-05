@@ -99,7 +99,39 @@
                     <label for="price">Price (optional)</label>
                     <input type="number" id="price" name="price" value="{{if .Item.Price}}{{.Item.Price}}{{end}}" step="0.01" min="0" placeholder="Enter price">
                 </div>
-                
+
+                <div class="form-group">
+                    <label for="brand">Brand (optional)</label>
+                    <input type="text" id="brand" name="brand" maxlength="100" placeholder="Enter brand name" value="{{if .Item.Brand}}{{.Item.Brand}}{{end}}">
+                </div>
+
+                <div class="form-group">
+                    <label for="purchase_date">Purchased (optional)</label>
+                    <input type="date" id="purchase_date" name="purchase_date" value="{{if .Item.PurchaseDate}}{{.Item.PurchaseDate.Format "2006-01-02"}}{{end}}">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group" style="flex: 2;">
+                        <label for="capacity">Capacity (optional)</label>
+                        <input type="number" id="capacity" name="capacity" step="0.01" min="0" placeholder="e.g., 1000" value="{{if .Item.Capacity}}{{.Item.Capacity}}{{end}}">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label for="capacity_unit">Unit</label>
+                        <select id="capacity_unit" name="capacity_unit">
+                            <option value="">--</option>
+                            <option value="mL"{{if .Item.CapacityUnit}}{{if eq (deref .Item.CapacityUnit) "mL"}} selected{{end}}{{end}}>mL</option>
+                            <option value="L"{{if .Item.CapacityUnit}}{{if eq (deref .Item.CapacityUnit) "L"}} selected{{end}}{{end}}>L</option>
+                            <option value="fl-oz"{{if .Item.CapacityUnit}}{{if eq (deref .Item.CapacityUnit) "fl-oz"}} selected{{end}}{{end}}>fl-oz</option>
+                            <option value="mAh"{{if .Item.CapacityUnit}}{{if eq (deref .Item.CapacityUnit) "mAh"}} selected{{end}}{{end}}>mAh</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="link">Product Link (optional)</label>
+                    <input type="url" id="link" name="link" maxlength="500" placeholder="https://..." value="{{if .Item.Link}}{{.Item.Link}}{{end}}">
+                </div>
+
                 <div class="form-actions">
                     <a href="/inventory" class="btn btn-secondary">Cancel</a>
                     <button type="submit" class="btn btn-primary">Update Item</button>
@@ -188,6 +220,15 @@
         margin-top: var(--space-1);
         font-size: var(--font-size-xs);
         color: var(--color-gray-500);
+    }
+
+    .form-row {
+        display: flex;
+        gap: var(--space-4);
+    }
+
+    .form-row .form-group {
+        margin-bottom: var(--space-4);
     }
     </style>
     
