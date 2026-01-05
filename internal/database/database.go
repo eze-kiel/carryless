@@ -794,6 +794,7 @@ func addItemOptionalFields(db *sql.DB) error {
 	// Define columns to add with their SQL definitions
 	columnsToAdd := map[string]string{
 		"brand":         "ALTER TABLE items ADD COLUMN brand TEXT",
+		"model":         "ALTER TABLE items ADD COLUMN model TEXT",
 		"purchase_date": "ALTER TABLE items ADD COLUMN purchase_date DATETIME",
 		"capacity":      "ALTER TABLE items ADD COLUMN capacity REAL",
 		"capacity_unit": "ALTER TABLE items ADD COLUMN capacity_unit TEXT",

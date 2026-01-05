@@ -34,6 +34,7 @@ type Item struct {
 	WeightToVerify bool       `json:"weight_to_verify" db:"weight_to_verify"`
 	Price          float64    `json:"price" db:"price"`
 	Brand          *string    `json:"brand,omitempty" db:"brand"`
+	Model          *string    `json:"model,omitempty" db:"model"`
 	PurchaseDate   *time.Time `json:"purchase_date,omitempty" db:"purchase_date"`
 	Capacity       *float64   `json:"capacity,omitempty" db:"capacity"`
 	CapacityUnit   *string    `json:"capacity_unit,omitempty" db:"capacity_unit"`

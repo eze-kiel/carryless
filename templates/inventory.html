@@ -154,22 +154,20 @@
                         <tr>
                             <th class="checkbox-col"><input type="checkbox" id="selectAllItems" onclick="toggleSelectAll()" title="Select all"></th>
                             <th>Name</th>
-                            <th>Description</th>
-                            <th>Category</th>
                             <th>Brand</th>
-                            <th>Capacity</th>
+                            <th>Model</th>
+                            <th>Description</th>
                             <th>Weight</th>
                         </tr>
                     </thead>
                     <tbody>
                         {{range .Items}}
-                            <tr class="item-row{{if .WeightToVerify}} item-needs-verification{{end}}" data-id="{{.ID}}" data-item-name="{{.Name}}" data-item-category="{{.Category.Name}}" data-item-description="{{.Note}}" data-item-brand="{{if .Brand}}{{.Brand}}{{end}}" data-item-weight="{{.WeightGrams}}" data-item-price="{{printf "%.2f" .Price}}" data-item-capacity="{{if .Capacity}}{{.Capacity}}{{end}}" data-item-capacity-unit="{{if .CapacityUnit}}{{.CapacityUnit}}{{end}}" data-item-link="{{if .Link}}{{.Link}}{{end}}" data-item-purchase-date="{{if .PurchaseDate}}{{.PurchaseDate.Format "2006-01-02"}}{{end}}" data-item-weight-verify="{{.WeightToVerify}}" onclick="showItemModal(this)">
+                            <tr class="item-row{{if .WeightToVerify}} item-needs-verification{{end}}" data-id="{{.ID}}" data-item-name="{{.Name}}" data-item-category="{{.Category.Name}}" data-item-description="{{.Note}}" data-item-brand="{{if .Brand}}{{.Brand}}{{end}}" data-item-model="{{if .Model}}{{.Model}}{{end}}" data-item-weight="{{.WeightGrams}}" data-item-price="{{printf "%.2f" .Price}}" data-item-capacity="{{if .Capacity}}{{.Capacity}}{{end}}" data-item-capacity-unit="{{if .CapacityUnit}}{{.CapacityUnit}}{{end}}" data-item-link="{{if .Link}}{{.Link}}{{end}}" data-item-purchase-date="{{if .PurchaseDate}}{{.PurchaseDate.Format "2006-01-02"}}{{end}}" data-item-weight-verify="{{.WeightToVerify}}" onclick="showItemModal(this)">
                                 <td class="checkbox-col" onclick="event.stopPropagation()"><input type="checkbox" class="item-checkbox" value="{{.ID}}" onclick="updateBulkSelection(event)"></td>
                                 <td>{{.Name}}</td>
-                                <td>{{.Note}}</td>
-                                <td>{{.Category.Name}}</td>
                                 <td>{{if .Brand}}{{.Brand}}{{else}}-{{end}}</td>
-                                <td>{{if .Capacity}}{{.Capacity}}{{if .CapacityUnit}} {{.CapacityUnit}}{{end}}{{else}}-{{end}}</td>
+                                <td>{{if .Model}}{{.Model}}{{else}}-{{end}}</td>
+                                <td>{{.Note}}</td>
                                 <td><span data-weight="{{.WeightGrams}}">{{.WeightGrams}}g</span></td>
                             </tr>
                         {{end}}
@@ -238,6 +236,10 @@
                         <div class="item-detail-row">
                             <span class="item-detail-label">Brand</span>
                             <span class="item-detail-value" id="itemModalBrand"></span>
+                        </div>
+                        <div class="item-detail-row">
+                            <span class="item-detail-label">Model</span>
+                            <span class="item-detail-value" id="itemModalModel"></span>
                         </div>
                         <div class="item-detail-row">
                             <span class="item-detail-label">Description</span>
@@ -321,6 +323,19 @@
                             <div class="field-content">
                                 <label for="bulk_brand">Brand</label>
                                 <input type="text" id="bulk_brand" name="brand" maxlength="100" placeholder="Enter brand name" disabled>
+                            </div>
+                        </div>
+
+                        <!-- Model -->
+                        <div class="bulk-edit-field">
+                            <label class="apply-checkbox">
+                                <input type="checkbox" name="apply_model" value="1" onchange="toggleBulkField(this, 'bulk_model')">
+                                <span class="apply-checkmark"></span>
+                                Apply
+                            </label>
+                            <div class="field-content">
+                                <label for="bulk_model">Model</label>
+                                <input type="text" id="bulk_model" name="model" maxlength="100" placeholder="Enter model name" disabled>
                             </div>
                         </div>
 
@@ -461,6 +476,7 @@
             const category = row.dataset.itemCategory;
             const description = row.dataset.itemDescription;
             const brand = row.dataset.itemBrand;
+            const model = row.dataset.itemModel;
             const weight = row.dataset.itemWeight;
             const price = row.dataset.itemPrice;
             const capacity = row.dataset.itemCapacity;
@@ -475,6 +491,9 @@
 
             // Brand
             document.getElementById('itemModalBrand').textContent = brand || '-';
+
+            // Model
+            document.getElementById('itemModalModel').textContent = model || '-';
 
             // Description
             document.getElementById('itemModalDescription').textContent = description || '-';
@@ -950,6 +969,12 @@
         if (document.querySelector('[name="apply_brand"]').checked) {
             if (!document.getElementById('bulk_brand').value.trim()) {
                 emptyAppliedFields.push('Brand');
+            }
+        }
+
+        if (document.querySelector('[name="apply_model"]').checked) {
+            if (!document.getElementById('bulk_model').value.trim()) {
+                emptyAppliedFields.push('Model');
             }
         }
 

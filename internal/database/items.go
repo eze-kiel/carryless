@@ -11,12 +11,12 @@ import (
 
 func CreateItem(db *sql.DB, userID int, item models.Item) (*models.Item, error) {
 	query := `
-		INSERT INTO items (user_id, category_id, name, note, weight_grams, weight_to_verify, price, brand, purchase_date, capacity, capacity_unit, link)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO items (user_id, category_id, name, note, weight_grams, weight_to_verify, price, brand, model, purchase_date, capacity, capacity_unit, link)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
 	result, err := db.Exec(query, userID, item.CategoryID, item.Name, item.Note, item.WeightGrams, item.WeightToVerify, item.Price,
-		item.Brand, item.PurchaseDate, item.Capacity, item.CapacityUnit, item.Link)
+		item.Brand, item.Model, item.PurchaseDate, item.Capacity, item.CapacityUnit, item.Link)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create item: %w", err)
 	}
@@ -37,7 +37,7 @@ func CreateItem(db *sql.DB, userID int, item models.Item) (*models.Item, error) 
 func GetItems(db *sql.DB, userID int) ([]models.Item, error) {
 	query := `
 		SELECT i.id, i.user_id, i.category_id, i.name, i.note, i.weight_grams, COALESCE(i.weight_to_verify, false), i.price,
-		       i.brand, i.purchase_date, i.capacity, i.capacity_unit, i.link,
+		       i.brand, i.model, i.purchase_date, i.capacity, i.capacity_unit, i.link,
 		       i.created_at, i.updated_at,
 		       c.id, c.name
 		FROM items i
@@ -56,7 +56,7 @@ func GetItems(db *sql.DB, userID int) ([]models.Item, error) {
 	for rows.Next() {
 		var item models.Item
 		var category models.Category
-		var brand, capacityUnit, link sql.NullString
+		var brand, model, capacityUnit, link sql.NullString
 		var purchaseDate sql.NullTime
 		var capacity sql.NullFloat64
 
@@ -70,6 +70,7 @@ func GetItems(db *sql.DB, userID int) ([]models.Item, error) {
 			&item.WeightToVerify,
 			&item.Price,
 			&brand,
+			&model,
 			&purchaseDate,
 			&capacity,
 			&capacityUnit,
@@ -86,6 +87,9 @@ func GetItems(db *sql.DB, userID int) ([]models.Item, error) {
 		// Convert nullable fields to pointer types
 		if brand.Valid {
 			item.Brand = &brand.String
+		}
+		if model.Valid {
+			item.Model = &model.String
 		}
 		if purchaseDate.Valid {
 			item.PurchaseDate = &purchaseDate.Time
@@ -114,13 +118,13 @@ func GetItems(db *sql.DB, userID int) ([]models.Item, error) {
 func GetItem(db *sql.DB, userID, itemID int) (*models.Item, error) {
 	item := &models.Item{}
 	category := &models.Category{}
-	var brand, capacityUnit, link sql.NullString
+	var brand, model, capacityUnit, link sql.NullString
 	var purchaseDate sql.NullTime
 	var capacity sql.NullFloat64
 
 	query := `
 		SELECT i.id, i.user_id, i.category_id, i.name, i.note, i.weight_grams, COALESCE(i.weight_to_verify, false), i.price,
-		       i.brand, i.purchase_date, i.capacity, i.capacity_unit, i.link,
+		       i.brand, i.model, i.purchase_date, i.capacity, i.capacity_unit, i.link,
 		       i.created_at, i.updated_at,
 		       c.id, c.name
 		FROM items i
@@ -138,6 +142,7 @@ func GetItem(db *sql.DB, userID, itemID int) (*models.Item, error) {
 		&item.WeightToVerify,
 		&item.Price,
 		&brand,
+		&model,
 		&purchaseDate,
 		&capacity,
 		&capacityUnit,
@@ -157,6 +162,9 @@ func GetItem(db *sql.DB, userID, itemID int) (*models.Item, error) {
 	// Convert nullable fields to pointer types
 	if brand.Valid {
 		item.Brand = &brand.String
+	}
+	if model.Valid {
+		item.Model = &model.String
 	}
 	if purchaseDate.Valid {
 		item.PurchaseDate = &purchaseDate.Time
@@ -179,13 +187,13 @@ func UpdateItem(db *sql.DB, userID, itemID int, updatedItem models.Item) error {
 	query := `
 		UPDATE items
 		SET category_id = ?, name = ?, note = ?, weight_grams = ?, weight_to_verify = ?, price = ?,
-		    brand = ?, purchase_date = ?, capacity = ?, capacity_unit = ?, link = ?,
+		    brand = ?, model = ?, purchase_date = ?, capacity = ?, capacity_unit = ?, link = ?,
 		    updated_at = CURRENT_TIMESTAMP
 		WHERE id = ? AND user_id = ?
 	`
 
 	result, err := db.Exec(query, updatedItem.CategoryID, updatedItem.Name, updatedItem.Note, updatedItem.WeightGrams, updatedItem.WeightToVerify, updatedItem.Price,
-		updatedItem.Brand, updatedItem.PurchaseDate, updatedItem.Capacity, updatedItem.CapacityUnit, updatedItem.Link,
+		updatedItem.Brand, updatedItem.Model, updatedItem.PurchaseDate, updatedItem.Capacity, updatedItem.CapacityUnit, updatedItem.Link,
 		itemID, userID)
 	if err != nil {
 		return fmt.Errorf("failed to update item: %w", err)
@@ -284,7 +292,7 @@ func GetPacksUsingItem(db *sql.DB, userID, itemID int) ([]string, error) {
 func GetItemsByCategory(db *sql.DB, userID, categoryID int) ([]models.Item, error) {
 	query := `
 		SELECT i.id, i.user_id, i.category_id, i.name, i.note, i.weight_grams, COALESCE(i.weight_to_verify, false), i.price,
-		       i.brand, i.purchase_date, i.capacity, i.capacity_unit, i.link,
+		       i.brand, i.model, i.purchase_date, i.capacity, i.capacity_unit, i.link,
 		       i.created_at, i.updated_at,
 		       c.id, c.name
 		FROM items i
@@ -303,7 +311,7 @@ func GetItemsByCategory(db *sql.DB, userID, categoryID int) ([]models.Item, erro
 	for rows.Next() {
 		var item models.Item
 		var category models.Category
-		var brand, capacityUnit, link sql.NullString
+		var brand, model, capacityUnit, link sql.NullString
 		var purchaseDate sql.NullTime
 		var capacity sql.NullFloat64
 
@@ -317,6 +325,7 @@ func GetItemsByCategory(db *sql.DB, userID, categoryID int) ([]models.Item, erro
 			&item.WeightToVerify,
 			&item.Price,
 			&brand,
+			&model,
 			&purchaseDate,
 			&capacity,
 			&capacityUnit,
@@ -333,6 +342,9 @@ func GetItemsByCategory(db *sql.DB, userID, categoryID int) ([]models.Item, erro
 		// Convert nullable fields to pointer types
 		if brand.Valid {
 			item.Brand = &brand.String
+		}
+		if model.Valid {
+			item.Model = &model.String
 		}
 		if purchaseDate.Valid {
 			item.PurchaseDate = &purchaseDate.Time
@@ -382,7 +394,7 @@ func DeleteAllItems(db *sql.DB, userID int) error {
 func GetItemsToVerify(db *sql.DB, userID int) ([]models.Item, error) {
 	query := `
 		SELECT i.id, i.user_id, i.category_id, i.name, i.note, i.weight_grams, i.weight_to_verify, i.price,
-		       i.brand, i.purchase_date, i.capacity, i.capacity_unit, i.link,
+		       i.brand, i.model, i.purchase_date, i.capacity, i.capacity_unit, i.link,
 		       i.created_at, i.updated_at,
 		       c.id, c.name
 		FROM items i
@@ -401,7 +413,7 @@ func GetItemsToVerify(db *sql.DB, userID int) ([]models.Item, error) {
 	for rows.Next() {
 		var item models.Item
 		var category models.Category
-		var brand, capacityUnit, link sql.NullString
+		var brand, model, capacityUnit, link sql.NullString
 		var purchaseDate sql.NullTime
 		var capacity sql.NullFloat64
 
@@ -415,6 +427,7 @@ func GetItemsToVerify(db *sql.DB, userID int) ([]models.Item, error) {
 			&item.WeightToVerify,
 			&item.Price,
 			&brand,
+			&model,
 			&purchaseDate,
 			&capacity,
 			&capacityUnit,
@@ -431,6 +444,9 @@ func GetItemsToVerify(db *sql.DB, userID int) ([]models.Item, error) {
 		// Convert nullable fields to pointer types
 		if brand.Valid {
 			item.Brand = &brand.String
+		}
+		if model.Valid {
+			item.Model = &model.String
 		}
 		if purchaseDate.Valid {
 			item.PurchaseDate = &purchaseDate.Time
@@ -478,6 +494,7 @@ func DuplicateItem(db *sql.DB, userID, itemID int) (*models.Item, error) {
 		WeightToVerify: original.WeightToVerify,
 		Price:          original.Price,
 		Brand:          original.Brand,
+		Model:          original.Model,
 		PurchaseDate:   original.PurchaseDate,
 		Capacity:       original.Capacity,
 		CapacityUnit:   original.CapacityUnit,

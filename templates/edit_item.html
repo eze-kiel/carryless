@@ -95,6 +95,11 @@
                 </div>
 
                 <div class="form-group">
+                    <label for="model">Model (optional)</label>
+                    <input type="text" id="model" name="model" maxlength="100" placeholder="Enter model name" value="{{if .Item.Model}}{{.Item.Model}}{{end}}">
+                </div>
+
+                <div class="form-group">
                     <label for="purchase_date">Purchased (optional)</label>
                     <input type="date" id="purchase_date" name="purchase_date" value="{{if .Item.PurchaseDate}}{{.Item.PurchaseDate.Format "2006-01-02"}}{{end}}">
                 </div>

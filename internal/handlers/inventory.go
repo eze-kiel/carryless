@@ -147,6 +147,7 @@ func handleCreateItem(c *gin.Context) {
 
 	// New optional fields
 	brand := strings.TrimSpace(c.PostForm("brand"))
+	model := strings.TrimSpace(c.PostForm("model"))
 	purchaseDateStr := c.PostForm("purchase_date")
 	capacityStr := c.PostForm("capacity")
 	capacityUnit := c.PostForm("capacity_unit")
@@ -186,6 +187,9 @@ func handleCreateItem(c *gin.Context) {
 	// Validate new optional fields
 	if len(brand) > 100 {
 		errors["brand"] = "Brand must be less than 100 characters"
+	}
+	if len(model) > 100 {
+		errors["model"] = "Model must be less than 100 characters"
 	}
 
 	var purchaseDatePtr *time.Time
@@ -256,6 +260,10 @@ func handleCreateItem(c *gin.Context) {
 	if brand != "" {
 		brandPtr = &brand
 	}
+	var modelPtr *string
+	if model != "" {
+		modelPtr = &model
+	}
 	var linkPtr *string
 	if link != "" {
 		linkPtr = &link
@@ -269,6 +277,7 @@ func handleCreateItem(c *gin.Context) {
 		WeightToVerify: weightToVerify,
 		Price:          price,
 		Brand:          brandPtr,
+		Model:          modelPtr,
 		PurchaseDate:   purchaseDatePtr,
 		Capacity:       capacityPtr,
 		CapacityUnit:   capacityUnitPtr,
@@ -370,6 +379,7 @@ func handleUpdateItem(c *gin.Context) {
 
 	// New optional fields
 	brand := strings.TrimSpace(c.PostForm("brand"))
+	model := strings.TrimSpace(c.PostForm("model"))
 	purchaseDateStr := c.PostForm("purchase_date")
 	capacityStr := c.PostForm("capacity")
 	capacityUnit := c.PostForm("capacity_unit")
@@ -410,6 +420,9 @@ func handleUpdateItem(c *gin.Context) {
 	// Validate new optional fields
 	if len(brand) > 100 {
 		errors["brand"] = "Brand must be less than 100 characters"
+	}
+	if len(model) > 100 {
+		errors["model"] = "Model must be less than 100 characters"
 	}
 
 	var purchaseDatePtr *time.Time
@@ -482,6 +495,10 @@ func handleUpdateItem(c *gin.Context) {
 	if brand != "" {
 		brandPtr = &brand
 	}
+	var modelPtr *string
+	if model != "" {
+		modelPtr = &model
+	}
 	var linkPtr *string
 	if link != "" {
 		linkPtr = &link
@@ -495,6 +512,7 @@ func handleUpdateItem(c *gin.Context) {
 		WeightToVerify: weightToVerify,
 		Price:          price,
 		Brand:          brandPtr,
+		Model:          modelPtr,
 		PurchaseDate:   purchaseDatePtr,
 		Capacity:       capacityPtr,
 		CapacityUnit:   capacityUnitPtr,
@@ -637,7 +655,7 @@ func handleExportInventory(c *gin.Context) {
 	writer := csv.NewWriter(&buf)
 
 	// Write header (extended with new fields)
-	header := []string{"Name", "Category", "Weight (grams)", "Price", "Description", "Brand", "Purchased", "Capacity", "Capacity Unit", "Link"}
+	header := []string{"Name", "Category", "Weight (grams)", "Price", "Description", "Brand", "Model", "Purchased", "Capacity", "Capacity Unit", "Link"}
 	if err := writer.Write(header); err != nil {
 		c.String(http.StatusInternalServerError, "Failed to generate CSV")
 		return
@@ -649,6 +667,10 @@ func handleExportInventory(c *gin.Context) {
 		brandStr := ""
 		if item.Brand != nil {
 			brandStr = *item.Brand
+		}
+		modelStr := ""
+		if item.Model != nil {
+			modelStr = *item.Model
 		}
 		purchaseDateStr := ""
 		if item.PurchaseDate != nil {
@@ -674,6 +696,7 @@ func handleExportInventory(c *gin.Context) {
 			fmt.Sprintf("%.2f", item.Price),
 			item.Note,
 			brandStr,
+			modelStr,
 			purchaseDateStr,
 			capacityStr,
 			capacityUnitStr,
@@ -817,9 +840,9 @@ func parseCSVFile(file multipart.File, db *sql.DB, userID int) ([]models.Item, e
 			return nil, fmt.Errorf("too many rows (max 10000)")
 		}
 
-		// Validate field count (5 = old format, 10 = new format)
-		if len(record) != 5 && len(record) != 10 {
-			return nil, fmt.Errorf("invalid number of fields at line %d (expected 5 or 10, got %d)", lineNumber, len(record))
+		// Validate field count (5 = old format, 10 = legacy format with brand, 11 = new format with model)
+		if len(record) != 5 && len(record) != 10 && len(record) != 11 {
+			return nil, fmt.Errorf("invalid number of fields at line %d (expected 5, 10, or 11, got %d)", lineNumber, len(record))
 		}
 
 		name := strings.TrimSpace(record[0])
@@ -864,8 +887,8 @@ func parseCSVFile(file multipart.File, db *sql.DB, userID int) ([]models.Item, e
 			Note:        note,
 		}
 
-		// Parse new optional fields if present (10-field format)
-		if len(record) == 10 {
+		// Parse new optional fields if present (10-field or 11-field format)
+		if len(record) >= 10 {
 			// Brand (index 5)
 			brand := strings.TrimSpace(record[5])
 			if brand != "" {
@@ -875,8 +898,31 @@ func parseCSVFile(file multipart.File, db *sql.DB, userID int) ([]models.Item, e
 				item.Brand = &brand
 			}
 
-			// Purchase date (index 6)
-			purchaseDateStr := strings.TrimSpace(record[6])
+			// Handle 11-field format (with Model) vs 10-field legacy format
+			var purchaseDateIdx, capacityIdx, capacityUnitIdx, linkIdx int
+			if len(record) == 11 {
+				// Model (index 6) - new format
+				modelStr := strings.TrimSpace(record[6])
+				if modelStr != "" {
+					if len(modelStr) > 100 {
+						return nil, fmt.Errorf("model too long at line %d", lineNumber)
+					}
+					item.Model = &modelStr
+				}
+				purchaseDateIdx = 7
+				capacityIdx = 8
+				capacityUnitIdx = 9
+				linkIdx = 10
+			} else {
+				// 10-field legacy format (no Model)
+				purchaseDateIdx = 6
+				capacityIdx = 7
+				capacityUnitIdx = 8
+				linkIdx = 9
+			}
+
+			// Purchase date
+			purchaseDateStr := strings.TrimSpace(record[purchaseDateIdx])
 			if purchaseDateStr != "" {
 				t, err := time.Parse("2006-01-02", purchaseDateStr)
 				if err != nil {
@@ -885,9 +931,9 @@ func parseCSVFile(file multipart.File, db *sql.DB, userID int) ([]models.Item, e
 				item.PurchaseDate = &t
 			}
 
-			// Capacity (index 7) and Capacity Unit (index 8)
-			capacityStr := strings.TrimSpace(record[7])
-			capacityUnitStr := strings.TrimSpace(record[8])
+			// Capacity and Capacity Unit
+			capacityStr := strings.TrimSpace(record[capacityIdx])
+			capacityUnitStr := strings.TrimSpace(record[capacityUnitIdx])
 			if capacityStr != "" {
 				cap, err := strconv.ParseFloat(capacityStr, 64)
 				if err != nil || cap < 0 {
@@ -902,8 +948,8 @@ func parseCSVFile(file multipart.File, db *sql.DB, userID int) ([]models.Item, e
 				}
 			}
 
-			// Link (index 9)
-			linkStr := strings.TrimSpace(record[9])
+			// Link
+			linkStr := strings.TrimSpace(record[linkIdx])
 			if linkStr != "" {
 				if len(linkStr) > 500 {
 					return nil, fmt.Errorf("link too long at line %d", lineNumber)
@@ -971,6 +1017,20 @@ func handleBulkEditItems(c *gin.Context) {
 				return
 			}
 			updates["brand"] = brand
+		}
+	}
+
+	// Model
+	if c.PostForm("apply_model") == "1" {
+		model := strings.TrimSpace(c.PostForm("model"))
+		if model == "" {
+			updates["model"] = nil // Clear the field
+		} else {
+			if len(model) > 100 {
+				c.Redirect(http.StatusFound, "/inventory?error=model_too_long")
+				return
+			}
+			updates["model"] = model
 		}
 	}
 

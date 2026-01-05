@@ -227,7 +227,7 @@ func GetPackWithItems(db *sql.DB, packID string) (*models.Pack, error) {
 
 	query := `
 		SELECT pi.id, pi.pack_id, pi.item_id, pi.is_worn, pi.count, COALESCE(pi.worn_count, 0), pi.created_at,
-		       i.id, i.user_id, i.category_id, i.name, i.note, i.weight_grams, i.weight_to_verify, i.price, i.brand, i.capacity, i.capacity_unit, i.created_at, i.updated_at,
+		       i.id, i.user_id, i.category_id, i.name, i.note, i.weight_grams, i.weight_to_verify, i.price, i.brand, i.model, i.capacity, i.capacity_unit, i.created_at, i.updated_at,
 		       c.id, c.name
 		FROM pack_items pi
 		INNER JOIN items i ON pi.item_id = i.id
@@ -246,7 +246,7 @@ func GetPackWithItems(db *sql.DB, packID string) (*models.Pack, error) {
 		var packItem models.PackItem
 		var item models.Item
 		var category models.Category
-		var brand, capacityUnit sql.NullString
+		var brand, model, capacityUnit sql.NullString
 		var capacity sql.NullFloat64
 
 		err := rows.Scan(
@@ -266,6 +266,7 @@ func GetPackWithItems(db *sql.DB, packID string) (*models.Pack, error) {
 			&item.WeightToVerify,
 			&item.Price,
 			&brand,
+			&model,
 			&capacity,
 			&capacityUnit,
 			&item.CreatedAt,
@@ -280,6 +281,9 @@ func GetPackWithItems(db *sql.DB, packID string) (*models.Pack, error) {
 		// Convert nullable fields to pointer types
 		if brand.Valid {
 			item.Brand = &brand.String
+		}
+		if model.Valid {
+			item.Model = &model.String
 		}
 		if capacity.Valid {
 			item.Capacity = &capacity.Float64
