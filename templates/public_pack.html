@@ -18,24 +18,13 @@
             </div>
             <div class="nav-links">
                 {{if .User}}
-                    <a href="/dashboard">Dashboard</a>
-                    <div class="dropdown">
-                        <button class="dropdown-toggle" type="button" aria-haspopup="true" aria-expanded="false">
-                            Inventory
-                            <svg class="dropdown-arrow" width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
-                                <path d="M2.5 4.5L6 8L9.5 4.5"></path>
-                            </svg>
-                        </button>
-                        <div class="dropdown-menu">
-                            <a href="/inventory" class="dropdown-item">Items</a>
-                            <a href="/categories" class="dropdown-item">Categories</a>
-                            <a href="/packs" class="dropdown-item">Packs</a>
-                        </div>
-                    </div>
+                    <a href="/inventory">Items</a>
+                    <a href="/categories">Categories</a>
+                    <a href="/packs">Packs</a>
+                    <a href="/account">Account</a>
                     {{if .User.IsAdmin}}
                         <a href="/admin">Admin</a>
                     {{end}}
-                    <a href="/account">Account</a>
                     <form class="logout-form" action="/logout" method="POST">
                         <button type="submit" class="btn btn-secondary">Logout</button>
                     </form>
@@ -111,10 +100,16 @@
                                 <div class="pack-item-card">
                                     <div class="item-header">
                                         <h4 class="item-name">{{.Item.Name}}</h4>
-                                        <div class="item-meta">
+                                        <div class="item-header-meta">
                                             {{if .Item.WeightToVerify}}<abbr class="item-weight weight-to-verify" title="weight not verified" data-weight="{{.Item.WeightGrams}}">{{.Item.WeightGrams}}g</abbr>{{else}}<span class="item-weight" data-weight="{{.Item.WeightGrams}}">{{.Item.WeightGrams}}g</span>{{end}}
                                         </div>
                                     </div>
+                                    {{if or .Item.Brand .Item.Capacity}}
+                                    <div class="item-details">
+                                        {{if .Item.Brand}}<span class="item-brand">{{.Item.Brand}}</span>{{end}}
+                                        {{if .Item.Capacity}}<span class="item-capacity">{{.Item.Capacity}}{{if .Item.CapacityUnit}}{{.Item.CapacityUnit}}{{end}}</span>{{end}}
+                                    </div>
+                                    {{end}}
                                     {{if .Item.Note}}<p class="item-description">{{.Item.Note}}</p>{{end}}
                                     <p class="item-quantity">Quantity: {{.Count}}{{if .WornCount}}, Worn: {{.WornCount}}{{end}}</p>
                                     {{if .Labels}}
@@ -137,6 +132,8 @@
                                     <thead>
                                         <tr>
                                             <th>Item</th>
+                                            <th>Brand</th>
+                                            <th>Capacity</th>
                                             <th>Description</th>
                                             <th>Weight</th>
                                             <th>Qty</th>
@@ -148,6 +145,8 @@
                                         {{range $items}}
                                             <tr>
                                                 <td>{{.Item.Name}}</td>
+                                                <td>{{if .Item.Brand}}{{.Item.Brand}}{{else}}-{{end}}</td>
+                                                <td>{{if .Item.Capacity}}{{.Item.Capacity}}{{if .Item.CapacityUnit}}{{.Item.CapacityUnit}}{{end}}{{else}}-{{end}}</td>
                                                 <td>{{.Item.Note}}</td>
                                                 <td>{{if .Item.WeightToVerify}}<abbr class="weight-to-verify" title="weight not verified" data-weight="{{.Item.WeightGrams}}">{{.Item.WeightGrams}}g</abbr>{{else}}<span data-weight="{{.Item.WeightGrams}}">{{.Item.WeightGrams}}g</span>{{end}}</td>
                                                 <td>{{.Count}}</td>
@@ -508,17 +507,27 @@
     /* Table column width adjustments */
     .desktop-table table th:nth-child(1), /* Item */
     .desktop-table table td:nth-child(1) {
-        width: 22%;
+        width: 18%;
     }
 
-    .desktop-table table th:nth-child(2), /* Description */
+    .desktop-table table th:nth-child(2), /* Brand */
     .desktop-table table td:nth-child(2) {
-        width: 22%;
+        width: 10%;
     }
 
-    .desktop-table table th:nth-child(6), /* Labels */
-    .desktop-table table td:nth-child(6) {
-        width: 22%;
+    .desktop-table table th:nth-child(3), /* Capacity */
+    .desktop-table table td:nth-child(3) {
+        width: 8%;
+    }
+
+    .desktop-table table th:nth-child(4), /* Description */
+    .desktop-table table td:nth-child(4) {
+        width: 18%;
+    }
+
+    .desktop-table table th:nth-child(8), /* Labels */
+    .desktop-table table td:nth-child(8) {
+        width: 18%;
     }
 
     .badge {
@@ -625,11 +634,49 @@
         }
     }
 
-    .item-meta {
+    .item-header-meta {
         display: flex;
         align-items: center;
         gap: 0.375rem;
         flex-shrink: 0;
+    }
+
+    .item-details {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        margin-bottom: 0.375rem;
+    }
+
+    .item-brand {
+        color: #6c757d;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+
+    .item-capacity {
+        background: #e9ecef;
+        padding: 0.1rem 0.35rem;
+        border-radius: 3px;
+        font-size: 0.75rem;
+        color: #495057;
+        font-weight: 500;
+    }
+
+    @media (max-width: 767px) {
+        .item-details {
+            gap: 0.5rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .item-brand {
+            font-size: 0.7rem;
+        }
+
+        .item-capacity {
+            font-size: 0.65rem;
+            padding: 0.075rem 0.25rem;
+        }
     }
 
     .item-weight {
@@ -890,70 +937,6 @@
 
     <script src="/static/js/app.js"></script>
 
-<script>
-// Dropdown functionality
-document.addEventListener('DOMContentLoaded', function() {
-    const dropdown = document.querySelector('.nav-links .dropdown');
-    const dropdownToggle = document.querySelector('.nav-links .dropdown-toggle');
-    const dropdownMenu = document.querySelector('.nav-links .dropdown-menu');
-    
-    if (dropdown && dropdownToggle && dropdownMenu) {
-        // Toggle dropdown on button click
-        dropdownToggle.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            dropdown.classList.toggle('active');
-        });
-        
-        // Close dropdown when clicking outside
-        document.addEventListener('click', function(e) {
-            if (!dropdown.contains(e.target)) {
-                dropdown.classList.remove('active');
-            }
-        });
-        
-        // Close dropdown on escape key
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                dropdown.classList.remove('active');
-                dropdownToggle.focus();
-            }
-        });
-        
-        // Handle arrow keys for dropdown navigation
-        dropdownToggle.addEventListener('keydown', function(e) {
-            if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                dropdown.classList.add('active');
-                const firstItem = dropdownMenu.querySelector('.dropdown-item');
-                if (firstItem) {
-                    firstItem.focus();
-                }
-            }
-        });
-        
-        // Handle navigation within dropdown
-        const dropdownItems = dropdownMenu.querySelectorAll('.dropdown-item');
-        dropdownItems.forEach((item, index) => {
-            item.addEventListener('keydown', function(e) {
-                if (e.key === 'ArrowDown') {
-                    e.preventDefault();
-                    const nextIndex = (index + 1) % dropdownItems.length;
-                    dropdownItems[nextIndex].focus();
-                } else if (e.key === 'ArrowUp') {
-                    e.preventDefault();
-                    const prevIndex = (index - 1 + dropdownItems.length) % dropdownItems.length;
-                    dropdownItems[prevIndex].focus();
-                } else if (e.key === 'Escape') {
-                    e.preventDefault();
-                    dropdown.classList.remove('active');
-                    dropdownToggle.focus();
-                }
-            });
-        });
-    }
-});
-</script>
 </body>
 </html>
 {{end}}

@@ -3,6 +3,7 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	"carryless/internal/models"
@@ -453,4 +454,86 @@ func GetItemsToVerify(db *sql.DB, userID int) ([]models.Item, error) {
 	}
 
 	return items, nil
+}
+
+// BulkUpdateItems updates multiple items atomically with the specified field updates.
+// The updates map should contain column names as keys and their new values.
+// All updates happen in a single transaction - either all succeed or all fail.
+func BulkUpdateItems(db *sql.DB, userID int, itemIDs []int, updates map[string]interface{}) error {
+	if len(itemIDs) == 0 || len(updates) == 0 {
+		return fmt.Errorf("no items or updates specified")
+	}
+
+	// Start transaction
+	tx, err := db.Begin()
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// Build placeholders for item IDs
+	placeholders := make([]string, len(itemIDs))
+	idArgs := make([]interface{}, len(itemIDs))
+	for i, id := range itemIDs {
+		placeholders[i] = "?"
+		idArgs[i] = id
+	}
+	placeholderStr := strings.Join(placeholders, ",")
+
+	// First, verify ALL items belong to the user
+	countQuery := fmt.Sprintf(
+		"SELECT COUNT(*) FROM items WHERE user_id = ? AND id IN (%s)",
+		placeholderStr,
+	)
+
+	countArgs := append([]interface{}{userID}, idArgs...)
+	var count int
+	err = tx.QueryRow(countQuery, countArgs...).Scan(&count)
+	if err != nil {
+		return fmt.Errorf("failed to verify item ownership: %w", err)
+	}
+
+	if count != len(itemIDs) {
+		return fmt.Errorf("some items not found or not owned by user (found %d of %d)", count, len(itemIDs))
+	}
+
+	// Build dynamic UPDATE query
+	setClauses := []string{"updated_at = CURRENT_TIMESTAMP"}
+	updateArgs := []interface{}{}
+
+	for field, value := range updates {
+		setClauses = append(setClauses, field+" = ?")
+		updateArgs = append(updateArgs, value)
+	}
+
+	// Add WHERE clause args (userID first, then item IDs)
+	updateArgs = append(updateArgs, userID)
+	updateArgs = append(updateArgs, idArgs...)
+
+	updateQuery := fmt.Sprintf(
+		"UPDATE items SET %s WHERE user_id = ? AND id IN (%s)",
+		strings.Join(setClauses, ", "),
+		placeholderStr,
+	)
+
+	result, err := tx.Exec(updateQuery, updateArgs...)
+	if err != nil {
+		return fmt.Errorf("failed to bulk update items: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if int(rowsAffected) != len(itemIDs) {
+		return fmt.Errorf("expected to update %d items, but updated %d", len(itemIDs), rowsAffected)
+	}
+
+	// Commit transaction
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
 }

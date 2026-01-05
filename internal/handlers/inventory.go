@@ -894,3 +894,195 @@ func parseCSVFile(file multipart.File, db *sql.DB, userID int) ([]models.Item, e
 
 	return items, nil
 }
+
+func handleBulkEditItems(c *gin.Context) {
+	userID := c.MustGet("user_id").(int)
+	db := c.MustGet("db").(*sql.DB)
+
+	// Parse item IDs (comma-separated)
+	itemIDsStr := c.PostForm("item_ids")
+	if itemIDsStr == "" {
+		c.Redirect(http.StatusFound, "/inventory?error=no_items_selected")
+		return
+	}
+
+	itemIDs, err := parseItemIDs(itemIDsStr)
+	if err != nil || len(itemIDs) == 0 {
+		c.Redirect(http.StatusFound, "/inventory?error=invalid_item_ids")
+		return
+	}
+
+	// Build updates map - only include fields where apply_X is checked
+	updates := make(map[string]interface{})
+
+	// Category
+	if c.PostForm("apply_category") == "1" {
+		categoryName := strings.TrimSpace(c.PostForm("category_name"))
+		if categoryName == "" {
+			c.Redirect(http.StatusFound, "/inventory?error=category_required")
+			return
+		}
+		if len(categoryName) > 100 {
+			c.Redirect(http.StatusFound, "/inventory?error=category_too_long")
+			return
+		}
+		category, err := database.GetOrCreateCategory(db, userID, categoryName)
+		if err != nil {
+			c.Redirect(http.StatusFound, "/inventory?error=category_error")
+			return
+		}
+		updates["category_id"] = category.ID
+	}
+
+	// Brand
+	if c.PostForm("apply_brand") == "1" {
+		brand := strings.TrimSpace(c.PostForm("brand"))
+		if brand == "" {
+			updates["brand"] = nil // Clear the field
+		} else {
+			if len(brand) > 100 {
+				c.Redirect(http.StatusFound, "/inventory?error=brand_too_long")
+				return
+			}
+			updates["brand"] = brand
+		}
+	}
+
+	// Note/Description
+	if c.PostForm("apply_note") == "1" {
+		note := strings.TrimSpace(c.PostForm("note"))
+		updates["note"] = note // Can be empty to clear
+	}
+
+	// Weight
+	if c.PostForm("apply_weight") == "1" {
+		weightStr := c.PostForm("weight_grams")
+		weight, err := strconv.Atoi(weightStr)
+		if err != nil || weight < 0 {
+			c.Redirect(http.StatusFound, "/inventory?error=invalid_weight")
+			return
+		}
+		updates["weight_grams"] = weight
+	}
+
+	// Weight needs verification
+	if c.PostForm("apply_weight_to_verify") == "1" {
+		weightToVerify := c.PostForm("weight_to_verify") == "1"
+		updates["weight_to_verify"] = weightToVerify
+	}
+
+	// Capacity and Capacity Unit
+	if c.PostForm("apply_capacity") == "1" {
+		capacityStr := c.PostForm("capacity")
+		capacityUnit := c.PostForm("capacity_unit")
+
+		if capacityStr == "" {
+			updates["capacity"] = nil
+			updates["capacity_unit"] = nil
+		} else {
+			cap, err := strconv.ParseFloat(capacityStr, 64)
+			if err != nil || cap < 0 {
+				c.Redirect(http.StatusFound, "/inventory?error=invalid_capacity")
+				return
+			}
+			updates["capacity"] = cap
+
+			if capacityUnit == "" {
+				c.Redirect(http.StatusFound, "/inventory?error=capacity_unit_required")
+				return
+			}
+			if !isValidCapacityUnit(capacityUnit) {
+				c.Redirect(http.StatusFound, "/inventory?error=invalid_capacity_unit")
+				return
+			}
+			updates["capacity_unit"] = capacityUnit
+		}
+	}
+
+	// Price
+	if c.PostForm("apply_price") == "1" {
+		priceStr := c.PostForm("price")
+		if priceStr == "" {
+			updates["price"] = 0.0
+		} else {
+			price, err := strconv.ParseFloat(priceStr, 64)
+			if err != nil || price < 0 {
+				c.Redirect(http.StatusFound, "/inventory?error=invalid_price")
+				return
+			}
+			updates["price"] = price
+		}
+	}
+
+	// Purchase Date
+	if c.PostForm("apply_purchase_date") == "1" {
+		purchaseDateStr := c.PostForm("purchase_date")
+		if purchaseDateStr == "" {
+			updates["purchase_date"] = nil
+		} else {
+			t, err := time.Parse("2006-01-02", purchaseDateStr)
+			if err != nil {
+				c.Redirect(http.StatusFound, "/inventory?error=invalid_date")
+				return
+			}
+			updates["purchase_date"] = t
+		}
+	}
+
+	// Link
+	if c.PostForm("apply_link") == "1" {
+		link := strings.TrimSpace(c.PostForm("link"))
+		if link == "" {
+			updates["link"] = nil
+		} else {
+			if len(link) > 500 {
+				c.Redirect(http.StatusFound, "/inventory?error=link_too_long")
+				return
+			}
+			if !isValidURL(link) {
+				c.Redirect(http.StatusFound, "/inventory?error=invalid_url")
+				return
+			}
+			updates["link"] = link
+		}
+	}
+
+	// Check if any fields were selected
+	if len(updates) == 0 {
+		c.Redirect(http.StatusFound, "/inventory?error=no_fields_selected")
+		return
+	}
+
+	// Call database function
+	err = database.BulkUpdateItems(db, userID, itemIDs, updates)
+	if err != nil {
+		fmt.Printf("[DEBUG] Bulk update failed: %v\n", err)
+		c.Redirect(http.StatusFound, "/inventory?error=bulk_update_failed")
+		return
+	}
+
+	c.Redirect(http.StatusFound, "/inventory?success=bulk_updated")
+}
+
+// parseItemIDs parses a comma-separated string of item IDs into a slice of integers
+func parseItemIDs(itemIDsStr string) ([]int, error) {
+	parts := strings.Split(itemIDsStr, ",")
+	itemIDs := make([]int, 0, len(parts))
+
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		id, err := strconv.Atoi(part)
+		if err != nil {
+			return nil, fmt.Errorf("invalid item ID: %s", part)
+		}
+		if id <= 0 {
+			return nil, fmt.Errorf("invalid item ID: %d", id)
+		}
+		itemIDs = append(itemIDs, id)
+	}
+
+	return itemIDs, nil
+}
