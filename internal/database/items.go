@@ -472,6 +472,168 @@ func GetItemsToVerify(db *sql.DB, userID int) ([]models.Item, error) {
 	return items, nil
 }
 
+func GetItemsWithEmptyBrand(db *sql.DB, userID int) ([]models.Item, error) {
+	query := `
+		SELECT i.id, i.user_id, i.category_id, i.name, i.note, i.weight_grams, COALESCE(i.weight_to_verify, false), i.price,
+		       i.brand, i.model, i.purchase_date, i.capacity, i.capacity_unit, i.link,
+		       i.created_at, i.updated_at,
+		       c.id, c.name
+		FROM items i
+		LEFT JOIN categories c ON i.category_id = c.id
+		WHERE i.user_id = ? AND (i.brand IS NULL OR i.brand = '')
+		ORDER BY c.name, i.name
+	`
+
+	rows, err := db.Query(query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query items with empty brand: %w", err)
+	}
+	defer rows.Close()
+
+	var items []models.Item
+	for rows.Next() {
+		var item models.Item
+		var category models.Category
+		var brand, model, capacityUnit, link sql.NullString
+		var purchaseDate sql.NullTime
+		var capacity sql.NullFloat64
+
+		err := rows.Scan(
+			&item.ID,
+			&item.UserID,
+			&item.CategoryID,
+			&item.Name,
+			&item.Note,
+			&item.WeightGrams,
+			&item.WeightToVerify,
+			&item.Price,
+			&brand,
+			&model,
+			&purchaseDate,
+			&capacity,
+			&capacityUnit,
+			&link,
+			&item.CreatedAt,
+			&item.UpdatedAt,
+			&category.ID,
+			&category.Name,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan item: %w", err)
+		}
+
+		// Convert nullable fields to pointer types
+		if brand.Valid {
+			item.Brand = &brand.String
+		}
+		if model.Valid {
+			item.Model = &model.String
+		}
+		if purchaseDate.Valid {
+			item.PurchaseDate = &purchaseDate.Time
+		}
+		if capacity.Valid {
+			item.Capacity = &capacity.Float64
+		}
+		if capacityUnit.Valid {
+			item.CapacityUnit = &capacityUnit.String
+		}
+		if link.Valid {
+			item.Link = &link.String
+		}
+
+		item.Category = &category
+		items = append(items, item)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating items with empty brand: %w", err)
+	}
+
+	return items, nil
+}
+
+func GetItemsWithEmptyModel(db *sql.DB, userID int) ([]models.Item, error) {
+	query := `
+		SELECT i.id, i.user_id, i.category_id, i.name, i.note, i.weight_grams, COALESCE(i.weight_to_verify, false), i.price,
+		       i.brand, i.model, i.purchase_date, i.capacity, i.capacity_unit, i.link,
+		       i.created_at, i.updated_at,
+		       c.id, c.name
+		FROM items i
+		LEFT JOIN categories c ON i.category_id = c.id
+		WHERE i.user_id = ? AND (i.model IS NULL OR i.model = '')
+		ORDER BY c.name, i.name
+	`
+
+	rows, err := db.Query(query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query items with empty model: %w", err)
+	}
+	defer rows.Close()
+
+	var items []models.Item
+	for rows.Next() {
+		var item models.Item
+		var category models.Category
+		var brand, model, capacityUnit, link sql.NullString
+		var purchaseDate sql.NullTime
+		var capacity sql.NullFloat64
+
+		err := rows.Scan(
+			&item.ID,
+			&item.UserID,
+			&item.CategoryID,
+			&item.Name,
+			&item.Note,
+			&item.WeightGrams,
+			&item.WeightToVerify,
+			&item.Price,
+			&brand,
+			&model,
+			&purchaseDate,
+			&capacity,
+			&capacityUnit,
+			&link,
+			&item.CreatedAt,
+			&item.UpdatedAt,
+			&category.ID,
+			&category.Name,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan item: %w", err)
+		}
+
+		// Convert nullable fields to pointer types
+		if brand.Valid {
+			item.Brand = &brand.String
+		}
+		if model.Valid {
+			item.Model = &model.String
+		}
+		if purchaseDate.Valid {
+			item.PurchaseDate = &purchaseDate.Time
+		}
+		if capacity.Valid {
+			item.Capacity = &capacity.Float64
+		}
+		if capacityUnit.Valid {
+			item.CapacityUnit = &capacityUnit.String
+		}
+		if link.Valid {
+			item.Link = &link.String
+		}
+
+		item.Category = &category
+		items = append(items, item)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating items with empty model: %w", err)
+	}
+
+	return items, nil
+}
+
 // DuplicateItem creates a copy of an item with "(duplicate)" appended to the name.
 // If a duplicate already exists, it will be named "(duplicate 2)", "(duplicate 3)", etc.
 func DuplicateItem(db *sql.DB, userID, itemID int) (*models.Item, error) {

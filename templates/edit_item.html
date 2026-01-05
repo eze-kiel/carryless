@@ -54,40 +54,6 @@
                     <label for="name">Item Name *</label>
                     <input type="text" id="name" name="name" value="{{.Item.Name}}" required maxlength="200" placeholder="Enter item name">
                 </div>
-                
-                <div class="form-group">
-                    <label for="note">Description</label>
-                    <textarea id="note" name="note" rows="3" placeholder="Add a description for this item">{{.Item.Note}}</textarea>
-                </div>
-                
-                <div class="form-group">
-                    <label for="category_name">Category *</label>
-                    <div class="autocomplete-container">
-                        <input type="text" id="category_name" name="category_name" required maxlength="100" 
-                               placeholder="Type category name..." autocomplete="off" value="{{.Item.Category.Name}}">
-                        <div id="category-suggestions" class="autocomplete-suggestions"></div>
-                    </div>
-                    <small class="form-help">Type to search existing categories or create a new one</small>
-                </div>
-                
-                <div class="form-group">
-                    <label for="weight_grams">Weight (grams) *</label>
-                    <input type="number" id="weight_grams" name="weight_grams" value="{{.Item.WeightGrams}}" required min="0" placeholder="Enter weight in grams">
-                </div>
-                
-                <div class="form-group checkbox-group">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="weight_to_verify" name="weight_to_verify"{{if .Item.WeightToVerify}} checked{{end}}>
-                        <span class="checkbox-checkmark"></span>
-                        Weight needs verification
-                    </label>
-                    <small class="form-help">Check this if the weight is estimated and needs to be verified later</small>
-                </div>
-                
-                <div class="form-group">
-                    <label for="price">Price (optional)</label>
-                    <input type="number" id="price" name="price" value="{{if .Item.Price}}{{.Item.Price}}{{end}}" step="0.01" min="0" placeholder="Enter price">
-                </div>
 
                 <div class="form-group">
                     <label for="brand">Brand (optional)</label>
@@ -97,6 +63,40 @@
                 <div class="form-group">
                     <label for="model">Model (optional)</label>
                     <input type="text" id="model" name="model" maxlength="100" placeholder="Enter model name" value="{{if .Item.Model}}{{.Item.Model}}{{end}}">
+                </div>
+
+                <div class="form-group">
+                    <label for="category_name">Category *</label>
+                    <div class="autocomplete-container">
+                        <input type="text" id="category_name" name="category_name" required maxlength="100"
+                               placeholder="Type category name..." autocomplete="off" value="{{.Item.Category.Name}}">
+                        <div id="category-suggestions" class="autocomplete-suggestions"></div>
+                    </div>
+                    <small class="form-help">Type to search existing categories or create a new one</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="note">Notes</label>
+                    <textarea id="note" name="note" rows="3" placeholder="Add notes for this item">{{.Item.Note}}</textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="weight_grams">Weight (grams) *</label>
+                    <input type="number" id="weight_grams" name="weight_grams" value="{{.Item.WeightGrams}}" required min="0" placeholder="Enter weight in grams">
+                </div>
+
+                <div class="form-group checkbox-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="weight_to_verify" name="weight_to_verify"{{if .Item.WeightToVerify}} checked{{end}}>
+                        <span class="checkbox-checkmark"></span>
+                        Weight needs verification
+                    </label>
+                    <small class="form-help">Check this if the weight is estimated and needs to be verified later</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="price">Price (optional)</label>
+                    <input type="number" id="price" name="price" value="{{if .Item.Price}}{{.Item.Price}}{{end}}" step="0.01" min="0" placeholder="Enter price">
                 </div>
 
                 <div class="form-group">

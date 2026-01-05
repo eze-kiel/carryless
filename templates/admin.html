@@ -97,6 +97,7 @@
                                 <th>Email</th>
                                 <th>Admin</th>
                                 <th>Activated</th>
+                                <th>Items</th>
                                 <th>Packs</th>
                                 <th>Last Seen</th>
                                 <th>Created At</th>
@@ -111,6 +112,7 @@
                                 <td>{{redactEmail .Email}}</td>
                                 <td>{{if .IsAdmin}}<span class="badge badge-success"><i class="fas fa-check"></i> Yes</span>{{else}}<span class="badge badge-danger"><i class="fas fa-times"></i> No</span>{{end}}</td>
                                 <td>{{if .IsActivated}}<span class="badge badge-success"><i class="fas fa-check"></i> Yes</span>{{else}}<span class="badge badge-danger"><i class="fas fa-times"></i> No</span>{{end}}</td>
+                                <td>{{.ItemCount}}</td>
                                 <td>{{.PackCount}}</td>
                                 <td>
                                     {{if .LastSeen.Valid}}

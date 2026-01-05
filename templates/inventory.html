@@ -135,16 +135,23 @@
         </div>
 
         <div class="search-container">
-            <input type="text" id="itemSearch" placeholder="Search items by name, description, or category..." autocomplete="off">
+            <input type="text" id="itemSearch" placeholder="Search items by name, brand, or model..." autocomplete="off">
         </div>
 
-        <div class="filter-container">
-            <div class="filter-group">
-                <label class="filter-label">
-                    <input type="checkbox" id="verifyOnlyFilter" class="standard-checkbox"{{if .VerifyOnly}} checked{{end}}>
-                    Show only items needing verification
-                </label>
-            </div>
+        <div class="filter-row">
+            <span class="filter-text">Show items...</span>
+            <label class="filter-label">
+                <input type="checkbox" id="verifyOnlyFilter" class="standard-checkbox"{{if .VerifyOnly}} checked{{end}}>
+                needing weight verification
+            </label>
+            <label class="filter-label">
+                <input type="checkbox" id="emptyBrandFilter" class="standard-checkbox"{{if .EmptyBrand}} checked{{end}}>
+                without brand
+            </label>
+            <label class="filter-label">
+                <input type="checkbox" id="emptyModelFilter" class="standard-checkbox"{{if .EmptyModel}} checked{{end}}>
+                without model
+            </label>
         </div>
 
         {{if .Items}}
@@ -153,10 +160,10 @@
                     <thead>
                         <tr>
                             <th class="checkbox-col"><input type="checkbox" id="selectAllItems" onclick="toggleSelectAll()" title="Select all"></th>
-                            <th>Name</th>
+                            <th>Item</th>
                             <th>Brand</th>
                             <th>Model</th>
-                            <th>Description</th>
+                            <th>Notes</th>
                             <th>Weight</th>
                         </tr>
                     </thead>
@@ -242,7 +249,7 @@
                             <span class="item-detail-value" id="itemModalModel"></span>
                         </div>
                         <div class="item-detail-row">
-                            <span class="item-detail-label">Description</span>
+                            <span class="item-detail-label">Notes</span>
                             <span class="item-detail-value" id="itemModalDescription"></span>
                         </div>
                         <div class="item-detail-row">
@@ -339,7 +346,7 @@
                             </div>
                         </div>
 
-                        <!-- Note/Description -->
+                        <!-- Notes -->
                         <div class="bulk-edit-field">
                             <label class="apply-checkbox">
                                 <input type="checkbox" name="apply_note" value="1" onchange="toggleBulkField(this, 'bulk_note')">
@@ -347,8 +354,8 @@
                                 Apply
                             </label>
                             <div class="field-content">
-                                <label for="bulk_note">Description</label>
-                                <textarea id="bulk_note" name="note" rows="2" placeholder="Enter description" disabled></textarea>
+                                <label for="bulk_note">Notes</label>
+                                <textarea id="bulk_note" name="note" rows="2" placeholder="Enter notes" disabled></textarea>
                             </div>
                         </div>
 
@@ -578,12 +585,11 @@
 
             rows.forEach(row => {
                 const itemName = row.dataset.itemName.toLowerCase();
-                const itemCategory = row.dataset.itemCategory.toLowerCase();
-                const itemDescription = row.dataset.itemDescription.toLowerCase();
                 const itemBrand = (row.dataset.itemBrand || '').toLowerCase();
+                const itemModel = (row.dataset.itemModel || '').toLowerCase();
                 const searchQuery = query.toLowerCase();
 
-                if (itemName.includes(searchQuery) || itemCategory.includes(searchQuery) || itemDescription.includes(searchQuery) || itemBrand.includes(searchQuery)) {
+                if (itemName.includes(searchQuery) || itemBrand.includes(searchQuery) || itemModel.includes(searchQuery)) {
                     row.style.display = '';
                 } else {
                     row.style.display = 'none';
@@ -825,8 +831,40 @@
 
         if (isChecked) {
             currentUrl.searchParams.set('verify_only', 'true');
+            currentUrl.searchParams.delete('empty_brand');
+            currentUrl.searchParams.delete('empty_model');
         } else {
             currentUrl.searchParams.delete('verify_only');
+        }
+
+        window.location.href = currentUrl.toString();
+    });
+
+    document.getElementById('emptyBrandFilter').addEventListener('change', function() {
+        const isChecked = this.checked;
+        const currentUrl = new URL(window.location);
+
+        if (isChecked) {
+            currentUrl.searchParams.set('empty_brand', 'true');
+            currentUrl.searchParams.delete('verify_only');
+            currentUrl.searchParams.delete('empty_model');
+        } else {
+            currentUrl.searchParams.delete('empty_brand');
+        }
+
+        window.location.href = currentUrl.toString();
+    });
+
+    document.getElementById('emptyModelFilter').addEventListener('change', function() {
+        const isChecked = this.checked;
+        const currentUrl = new URL(window.location);
+
+        if (isChecked) {
+            currentUrl.searchParams.set('empty_model', 'true');
+            currentUrl.searchParams.delete('verify_only');
+            currentUrl.searchParams.delete('empty_brand');
+        } else {
+            currentUrl.searchParams.delete('empty_model');
         }
 
         window.location.href = currentUrl.toString();
@@ -980,7 +1018,7 @@
 
         if (document.querySelector('[name="apply_note"]').checked) {
             if (!document.getElementById('bulk_note').value.trim()) {
-                emptyAppliedFields.push('Description');
+                emptyAppliedFields.push('Notes');
             }
         }
 
@@ -1253,27 +1291,25 @@
     }
 }
 
-.filter-container {
-    margin-bottom: 1rem;
-    padding: 1rem;
-    background: var(--color-gray-50); /* Was #f8f9fa */
-    border-radius: 8px;
-    border: 1px solid var(--color-gray-200); /* Was #dee2e6 */
-}
-
-.filter-group {
+.filter-row {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+    color: var(--color-gray-600);
+}
+
+.filter-text {
+    margin-right: 0.75rem;
 }
 
 .filter-label {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.35rem;
     cursor: pointer;
-    font-size: 0.9rem;
-    color: var(--color-gray-600); /* Was #495057 */
+    margin-right: 0.75rem;
 }
 
 .item-needs-verification {

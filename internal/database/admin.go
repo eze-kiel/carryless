@@ -24,6 +24,7 @@ type UserWithStats struct {
 	CreatedAt   time.Time      `json:"created_at"`
 	UpdatedAt   time.Time      `json:"updated_at"`
 	PackCount   int            `json:"pack_count"`
+	ItemCount   int            `json:"item_count"`
 	LastSeen    sql.NullTime   `json:"last_seen"`
 }
 
@@ -107,7 +108,8 @@ func GetAllUsersWithStats(db *sql.DB) ([]UserWithStats, error) {
 			u.created_at,
 			u.updated_at,
 			u.last_seen,
-			COUNT(p.id) as pack_count
+			COUNT(p.id) as pack_count,
+			(SELECT COUNT(*) FROM items i WHERE i.user_id = u.id) as item_count
 		FROM users u
 		LEFT JOIN packs p ON u.id = p.user_id
 		GROUP BY u.id, u.username, u.email, u.currency, u.is_admin, u.is_activated, u.created_at, u.updated_at, u.last_seen
@@ -134,6 +136,7 @@ func GetAllUsersWithStats(db *sql.DB) ([]UserWithStats, error) {
 			&user.UpdatedAt,
 			&user.LastSeen,
 			&user.PackCount,
+			&user.ItemCount,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan user with stats: %w", err)

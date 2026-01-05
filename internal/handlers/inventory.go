@@ -49,14 +49,20 @@ func handleInventory(c *gin.Context) {
 	db := c.MustGet("db").(*sql.DB)
 	user := c.MustGet("user")
 
-	// Check if filtering for verification items
+	// Check filters
 	verifyOnly := c.Query("verify_only") == "true"
-	
+	emptyBrand := c.Query("empty_brand") == "true"
+	emptyModel := c.Query("empty_model") == "true"
+
 	var items []models.Item
 	var err error
-	
+
 	if verifyOnly {
 		items, err = database.GetItemsToVerify(db, userID)
+	} else if emptyBrand {
+		items, err = database.GetItemsWithEmptyBrand(db, userID)
+	} else if emptyModel {
+		items, err = database.GetItemsWithEmptyModel(db, userID)
 	} else {
 		items, err = database.GetItems(db, userID)
 	}
@@ -97,6 +103,8 @@ func handleInventory(c *gin.Context) {
 		"Categories": categories,
 		"CSRFToken":  csrfToken.Token,
 		"VerifyOnly": verifyOnly,
+		"EmptyBrand": emptyBrand,
+		"EmptyModel": emptyModel,
 	})
 }
 
