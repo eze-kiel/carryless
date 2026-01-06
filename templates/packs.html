@@ -57,7 +57,7 @@
                     </thead>
                     <tbody>
                         {{range .Packs}}
-                            <tr>
+                            <tr class="clickable-row" data-href="/packs/{{.ID}}">
                                 <td>
                                     <div class="pack-name-cell">
                                         <a href="/packs/{{.ID}}" class="pack-name">{{.Name}}</a>
@@ -119,6 +119,14 @@
             </div>
         {{end}}
 
+<style>
+.clickable-row {
+    cursor: pointer;
+}
+.clickable-row:hover {
+    background-color: var(--color-gray-50);
+}
+</style>
 <script>
 // Close other dropdowns when one is opened
 document.addEventListener('click', function(event) {
@@ -130,6 +138,17 @@ document.addEventListener('click', function(event) {
             }
         });
     }
+});
+
+// Make rows clickable
+document.querySelectorAll('.clickable-row').forEach(row => {
+    row.addEventListener('click', function(event) {
+        // Don't navigate if clicking on a link, button, or dropdown
+        if (event.target.closest('a, button, .dropdown, details, summary')) {
+            return;
+        }
+        window.location.href = this.dataset.href;
+    });
 });
 </script>
     </main>
