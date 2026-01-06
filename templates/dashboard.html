@@ -17,214 +17,115 @@
             <div class="alert alert-error">{{.Error}}</div>
         {{end}}
 
-        <div class="dashboard">
-            <h1>Welcome back, {{.User.Username}}!</h1>
+        <div class="dashboard-page">
+            <div class="dashboard-header">
+                <h1>Welcome back, {{.User.Username}}</h1>
+                {{if .Stats}}
+                <div class="header-stats">
+                    <span class="header-stat"><strong>{{.Stats.TotalPacks}}</strong> packs</span>
+                    <span class="header-stat"><strong>{{.Stats.TotalItems}}</strong> items</span>
+                    <span class="header-stat"><strong>{{.Stats.TotalCategories}}</strong> categories</span>
+                    <span class="header-stat" data-weight="{{.Stats.TotalWeight}}"><strong>{{.Stats.TotalWeight}}g</strong> total</span>
+                </div>
+                {{end}}
+            </div>
 
-            <!-- Stats Grid -->
-            {{if .Stats}}
-            <div class="stats-grid">
-                <div class="stat-card-mini">
-                    <div class="stat-icon">
-                        <i class="fas fa-suitcase"></i>
-                    </div>
-                    <div class="stat-content">
-                        <div class="stat-number">{{.Stats.TotalPacks}}</div>
-                        <div class="stat-label">Packs</div>
-                    </div>
-                </div>
-                <div class="stat-card-mini">
-                    <div class="stat-icon">
-                        <i class="fas fa-cube"></i>
-                    </div>
-                    <div class="stat-content">
-                        <div class="stat-number">{{.Stats.TotalItems}}</div>
-                        <div class="stat-label">Items</div>
-                    </div>
-                </div>
-                <div class="stat-card-mini">
-                    <div class="stat-icon">
-                        <i class="fas fa-tags"></i>
-                    </div>
-                    <div class="stat-content">
-                        <div class="stat-number">{{.Stats.TotalCategories}}</div>
-                        <div class="stat-label">Categories</div>
-                    </div>
-                </div>
-                <div class="stat-card-mini">
-                    <div class="stat-icon">
-                        <i class="fas fa-weight-hanging"></i>
-                    </div>
-                    <div class="stat-content">
-                        <div class="stat-number" data-weight="{{.Stats.TotalWeight}}">{{.Stats.TotalWeight}}g</div>
-                        <div class="stat-label">Total Weight</div>
-                    </div>
-                </div>
+            {{if gt .Stats.ItemsToVerify 0}}
+            <div class="dashboard-alert">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>{{.Stats.ItemsToVerify}} items need weight verification</span>
+                <a href="/inventory?verify_only=true">Review</a>
             </div>
             {{end}}
 
-            <!-- Quick Actions -->
-            <div class="dashboard-section">
-                <div class="stat-card">
-                    <h3>Quick Actions</h3>
-                    <div class="quick-actions">
-                        <a href="/packs/new" class="btn btn-primary">
-                            <i class="fas fa-plus"></i> Create New Pack
-                        </a>
-                        <a href="/inventory/items/new" class="btn btn-primary">
-                            <i class="fas fa-plus"></i> Add Gear Item
-                        </a>
-                        <a href="/packs" class="btn btn-secondary">
-                            <i class="fas fa-suitcase"></i> Browse My Packs
-                        </a>
-                        <a href="/categories" class="btn btn-secondary">
-                            <i class="fas fa-tags"></i> Manage Categories
-                        </a>
-                    </div>
-                </div>
-            </div>
-
-            <div class="dashboard-row">
-                <!-- Recent Activity -->
-                <div class="dashboard-section">
-                    <div class="stat-card">
-                        <h3>Recent Activity</h3>
+            <div class="dashboard-grid">
+                <section class="dashboard-section-clean">
+                    <div class="section-header">
+                        <h2>Recent Packs</h2>
                         {{if .RecentPacks}}
-                            <div class="recent-packs-list">
-                                {{range .RecentPacks}}
-                                <div class="recent-pack-card">
-                                    <div class="pack-info">
-                                        <a href="/packs/{{.ID}}" class="pack-name">{{.Name}}</a>
-                                        <div class="pack-meta">
-                                            <span class="weight" data-weight="{{.TotalWeight}}">{{.TotalWeight}}g total</span>
-                                            <span class="separator">•</span>
-                                            <span class="items">{{.ItemCount}} items</span>
-                                            <span class="separator">•</span>
-                                            <span class="updated">{{timeAgo .UpdatedAt}}</span>
-                                        </div>
-                                    </div>
-                                    <div class="pack-actions">
-                                        {{if .IsLocked}}
-                                            <span class="lock-indicator" title="Locked pack">
-                                                <i class="fas fa-lock"></i>
-                                            </span>
-                                        {{end}}
-                                        {{if .IsPublic}}
-                                            <span class="public-indicator" title="Public pack">
-                                                <i class="fas fa-globe"></i>
-                                            </span>
-                                        {{end}}
-                                        <a href="/packs/{{.ID}}" class="icon-link" title="View pack">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
-                                    </div>
-                                </div>
-                                {{end}}
-                            </div>
-                            <div class="section-footer">
-                                <a href="/packs" class="view-all-link">View all packs <i class="fas fa-arrow-right"></i></a>
-                            </div>
-                        {{else}}
-                            <div class="empty-state">
-                                <i class="fas fa-suitcase empty-icon"></i>
-                                <p>No packs yet</p>
-                                <a href="/packs/new" class="btn btn-primary">Create Your First Pack</a>
-                            </div>
+                        <a href="/packs" class="section-link">View all <i class="fas fa-arrow-right"></i></a>
                         {{end}}
                     </div>
-                </div>
 
-                <!-- Insights -->
-                <div class="dashboard-section">
-                    <div class="stat-card">
-                        <h3>Insights</h3>
-                        {{if .Stats}}
-                        <div class="insights-content">
-                            {{if .Stats.LightestPack}}
-                                <div class="insight-item">
-                                    <div class="insight-icon">
-                                        <i class="fas fa-feather-alt"></i>
-                                    </div>
-                                    <div class="insight-content">
-                                        <div class="insight-title">Lightest Pack</div>
-                                        <div class="insight-detail">
-                                            <strong>{{.Stats.LightestPack.Name}}</strong>
-                                            <span class="weight" data-weight="{{.Stats.LightestWeight}}">{{.Stats.LightestWeight}}g in pack</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            {{end}}
-
-                            {{if .Stats.HeaviestPack}}
-                                <div class="insight-item">
-                                    <div class="insight-icon">
-                                        <i class="fas fa-dumbbell"></i>
-                                    </div>
-                                    <div class="insight-content">
-                                        <div class="insight-title">Heaviest Pack</div>
-                                        <div class="insight-detail">
-                                            <strong>{{.Stats.HeaviestPack.Name}}</strong>
-                                            <span class="weight" data-weight="{{.Stats.HeaviestWeight}}">{{.Stats.HeaviestWeight}}g in pack</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            {{end}}
-
-                            {{if gt .Stats.ItemsToVerify 0}}
-                                <div class="insight-item alert alert-persistent">
-                                    <div class="insight-icon">
-                                        <i class="fas fa-exclamation-triangle"></i>
-                                    </div>
-                                    <div class="insight-content">
-                                        <div class="insight-title">Weight Verification</div>
-                                        <div class="insight-detail">
-                                            {{.Stats.ItemsToVerify}} items need weight verification
-                                            <a href="/inventory?verify_only=true" class="verify-link">Review items</a>
-                                        </div>
-                                    </div>
-                                </div>
-                            {{end}}
-
-                            {{if eq .Stats.TotalPacks 0}}
-                                <div class="insight-item getting-started">
-                                    <div class="insight-icon">
-                                        <i class="fas fa-rocket"></i>
-                                    </div>
-                                    <div class="insight-content">
-                                        <div class="insight-title">Getting Started</div>
-                                        <div class="insight-detail">
-                                            <ol class="getting-started-list">
-                                                <li>Create categories like "Sleeping", "Cooking", "Clothing"</li>
-                                                <li>Add your gear items with weights and details</li>
-                                                <li>Create packs and add items for specific trips</li>
-                                                <li>Analyze weight distribution and share your packs</li>
-                                            </ol>
-                                        </div>
-                                    </div>
-                                </div>
-                            {{end}}
-                        </div>
-                        {{else}}
-                        <div class="insights-content">
-                            <div class="insight-item getting-started">
-                                <div class="insight-icon">
-                                    <i class="fas fa-rocket"></i>
-                                </div>
-                                <div class="insight-content">
-                                    <div class="insight-title">Getting Started</div>
-                                    <div class="insight-detail">
-                                        <ol class="getting-started-list">
-                                            <li>Create categories like "Sleeping", "Cooking", "Clothing"</li>
-                                            <li>Add your gear items with weights and details</li>
-                                            <li>Create packs and add items for specific trips</li>
-                                            <li>Analyze weight distribution and share your packs</li>
-                                        </ol>
-                                    </div>
-                                </div>
+                    {{if .RecentPacks}}
+                    <div class="recent-list">
+                        {{range .RecentPacks}}
+                        <a href="/packs/{{.ID}}" class="recent-item">
+                            <div class="recent-item-main">
+                                <span class="recent-item-name">{{.Name}}</span>
+                                <span class="recent-item-meta">
+                                    {{if .IsLocked}}<i class="fas fa-lock" title="Locked"></i>{{end}}
+                                    {{if .IsPublic}}<i class="fas fa-globe" title="Public"></i>{{end}}
+                                </span>
                             </div>
+                            <div class="recent-item-details">
+                                <span data-weight="{{.TotalWeight}}">{{.TotalWeight}}g</span>
+                                <span class="separator">·</span>
+                                <span>{{.ItemCount}} items</span>
+                                <span class="separator">·</span>
+                                <span class="time-ago">{{timeAgo .UpdatedAt}}</span>
+                            </div>
+                        </a>
+                        {{end}}
+                    </div>
+                    {{else}}
+                    <div class="empty-message">
+                        <p>No packs yet. <a href="/packs/new">Create your first pack</a> to get started.</p>
+                    </div>
+                    {{end}}
+                </section>
+
+                <section class="dashboard-section-clean">
+                    <div class="section-header">
+                        <h2>Insights</h2>
+                    </div>
+
+                    {{if .Stats}}
+                    <div class="insights-list">
+                        {{if .Stats.LightestPack}}
+                        <div class="insight-row">
+                            <span class="insight-label"><i class="fas fa-feather-alt"></i> Lightest</span>
+                            <span class="insight-value">
+                                <strong>{{.Stats.LightestPack.Name}}</strong>
+                                <span class="weight-badge" data-weight="{{.Stats.LightestWeight}}">{{.Stats.LightestWeight}}g</span>
+                            </span>
+                        </div>
+                        {{end}}
+
+                        {{if .Stats.HeaviestPack}}
+                        <div class="insight-row">
+                            <span class="insight-label"><i class="fas fa-dumbbell"></i> Heaviest</span>
+                            <span class="insight-value">
+                                <strong>{{.Stats.HeaviestPack.Name}}</strong>
+                                <span class="weight-badge" data-weight="{{.Stats.HeaviestWeight}}">{{.Stats.HeaviestWeight}}g</span>
+                            </span>
+                        </div>
+                        {{end}}
+
+                        {{if and (not .Stats.LightestPack) (not .Stats.HeaviestPack)}}
+                        <div class="getting-started-tips">
+                            <p class="tips-intro">Get started with Carryless:</p>
+                            <ol>
+                                <li>Create categories (Sleeping, Cooking, Clothing...)</li>
+                                <li>Add your gear items with weights</li>
+                                <li>Build packs for specific trips</li>
+                                <li>Analyze and share your loadouts</li>
+                            </ol>
                         </div>
                         {{end}}
                     </div>
-                </div>
+                    {{else}}
+                    <div class="getting-started-tips">
+                        <p class="tips-intro">Get started with Carryless:</p>
+                        <ol>
+                            <li>Create categories (Sleeping, Cooking, Clothing...)</li>
+                            <li>Add your gear items with weights</li>
+                            <li>Build packs for specific trips</li>
+                            <li>Analyze and share your loadouts</li>
+                        </ol>
+                    </div>
+                    {{end}}
+                </section>
             </div>
         </div>
     </main>
@@ -232,6 +133,253 @@
     {{template "footer" .}}
 
     <script src="/static/js/app.js"></script>
+
+    <style>
+    .dashboard-page {
+        max-width: 900px;
+        margin: 0 auto;
+    }
+
+    .dashboard-header {
+        margin-bottom: var(--space-6);
+    }
+
+    .dashboard-header h1 {
+        font-size: var(--font-size-2xl);
+        font-weight: 600;
+        margin-bottom: var(--space-2);
+        color: var(--color-gray-900);
+    }
+
+    .header-stats {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-4);
+        color: var(--color-gray-600);
+        font-size: var(--font-size-sm);
+    }
+
+    .header-stat strong {
+        color: var(--color-gray-900);
+    }
+
+    .dashboard-alert {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        padding: var(--space-3) var(--space-4);
+        background: var(--color-warning-light, #fef3c7);
+        border-left: 3px solid var(--color-warning, #f59e0b);
+        border-radius: var(--radius-sm);
+        margin-bottom: var(--space-6);
+        font-size: var(--font-size-sm);
+    }
+
+    .dashboard-alert i {
+        color: var(--color-warning, #f59e0b);
+    }
+
+    .dashboard-alert a {
+        margin-left: auto;
+        font-weight: 500;
+        color: var(--color-primary);
+    }
+
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-8);
+    }
+
+    .dashboard-section-clean {
+        min-width: 0;
+    }
+
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: var(--space-4);
+        padding-bottom: var(--space-2);
+        border-bottom: 1px solid var(--color-gray-200);
+    }
+
+    .section-header h2 {
+        font-size: var(--font-size-lg);
+        font-weight: 600;
+        color: var(--color-gray-800);
+        margin: 0;
+    }
+
+    .section-link {
+        font-size: var(--font-size-sm);
+        color: var(--color-gray-500);
+        text-decoration: none;
+    }
+
+    .section-link:hover {
+        color: var(--color-primary);
+    }
+
+    .section-link i {
+        font-size: 0.75em;
+        margin-left: var(--space-1);
+    }
+
+    .recent-list {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-1);
+    }
+
+    .recent-item {
+        display: block;
+        padding: var(--space-3);
+        border-radius: var(--radius-md);
+        text-decoration: none;
+        color: inherit;
+        transition: background-color 0.15s ease;
+    }
+
+    .recent-item:hover {
+        background: var(--color-gray-50);
+    }
+
+    .recent-item-main {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: var(--space-1);
+    }
+
+    .recent-item-name {
+        font-weight: 500;
+        color: var(--color-gray-900);
+    }
+
+    .recent-item-meta {
+        display: flex;
+        gap: var(--space-2);
+        color: var(--color-gray-400);
+        font-size: var(--font-size-sm);
+    }
+
+    .recent-item-details {
+        font-size: var(--font-size-sm);
+        color: var(--color-gray-500);
+    }
+
+    .recent-item-details .separator {
+        margin: 0 var(--space-1);
+        color: var(--color-gray-300);
+    }
+
+    .empty-message {
+        padding: var(--space-6) var(--space-4);
+        text-align: center;
+        color: var(--color-gray-500);
+        font-size: var(--font-size-sm);
+    }
+
+    .empty-message a {
+        color: var(--color-primary);
+        font-weight: 500;
+    }
+
+    .insights-list {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-3);
+    }
+
+    .insight-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: var(--space-3);
+        background: var(--color-gray-50);
+        border-radius: var(--radius-md);
+    }
+
+    .insight-label {
+        font-size: var(--font-size-sm);
+        color: var(--color-gray-600);
+    }
+
+    .insight-label i {
+        width: 1.25em;
+        margin-right: var(--space-2);
+        color: var(--color-gray-400);
+    }
+
+    .insight-value {
+        font-size: var(--font-size-sm);
+        text-align: right;
+    }
+
+    .insight-value strong {
+        color: var(--color-gray-900);
+    }
+
+    .weight-badge {
+        display: inline-block;
+        margin-left: var(--space-2);
+        padding: var(--space-1) var(--space-2);
+        background: var(--color-white);
+        border: 1px solid var(--color-gray-200);
+        border-radius: var(--radius-sm);
+        font-size: var(--font-size-xs);
+        color: var(--color-gray-600);
+    }
+
+    .getting-started-tips {
+        padding: var(--space-4);
+        background: var(--color-gray-50);
+        border-radius: var(--radius-md);
+    }
+
+    .tips-intro {
+        font-weight: 500;
+        color: var(--color-gray-700);
+        margin-bottom: var(--space-3);
+    }
+
+    .getting-started-tips ol {
+        margin: 0;
+        padding-left: var(--space-5);
+        color: var(--color-gray-600);
+        font-size: var(--font-size-sm);
+    }
+
+    .getting-started-tips li {
+        margin-bottom: var(--space-2);
+    }
+
+    .getting-started-tips li:last-child {
+        margin-bottom: 0;
+    }
+
+    @media (max-width: 768px) {
+        .dashboard-grid {
+            grid-template-columns: 1fr;
+            gap: var(--space-6);
+        }
+
+        .header-stats {
+            gap: var(--space-3);
+        }
+
+        .insight-row {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: var(--space-2);
+        }
+
+        .insight-value {
+            text-align: left;
+        }
+    }
+    </style>
 </body>
 </html>
 {{end}}

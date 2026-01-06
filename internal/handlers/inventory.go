@@ -645,7 +645,7 @@ func handleExportInventory(c *gin.Context) {
 	writer := csv.NewWriter(&buf)
 
 	// Write header (extended with new fields)
-	header := []string{"Name", "Category", "Weight (grams)", "Price", "Description", "Brand", "Model", "Purchased", "Capacity", "Capacity Unit", "Link"}
+	header := []string{"Name", "Category", "Weight (grams)", "Weight To Verify", "Price", "Notes", "Brand", "Model", "Purchased", "Capacity", "Capacity Unit", "Link"}
 	if err := writer.Write(header); err != nil {
 		c.String(http.StatusInternalServerError, "Failed to generate CSV")
 		return
@@ -679,10 +679,17 @@ func handleExportInventory(c *gin.Context) {
 			linkStr = *item.Link
 		}
 
+		// Convert WeightToVerify to string
+		weightToVerifyStr := "false"
+		if item.WeightToVerify {
+			weightToVerifyStr = "true"
+		}
+
 		record := []string{
 			item.Name,
 			item.Category.Name,
 			strconv.Itoa(item.WeightGrams),
+			weightToVerifyStr,
 			fmt.Sprintf("%.2f", item.Price),
 			item.Note,
 			brandStr,
@@ -830,16 +837,30 @@ func parseCSVFile(file multipart.File, db *sql.DB, userID int) ([]models.Item, e
 			return nil, fmt.Errorf("too many rows (max 10000)")
 		}
 
-		// Validate field count (5 = old format, 10 = legacy format with brand, 11 = new format with model)
-		if len(record) != 5 && len(record) != 10 && len(record) != 11 {
-			return nil, fmt.Errorf("invalid number of fields at line %d (expected 5, 10, or 11, got %d)", lineNumber, len(record))
+		// Validate field count (5 = old format, 10 = legacy format with brand, 11 = format with model, 12 = new format with WeightToVerify)
+		if len(record) != 5 && len(record) != 10 && len(record) != 11 && len(record) != 12 {
+			return nil, fmt.Errorf("invalid number of fields at line %d (expected 5, 10, 11, or 12, got %d)", lineNumber, len(record))
 		}
 
 		name := strings.TrimSpace(record[0])
 		categoryName := strings.TrimSpace(record[1])
 		weightStr := strings.TrimSpace(record[2])
-		priceStr := strings.TrimSpace(record[3])
-		note := strings.TrimSpace(record[4])
+
+		// Handle field indices based on format
+		// 12-field format has WeightToVerify at index 3, shifting price/note
+		var weightToVerify bool
+		var priceStr, note string
+		if len(record) == 12 {
+			// 12-field format: WeightToVerify at index 3
+			weightToVerifyStr := strings.ToLower(strings.TrimSpace(record[3]))
+			weightToVerify = (weightToVerifyStr == "true" || weightToVerifyStr == "1" || weightToVerifyStr == "yes")
+			priceStr = strings.TrimSpace(record[4])
+			note = strings.TrimSpace(record[5])
+		} else {
+			// 5, 10, or 11-field format: price at index 3, note at index 4
+			priceStr = strings.TrimSpace(record[3])
+			note = strings.TrimSpace(record[4])
+		}
 
 		// Validate required fields
 		if name == "" || categoryName == "" {
@@ -870,17 +891,50 @@ func parseCSVFile(file multipart.File, db *sql.DB, userID int) ([]models.Item, e
 		}
 
 		item := models.Item{
-			Name:        name,
-			CategoryID:  category.ID,
-			WeightGrams: weight,
-			Price:       price,
-			Note:        note,
+			Name:           name,
+			CategoryID:     category.ID,
+			WeightGrams:    weight,
+			WeightToVerify: weightToVerify,
+			Price:          price,
+			Note:           note,
 		}
 
-		// Parse new optional fields if present (10-field or 11-field format)
+		// Parse new optional fields if present (10-field, 11-field, or 12-field format)
 		if len(record) >= 10 {
-			// Brand (index 5)
-			brand := strings.TrimSpace(record[5])
+			// Determine field indices based on format
+			var brandIdx, modelIdx, purchaseDateIdx, capacityIdx, capacityUnitIdx, linkIdx int
+			var hasModel bool
+
+			if len(record) == 12 {
+				// 12-field format: WeightToVerify shifts all optional fields by 1
+				brandIdx = 6
+				modelIdx = 7
+				hasModel = true
+				purchaseDateIdx = 8
+				capacityIdx = 9
+				capacityUnitIdx = 10
+				linkIdx = 11
+			} else if len(record) == 11 {
+				// 11-field format (with Model)
+				brandIdx = 5
+				modelIdx = 6
+				hasModel = true
+				purchaseDateIdx = 7
+				capacityIdx = 8
+				capacityUnitIdx = 9
+				linkIdx = 10
+			} else {
+				// 10-field legacy format (no Model)
+				brandIdx = 5
+				hasModel = false
+				purchaseDateIdx = 6
+				capacityIdx = 7
+				capacityUnitIdx = 8
+				linkIdx = 9
+			}
+
+			// Brand
+			brand := strings.TrimSpace(record[brandIdx])
 			if brand != "" {
 				if len(brand) > 100 {
 					return nil, fmt.Errorf("brand too long at line %d", lineNumber)
@@ -888,27 +942,15 @@ func parseCSVFile(file multipart.File, db *sql.DB, userID int) ([]models.Item, e
 				item.Brand = &brand
 			}
 
-			// Handle 11-field format (with Model) vs 10-field legacy format
-			var purchaseDateIdx, capacityIdx, capacityUnitIdx, linkIdx int
-			if len(record) == 11 {
-				// Model (index 6) - new format
-				modelStr := strings.TrimSpace(record[6])
+			// Model (if present in format)
+			if hasModel {
+				modelStr := strings.TrimSpace(record[modelIdx])
 				if modelStr != "" {
 					if len(modelStr) > 100 {
 						return nil, fmt.Errorf("model too long at line %d", lineNumber)
 					}
 					item.Model = &modelStr
 				}
-				purchaseDateIdx = 7
-				capacityIdx = 8
-				capacityUnitIdx = 9
-				linkIdx = 10
-			} else {
-				// 10-field legacy format (no Model)
-				purchaseDateIdx = 6
-				capacityIdx = 7
-				capacityUnitIdx = 8
-				linkIdx = 9
 			}
 
 			// Purchase date
