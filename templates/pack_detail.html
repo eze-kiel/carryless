@@ -1632,11 +1632,11 @@ function setupCategoryAutocomplete(inputId, suggestionsId) {
 function selectCategory(inputId, suggestionsId, category) {
     document.getElementById(inputId).value = category;
     document.getElementById(suggestionsId).style.display = 'none';
-    // Trigger blur to save
-    document.getElementById(inputId).dispatchEvent(new Event('blur'));
+    // Trigger input to save
+    document.getElementById(inputId).dispatchEvent(new Event('input'));
 }
 
-// Setup auto-save on blur for quick edit fields
+// Setup auto-save on input for quick edit fields (debounced 500ms after last edit)
 function setupQuickEditAutoSave() {
     const fields = [
         { id: 'qe-name', key: 'name', apiKey: 'name' },
@@ -1652,7 +1652,8 @@ function setupQuickEditAutoSave() {
         const el = document.getElementById(field.id);
         if (!el) return;
 
-        const eventType = field.isCheckbox ? 'change' : 'blur';
+        // Use 'input' for text/number fields, 'change' for checkbox
+        const eventType = field.isCheckbox ? 'change' : 'input';
 
         el.addEventListener(eventType, () => {
             if (!currentEditItemId) return;
@@ -1669,10 +1670,12 @@ function setupQuickEditAutoSave() {
                     clearTimeout(quickEditSaveTimeouts[field.key]);
                 }
 
-                // Debounce save
+                // Debounce save - 500ms after last edit
                 quickEditSaveTimeouts[field.key] = setTimeout(() => {
                     saveQuickEditField(field, currentValue);
-                }, 300);
+                    // Update original value after save initiated
+                    quickEditOriginalValues[field.key] = currentValue;
+                }, 500);
             }
         });
     });
@@ -2771,11 +2774,11 @@ async function saveFullEdit(event) {
 }
 
 .quick-edit-body {
-    padding: 1rem;
+    padding: 0.75rem 1rem;
 }
 
 .quick-edit-field {
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.5rem;
 }
 
 .quick-edit-field:last-child {
@@ -2787,17 +2790,17 @@ async function saveFullEdit(event) {
     font-size: 0.8rem;
     font-weight: 500;
     color: #495057;
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.15rem;
 }
 
 .quick-edit-field input[type="text"],
 .quick-edit-field input[type="number"],
 .quick-edit-field textarea {
     width: 100%;
-    padding: 0.5rem 0.75rem;
+    padding: 0.4rem 0.6rem;
     border: 1px solid #ced4da;
     border-radius: 4px;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
