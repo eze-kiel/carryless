@@ -60,6 +60,7 @@ func SetupRoutes(r *gin.Engine, db *sql.DB, emailService *email.Service, cfg *co
 		activated.POST("/inventory/items/:id/duplicate", handleDuplicateItem)
 		activated.POST("/inventory/items/bulk-edit", handleBulkEditItems)
 		activated.POST("/inventory/items/bulk-delete", handleBulkDeleteItems)
+		activated.PATCH("/api/items/:id", handlePatchItem)
 
 		activated.GET("/categories", handleCategories)
 		activated.GET("/categories/new", handleNewCategoryPage)

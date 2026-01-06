@@ -126,6 +126,7 @@
             <input type="text" id="addItemSearch" placeholder="Search and add items to pack..." autocomplete="off">
             <div id="itemSuggestions" class="autocomplete-suggestions"></div>
         </div>
+        <p class="search-hint">Hint: you can double click on an item to edit its properties</p>
     </div>
     {{end}}
 
@@ -139,7 +140,8 @@
                 <!-- Mobile-first card layout -->
                 <div class="mobile-cards">
                     {{range $items}}
-                        <div class="pack-item-card">
+                        <div class="pack-item-card" data-item-id="{{.Item.ID}}">
+                            <span class="pack-item-card-edit-icon" onclick="openQuickEditPopover({{.Item.ID}}, event)"><i class="fas fa-pen"></i></span>
                             <div class="item-header">
                                 <h4 class="item-name">{{.Item.Name}}</h4>
                                 {{if .Item.WeightToVerify}}<abbr class="item-weight weight-to-verify" title="weight not verified" data-weight="{{.Item.WeightGrams}}">{{.Item.WeightGrams}}g</abbr>{{else}}<span class="item-weight" data-weight="{{.Item.WeightGrams}}">{{.Item.WeightGrams}}g</span>{{end}}
@@ -216,7 +218,7 @@
                             </thead>
                             <tbody>
                                 {{range $items}}
-                                    <tr>
+                                    <tr class="pack-item-row" data-item-id="{{.Item.ID}}">
                                         <td>{{.Item.Name}}</td>
                                         <td>{{if .Item.Brand}}{{.Item.Brand}}{{end}}</td>
                                         <td>{{if .Item.Model}}{{.Item.Model}}{{end}}</td>
@@ -372,6 +374,148 @@
                 </div>
             {{end}}
         </div>
+    </div>
+</div>
+
+<!-- Bottom Sheet Backdrop (mobile) -->
+<div id="bottomSheetBackdrop" class="bottom-sheet-backdrop" onclick="closeQuickEditPopover()"></div>
+
+<!-- Quick Edit Popover -->
+<div id="quickEditPopover" class="quick-edit-popover">
+    <div class="quick-edit-header">
+        <span class="quick-edit-title">Quick Edit</span>
+        <span class="quick-edit-close" onclick="closeQuickEditPopover()">&times;</span>
+    </div>
+    <div class="quick-edit-body">
+        <div class="quick-edit-field">
+            <label for="qe-name">Name</label>
+            <input type="text" id="qe-name" maxlength="200">
+            <span class="field-status" id="qe-name-status"></span>
+        </div>
+        <div class="quick-edit-field">
+            <label for="qe-category">Category</label>
+            <div class="category-autocomplete-wrapper">
+                <input type="text" id="qe-category" autocomplete="off" maxlength="100">
+                <div id="qe-category-suggestions" class="category-suggestions"></div>
+            </div>
+            <span class="field-status" id="qe-category-status"></span>
+        </div>
+        <div class="quick-edit-field quick-edit-row">
+            <div class="quick-edit-weight">
+                <label for="qe-weight">Weight (g)</label>
+                <input type="number" id="qe-weight" min="0">
+                <span class="field-status" id="qe-weight-status"></span>
+            </div>
+            <div class="quick-edit-verify">
+                <label class="verify-label">
+                    <input type="checkbox" id="qe-verify">
+                    <span>To verify</span>
+                </label>
+            </div>
+        </div>
+        <div class="quick-edit-field">
+            <label for="qe-note">Notes</label>
+            <textarea id="qe-note" rows="2"></textarea>
+            <span class="field-status" id="qe-note-status"></span>
+        </div>
+        <div class="quick-edit-field">
+            <label for="qe-brand">Brand</label>
+            <input type="text" id="qe-brand" maxlength="100">
+            <span class="field-status" id="qe-brand-status"></span>
+        </div>
+        <div class="quick-edit-field">
+            <label for="qe-model">Model</label>
+            <input type="text" id="qe-model" maxlength="100">
+            <span class="field-status" id="qe-model-status"></span>
+        </div>
+    </div>
+    <div class="quick-edit-footer">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="openFullEditModal()">Full Edit</button>
+    </div>
+</div>
+
+<!-- Full Edit Modal -->
+<div id="fullEditModal" class="modal">
+    <div class="modal-content large">
+        <div class="modal-header">
+            <h4 id="fullEditTitle">Edit Item</h4>
+            <span class="close" onclick="closeFullEditModal()">&times;</span>
+        </div>
+        <form id="fullEditForm" onsubmit="saveFullEdit(event)">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="fe-name">Name *</label>
+                    <input type="text" id="fe-name" required maxlength="200">
+                </div>
+                <div class="form-group">
+                    <label for="fe-category">Category *</label>
+                    <div class="category-autocomplete-wrapper">
+                        <input type="text" id="fe-category" required autocomplete="off" maxlength="100">
+                        <div id="fe-category-suggestions" class="category-suggestions"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="fe-weight">Weight (grams) *</label>
+                    <input type="number" id="fe-weight" required min="0">
+                </div>
+                <div class="form-group">
+                    <label class="verify-checkbox-label">
+                        <input type="checkbox" id="fe-verify">
+                        <span>Weight needs verification</span>
+                    </label>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="fe-brand">Brand</label>
+                    <input type="text" id="fe-brand" maxlength="100">
+                </div>
+                <div class="form-group">
+                    <label for="fe-model">Model</label>
+                    <input type="text" id="fe-model" maxlength="100">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="fe-note">Notes</label>
+                <textarea id="fe-note" rows="2"></textarea>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="fe-price">Price</label>
+                    <input type="number" id="fe-price" min="0" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label for="fe-purchase-date">Purchase Date</label>
+                    <input type="date" id="fe-purchase-date">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="fe-capacity">Capacity</label>
+                    <input type="number" id="fe-capacity" min="0" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label for="fe-capacity-unit">Unit</label>
+                    <select id="fe-capacity-unit">
+                        <option value="">Select unit</option>
+                        <option value="mL">mL</option>
+                        <option value="L">L</option>
+                        <option value="fl-oz">fl-oz</option>
+                        <option value="mAh">mAh</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="fe-link">Product Link</label>
+                <input type="url" id="fe-link" placeholder="https://" maxlength="500">
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeFullEditModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary" id="fullEditSaveBtn">Save Changes</button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -1226,7 +1370,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }, 1000);
         });
 
-        // Autosave function
+        // Autosave function for pack notes
         async function autoSavePackNote(textarea, statusElement) {
             if (packNoteIsSaving) return; // Prevent concurrent saves
 
@@ -1285,7 +1429,494 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     }
+
+    // Setup quick edit double-click handlers
+    setupQuickEditHandlers();
 });
+
+// Quick Edit Variables
+let currentEditItemId = null;
+let quickEditOriginalValues = {};
+let quickEditSaveTimeouts = {};
+
+// Get all categories for autocomplete
+const allCategories = [...new Set(availableItems.map(item => item.category))].filter(Boolean);
+
+// Setup double-click handlers for items
+function setupQuickEditHandlers() {
+    // Desktop table rows
+    document.querySelectorAll('.pack-item-row').forEach(row => {
+        row.style.cursor = 'pointer';
+        row.addEventListener('dblclick', (e) => {
+            // Ignore if clicking on interactive elements
+            if (e.target.closest('button, input, .label-tag, .btn-add-label')) return;
+            const itemId = parseInt(row.dataset.itemId);
+            openQuickEditPopover(itemId, e);
+        });
+    });
+
+    // Mobile cards
+    document.querySelectorAll('.pack-item-card').forEach(card => {
+        card.addEventListener('dblclick', (e) => {
+            // Ignore if clicking on interactive elements
+            if (e.target.closest('button, input, .label-tag, .btn-add-label')) return;
+            const itemId = parseInt(card.dataset.itemId);
+            openQuickEditPopover(itemId, e);
+        });
+    });
+
+    // Setup category autocomplete for quick edit
+    setupCategoryAutocomplete('qe-category', 'qe-category-suggestions');
+    setupCategoryAutocomplete('fe-category', 'fe-category-suggestions');
+
+    // Setup auto-save on blur for quick edit fields
+    setupQuickEditAutoSave();
+
+    // Close popover on Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeQuickEditPopover();
+            closeFullEditModal();
+        }
+    });
+
+    // Close popover when clicking outside
+    document.addEventListener('click', (e) => {
+        const popover = document.getElementById('quickEditPopover');
+        if (popover.style.display === 'block' && !popover.contains(e.target)) {
+            // Check if click is on a pack item (which would open a new popover)
+            if (!e.target.closest('.pack-item-row, .pack-item-card')) {
+                closeQuickEditPopover();
+            }
+        }
+    });
+}
+
+// Open quick edit popover
+function openQuickEditPopover(itemId, event) {
+    const item = availableItems.find(i => i.id === itemId);
+    if (!item) return;
+
+    currentEditItemId = itemId;
+    const popover = document.getElementById('quickEditPopover');
+
+    // Store original values for comparison
+    quickEditOriginalValues = {
+        name: item.name,
+        category: item.category,
+        weight: item.weight,
+        verify: item.verify || false,
+        note: item.description || '',
+        brand: item.brand || '',
+        model: item.model || ''
+    };
+
+    // Populate form fields
+    document.getElementById('qe-name').value = item.name;
+    document.getElementById('qe-category').value = item.category;
+    document.getElementById('qe-weight').value = item.weight;
+    document.getElementById('qe-verify').checked = item.verify || false;
+    document.getElementById('qe-note').value = item.description || '';
+    document.getElementById('qe-brand').value = item.brand || '';
+    document.getElementById('qe-model').value = item.model || '';
+
+    // Clear status indicators
+    document.querySelectorAll('.field-status').forEach(el => {
+        el.textContent = '';
+        el.className = 'field-status';
+    });
+
+    // Position popover near the clicked element
+    const rect = event.target.closest('.pack-item-row, .pack-item-card').getBoundingClientRect();
+    const popoverWidth = 340;
+
+    // Check if we're on mobile (use bottom sheet instead)
+    const backdrop = document.getElementById('bottomSheetBackdrop');
+    if (window.innerWidth < 768) {
+        popover.classList.add('bottom-sheet');
+        popover.style.top = '';
+        popover.style.left = '';
+        popover.style.right = '';
+        backdrop.classList.add('show');
+    } else {
+        backdrop.classList.remove('show');
+        popover.classList.remove('bottom-sheet');
+        // Position to the right of the row if space, otherwise to the left
+        let left = rect.right + 10;
+        if (left + popoverWidth > window.innerWidth - 20) {
+            left = rect.left - popoverWidth - 10;
+        }
+        if (left < 10) left = 10;
+
+        let top = rect.top + window.scrollY;
+        if (top + 400 > window.innerHeight + window.scrollY) {
+            top = Math.max(10, window.innerHeight + window.scrollY - 420);
+        }
+
+        popover.style.top = top + 'px';
+        popover.style.left = left + 'px';
+    }
+
+    popover.style.display = 'block';
+
+    // Focus first field
+    setTimeout(() => document.getElementById('qe-name').focus(), 100);
+}
+
+// Close quick edit popover
+function closeQuickEditPopover() {
+    const popover = document.getElementById('quickEditPopover');
+    const backdrop = document.getElementById('bottomSheetBackdrop');
+    popover.style.display = 'none';
+    popover.classList.remove('bottom-sheet');
+    backdrop.classList.remove('show');
+    currentEditItemId = null;
+
+    // Clear any pending save timeouts
+    Object.keys(quickEditSaveTimeouts).forEach(key => {
+        clearTimeout(quickEditSaveTimeouts[key]);
+    });
+    quickEditSaveTimeouts = {};
+}
+
+// Setup category autocomplete
+function setupCategoryAutocomplete(inputId, suggestionsId) {
+    const input = document.getElementById(inputId);
+    const suggestions = document.getElementById(suggestionsId);
+    if (!input || !suggestions) return;
+
+    input.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase().trim();
+        if (query.length < 1) {
+            suggestions.style.display = 'none';
+            return;
+        }
+
+        const matches = allCategories.filter(cat =>
+            cat.toLowerCase().includes(query)
+        ).slice(0, 6);
+
+        if (matches.length === 0) {
+            suggestions.style.display = 'none';
+            return;
+        }
+
+        suggestions.innerHTML = matches.map(cat =>
+            `<div class="category-suggestion" onclick="selectCategory('${inputId}', '${suggestionsId}', '${cat.replace(/'/g, "\\'")}')">
+                ${cat}
+            </div>`
+        ).join('');
+        suggestions.style.display = 'block';
+    });
+
+    input.addEventListener('blur', () => {
+        // Delay hide to allow click on suggestion
+        setTimeout(() => {
+            suggestions.style.display = 'none';
+        }, 200);
+    });
+}
+
+function selectCategory(inputId, suggestionsId, category) {
+    document.getElementById(inputId).value = category;
+    document.getElementById(suggestionsId).style.display = 'none';
+    // Trigger blur to save
+    document.getElementById(inputId).dispatchEvent(new Event('blur'));
+}
+
+// Setup auto-save on blur for quick edit fields
+function setupQuickEditAutoSave() {
+    const fields = [
+        { id: 'qe-name', key: 'name', apiKey: 'name' },
+        { id: 'qe-category', key: 'category', apiKey: 'category_name' },
+        { id: 'qe-weight', key: 'weight', apiKey: 'weight_grams', isNumber: true },
+        { id: 'qe-verify', key: 'verify', apiKey: 'weight_to_verify', isCheckbox: true },
+        { id: 'qe-note', key: 'note', apiKey: 'note' },
+        { id: 'qe-brand', key: 'brand', apiKey: 'brand' },
+        { id: 'qe-model', key: 'model', apiKey: 'model' }
+    ];
+
+    fields.forEach(field => {
+        const el = document.getElementById(field.id);
+        if (!el) return;
+
+        const eventType = field.isCheckbox ? 'change' : 'blur';
+
+        el.addEventListener(eventType, () => {
+            if (!currentEditItemId) return;
+
+            const currentValue = field.isCheckbox ? el.checked :
+                                 field.isNumber ? parseInt(el.value) || 0 :
+                                 el.value;
+            const originalValue = quickEditOriginalValues[field.key];
+
+            // Only save if value changed
+            if (currentValue !== originalValue) {
+                // Clear existing timeout for this field
+                if (quickEditSaveTimeouts[field.key]) {
+                    clearTimeout(quickEditSaveTimeouts[field.key]);
+                }
+
+                // Debounce save
+                quickEditSaveTimeouts[field.key] = setTimeout(() => {
+                    saveQuickEditField(field, currentValue);
+                }, 300);
+            }
+        });
+    });
+}
+
+// Save a single quick edit field
+async function saveQuickEditField(field, value) {
+    if (!currentEditItemId) return;
+
+    const statusEl = document.getElementById(field.id + '-status');
+    if (statusEl) {
+        statusEl.textContent = 'Saving...';
+        statusEl.className = 'field-status saving';
+    }
+
+    await fetchCSRFToken();
+
+    const payload = {};
+    payload[field.apiKey] = value;
+
+    try {
+        const response = await fetch(`/api/items/${currentEditItemId}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            // Update original value
+            quickEditOriginalValues[field.key] = value;
+
+            // Update the item in availableItems
+            const item = availableItems.find(i => i.id === currentEditItemId);
+            if (item) {
+                if (field.key === 'name') item.name = value;
+                else if (field.key === 'category') item.category = value;
+                else if (field.key === 'weight') item.weight = value;
+                else if (field.key === 'verify') item.verify = value;
+                else if (field.key === 'note') item.description = value;
+                else if (field.key === 'brand') item.brand = value;
+                else if (field.key === 'model') item.model = value;
+            }
+
+            // Show success
+            if (statusEl) {
+                statusEl.textContent = 'Saved';
+                statusEl.className = 'field-status success';
+                setTimeout(() => {
+                    statusEl.textContent = '';
+                    statusEl.className = 'field-status';
+                }, 2000);
+            }
+
+            // Update the displayed values in the pack view
+            updateItemDisplay(currentEditItemId, data.item);
+        } else {
+            // Show error
+            const errorMsg = data.errors ? Object.values(data.errors)[0] : (data.error || 'Failed to save');
+            if (statusEl) {
+                statusEl.textContent = errorMsg;
+                statusEl.className = 'field-status error';
+            }
+        }
+    } catch (error) {
+        if (statusEl) {
+            statusEl.textContent = 'Network error';
+            statusEl.className = 'field-status error';
+        }
+    }
+}
+
+// Update the item display in the pack view after save
+function updateItemDisplay(itemId, updatedItem) {
+    // Update desktop table row
+    const row = document.querySelector(`.pack-item-row[data-item-id="${itemId}"]`);
+    if (row) {
+        const cells = row.querySelectorAll('td');
+        if (cells[0]) cells[0].textContent = updatedItem.name;
+        if (cells[1]) cells[1].textContent = updatedItem.brand || '';
+        if (cells[2]) cells[2].textContent = updatedItem.model || '';
+        if (cells[3]) cells[3].textContent = updatedItem.note || '';
+        // Weight is in cells[5]
+        if (cells[5]) {
+            const weightEl = cells[5].querySelector('[data-weight]') || cells[5];
+            if (weightEl.dataset) weightEl.dataset.weight = updatedItem.weight_grams;
+            const savedUnit = getCookie('weightUnit') || 'g';
+            weightEl.textContent = formatWeightWithUnit(updatedItem.weight_grams, savedUnit);
+            if (updatedItem.weight_to_verify) {
+                weightEl.classList.add('weight-to-verify');
+                weightEl.title = 'weight not verified';
+            } else {
+                weightEl.classList.remove('weight-to-verify');
+                weightEl.title = '';
+            }
+        }
+    }
+
+    // Update mobile card
+    const card = document.querySelector(`.pack-item-card[data-item-id="${itemId}"]`);
+    if (card) {
+        const nameEl = card.querySelector('.item-name');
+        if (nameEl) nameEl.textContent = updatedItem.name;
+
+        const weightEl = card.querySelector('.item-weight');
+        if (weightEl) {
+            weightEl.dataset.weight = updatedItem.weight_grams;
+            const savedUnit = getCookie('weightUnit') || 'g';
+            weightEl.textContent = formatWeightWithUnit(updatedItem.weight_grams, savedUnit);
+            if (updatedItem.weight_to_verify) {
+                weightEl.classList.add('weight-to-verify');
+                weightEl.title = 'weight not verified';
+            } else {
+                weightEl.classList.remove('weight-to-verify');
+                weightEl.title = '';
+            }
+        }
+
+        const descEl = card.querySelector('.item-description');
+        if (descEl) {
+            descEl.textContent = updatedItem.note || '';
+            descEl.style.display = updatedItem.note ? 'block' : 'none';
+        }
+
+        // Update brand/model in meta
+        const brandEl = card.querySelector('.item-brand');
+        if (brandEl) {
+            brandEl.textContent = updatedItem.brand || '';
+            brandEl.style.display = updatedItem.brand ? 'inline' : 'none';
+        }
+        const modelEl = card.querySelector('.item-model');
+        if (modelEl) {
+            modelEl.textContent = updatedItem.model || '';
+            modelEl.style.display = updatedItem.model ? 'inline' : 'none';
+        }
+    }
+}
+
+// Full Edit Modal Functions
+function openFullEditModal() {
+    closeQuickEditPopover();
+
+    const item = availableItems.find(i => i.id === currentEditItemId);
+    if (!item) return;
+
+    // Re-set currentEditItemId since closeQuickEditPopover clears it
+    const itemId = item.id;
+    currentEditItemId = itemId;
+
+    document.getElementById('fullEditTitle').textContent = `Edit: ${item.name}`;
+    document.getElementById('fe-name').value = item.name;
+    document.getElementById('fe-category').value = item.category;
+    document.getElementById('fe-weight').value = item.weight;
+    document.getElementById('fe-verify').checked = item.verify || false;
+    document.getElementById('fe-note').value = item.description || '';
+    document.getElementById('fe-brand').value = item.brand || '';
+    document.getElementById('fe-model').value = item.model || '';
+    document.getElementById('fe-price').value = item.price || '';
+    document.getElementById('fe-purchase-date').value = item.purchaseDate || '';
+    document.getElementById('fe-capacity').value = item.capacity || '';
+    document.getElementById('fe-capacity-unit').value = item.capacityUnit || '';
+    document.getElementById('fe-link').value = item.link || '';
+
+    document.getElementById('fullEditModal').style.display = 'block';
+}
+
+function closeFullEditModal() {
+    document.getElementById('fullEditModal').style.display = 'none';
+}
+
+async function saveFullEdit(event) {
+    event.preventDefault();
+
+    if (!currentEditItemId) return;
+
+    const saveBtn = document.getElementById('fullEditSaveBtn');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving...';
+
+    await fetchCSRFToken();
+
+    const payload = {
+        name: document.getElementById('fe-name').value.trim(),
+        category_name: document.getElementById('fe-category').value.trim(),
+        weight_grams: parseInt(document.getElementById('fe-weight').value) || 0,
+        weight_to_verify: document.getElementById('fe-verify').checked,
+        note: document.getElementById('fe-note').value.trim(),
+        brand: document.getElementById('fe-brand').value.trim() || '',
+        model: document.getElementById('fe-model').value.trim() || ''
+    };
+
+    const price = document.getElementById('fe-price').value;
+    if (price) payload.price = parseFloat(price);
+
+    const purchaseDate = document.getElementById('fe-purchase-date').value;
+    if (purchaseDate) payload.purchase_date = purchaseDate;
+
+    const capacity = document.getElementById('fe-capacity').value;
+    const capacityUnit = document.getElementById('fe-capacity-unit').value;
+    if (capacity) {
+        payload.capacity = parseFloat(capacity);
+        payload.capacity_unit = capacityUnit;
+    }
+
+    const link = document.getElementById('fe-link').value.trim();
+    if (link) payload.link = link;
+
+    try {
+        const response = await fetch(`/api/items/${currentEditItemId}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            // Update display and close modal
+            updateItemDisplay(currentEditItemId, data.item);
+
+            // Update availableItems
+            const item = availableItems.find(i => i.id === currentEditItemId);
+            if (item) {
+                item.name = data.item.name;
+                item.category = data.item.category_name;
+                item.weight = data.item.weight_grams;
+                item.verify = data.item.weight_to_verify;
+                item.description = data.item.note;
+                item.brand = data.item.brand;
+                item.model = data.item.model;
+            }
+
+            closeFullEditModal();
+
+            // Reload to update category grouping if category changed
+            if (payload.category_name !== quickEditOriginalValues.category) {
+                location.reload();
+            }
+        } else {
+            const errorMsg = data.errors ? Object.values(data.errors)[0] : (data.error || 'Failed to save');
+            alert(errorMsg);
+        }
+    } catch (error) {
+        alert('Failed to save: network error');
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Changes';
+    }
+}
 
 </script>
 
@@ -2063,6 +2694,438 @@ document.addEventListener('DOMContentLoaded', function() {
     .char-count,
     .pack-note-status {
         font-size: 0.75rem;
+    }
+}
+
+/* Search Hint */
+.search-hint {
+    font-size: 0.85rem;
+    color: #6c757d;
+    font-style: italic;
+    margin-top: 0.5rem;
+    text-align: center;
+}
+
+/* Quick Edit Popover */
+.quick-edit-popover {
+    position: absolute;
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    width: 340px;
+    z-index: 1000;
+    display: none;
+    animation: popoverFadeIn 0.15s ease-out;
+}
+
+@keyframes popoverFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.quick-edit-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #dee2e6;
+    background: #f8f9fa;
+    border-radius: 8px 8px 0 0;
+}
+
+.quick-edit-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #333;
+}
+
+.quick-edit-close {
+    cursor: pointer;
+    font-size: 1.25rem;
+    color: #6c757d;
+    line-height: 1;
+    padding: 0 0.25rem;
+}
+
+.quick-edit-close:hover {
+    color: #333;
+}
+
+.quick-edit-body {
+    padding: 1rem;
+}
+
+.quick-edit-field {
+    margin-bottom: 0.75rem;
+}
+
+.quick-edit-field:last-child {
+    margin-bottom: 0;
+}
+
+.quick-edit-field label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #495057;
+    margin-bottom: 0.25rem;
+}
+
+.quick-edit-field input[type="text"],
+.quick-edit-field input[type="number"],
+.quick-edit-field textarea {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.quick-edit-field input:focus,
+.quick-edit-field textarea:focus {
+    outline: none;
+    border-color: #4a7c59;
+    box-shadow: 0 0 0 3px rgba(74, 124, 89, 0.1);
+}
+
+.quick-edit-field textarea {
+    resize: vertical;
+    min-height: 50px;
+}
+
+.quick-edit-row {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-end;
+}
+
+.quick-edit-weight {
+    flex: 1;
+}
+
+.quick-edit-verify {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding-bottom: 0.5rem;
+}
+
+.quick-edit-verify input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.quick-edit-verify label {
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-bottom: 0;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.quick-edit-footer {
+    padding: 0.75rem 1rem;
+    border-top: 1px solid #dee2e6;
+    background: #f8f9fa;
+    border-radius: 0 0 8px 8px;
+    text-align: right;
+}
+
+.quick-edit-footer a {
+    font-size: 0.85rem;
+    color: #4a7c59;
+    text-decoration: none;
+}
+
+.quick-edit-footer a:hover {
+    text-decoration: underline;
+}
+
+/* Field Status Indicators */
+.field-status {
+    display: inline-block;
+    font-size: 0.75rem;
+    margin-left: 0.5rem;
+    vertical-align: middle;
+}
+
+.field-status.saving {
+    color: #6c757d;
+}
+
+.field-status.saved {
+    color: #28a745;
+}
+
+.field-status.error {
+    color: #dc3545;
+}
+
+/* Category Autocomplete */
+.category-input-wrapper {
+    position: relative;
+}
+
+.category-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #fff;
+    border: 1px solid #ced4da;
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    max-height: 150px;
+    overflow-y: auto;
+    z-index: 1001;
+    display: none;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.category-suggestions.show {
+    display: block;
+}
+
+.category-suggestion {
+    padding: 0.5rem 0.75rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.category-suggestion:hover,
+.category-suggestion.selected {
+    background: #f0f7f2;
+}
+
+/* Full Edit Modal */
+#fullEditModal .modal-content {
+    max-width: 500px;
+}
+
+#fullEditModal .form-group {
+    margin-bottom: 1rem;
+}
+
+#fullEditModal .form-group label {
+    display: block;
+    font-weight: 500;
+    font-size: 0.9rem;
+    margin-bottom: 0.35rem;
+    color: #333;
+}
+
+#fullEditModal .form-group input,
+#fullEditModal .form-group textarea,
+#fullEditModal .form-group select {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+#fullEditModal .form-group input:focus,
+#fullEditModal .form-group textarea:focus,
+#fullEditModal .form-group select:focus {
+    outline: none;
+    border-color: #4a7c59;
+    box-shadow: 0 0 0 3px rgba(74, 124, 89, 0.1);
+}
+
+#fullEditModal .form-row {
+    display: flex;
+    gap: 1rem;
+}
+
+#fullEditModal .form-row .form-group {
+    flex: 1;
+}
+
+#fullEditModal .checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+#fullEditModal .checkbox-group input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+}
+
+#fullEditModal .checkbox-group label {
+    margin-bottom: 0;
+    font-weight: normal;
+}
+
+#fullEditModal .modal-buttons {
+    margin-top: 1.5rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+}
+
+#fullEditModal .modal-buttons .btn {
+    padding: 0.5rem 1.25rem;
+}
+
+/* Mobile Bottom Sheet */
+@media (max-width: 768px) {
+    .search-hint {
+        font-size: 0.8rem;
+    }
+
+    .quick-edit-popover {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        top: auto;
+        width: 100%;
+        max-height: 70vh;
+        border-radius: 16px 16px 0 0;
+        animation: bottomSheetSlideUp 0.25s ease-out;
+        overflow-y: auto;
+    }
+
+    @keyframes bottomSheetSlideUp {
+        from {
+            transform: translateY(100%);
+        }
+        to {
+            transform: translateY(0);
+        }
+    }
+
+    .quick-edit-header {
+        border-radius: 16px 16px 0 0;
+        position: sticky;
+        top: 0;
+        z-index: 1;
+    }
+
+    .quick-edit-header::before {
+        content: '';
+        position: absolute;
+        top: 8px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 40px;
+        height: 4px;
+        background: #dee2e6;
+        border-radius: 2px;
+    }
+
+    .quick-edit-title {
+        margin-top: 0.5rem;
+    }
+
+    .quick-edit-body {
+        padding: 1rem 1rem 2rem 1rem;
+    }
+
+    .quick-edit-field input[type="text"],
+    .quick-edit-field input[type="number"],
+    .quick-edit-field textarea {
+        padding: 0.75rem;
+        font-size: 16px; /* Prevents iOS zoom on focus */
+    }
+
+    .quick-edit-footer {
+        position: sticky;
+        bottom: 0;
+        border-radius: 0;
+    }
+
+    #fullEditModal .modal-content {
+        max-width: 100%;
+        margin: 0;
+        border-radius: 0;
+        min-height: 100vh;
+    }
+
+    #fullEditModal .form-row {
+        flex-direction: column;
+        gap: 0;
+    }
+}
+
+/* Bottom sheet backdrop */
+.bottom-sheet-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 999;
+    display: none;
+    animation: backdropFadeIn 0.2s ease-out;
+}
+
+.bottom-sheet-backdrop.show {
+    display: block;
+}
+
+@keyframes backdropFadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* Item row hover cursor hint */
+.items-table tbody tr {
+    cursor: pointer;
+}
+
+.items-table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+/* Mobile card edit icon */
+.pack-item-card {
+    position: relative;
+}
+
+.pack-item-card-edit-icon {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    color: #6c757d;
+    font-size: 0.85rem;
+    cursor: pointer;
+    z-index: 5;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.pack-item-card-edit-icon:hover {
+    background: #e9ecef;
+    color: #333;
+}
+
+@media (min-width: 769px) {
+    .pack-item-card-edit-icon {
+        display: none;
     }
 }
 </style>

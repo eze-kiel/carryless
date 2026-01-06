@@ -870,6 +870,49 @@ func BulkDeleteItems(db *sql.DB, userID int, itemIDs []int) (int, error) {
 	return int(rowsAffected), nil
 }
 
+// PatchItem updates a single item with the specified field updates.
+// Returns the updated item with category info for UI sync.
+func PatchItem(db *sql.DB, userID int, itemID int, updates map[string]interface{}) (*models.Item, error) {
+	if len(updates) == 0 {
+		return nil, fmt.Errorf("no updates specified")
+	}
+
+	// Verify item belongs to user
+	var exists bool
+	err := db.QueryRow("SELECT EXISTS(SELECT 1 FROM items WHERE id = ? AND user_id = ?)", itemID, userID).Scan(&exists)
+	if err != nil {
+		return nil, fmt.Errorf("failed to verify item ownership: %w", err)
+	}
+	if !exists {
+		return nil, fmt.Errorf("item not found")
+	}
+
+	// Build dynamic UPDATE query
+	setClauses := []string{"updated_at = CURRENT_TIMESTAMP"}
+	updateArgs := []interface{}{}
+
+	for field, value := range updates {
+		setClauses = append(setClauses, field+" = ?")
+		updateArgs = append(updateArgs, value)
+	}
+
+	// Add WHERE clause args
+	updateArgs = append(updateArgs, itemID, userID)
+
+	updateQuery := fmt.Sprintf(
+		"UPDATE items SET %s WHERE id = ? AND user_id = ?",
+		strings.Join(setClauses, ", "),
+	)
+
+	_, err = db.Exec(updateQuery, updateArgs...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update item: %w", err)
+	}
+
+	// Return the updated item with category info
+	return GetItem(db, userID, itemID)
+}
+
 // BulkUpdateItems updates multiple items atomically with the specified field updates.
 // The updates map should contain column names as keys and their new values.
 // All updates happen in a single transaction - either all succeed or all fail.

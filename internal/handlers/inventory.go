@@ -1211,6 +1211,211 @@ func handleBulkDeleteItems(c *gin.Context) {
 	c.Redirect(http.StatusFound, "/inventory?success=bulk_deleted")
 }
 
+// ItemPatchRequest represents the JSON body for PATCH /api/items/:id
+type ItemPatchRequest struct {
+	Name           *string  `json:"name"`
+	CategoryName   *string  `json:"category_name"`
+	WeightGrams    *int     `json:"weight_grams"`
+	WeightToVerify *bool    `json:"weight_to_verify"`
+	Note           *string  `json:"note"`
+	Brand          *string  `json:"brand"`
+	Model          *string  `json:"model"`
+	Price          *float64 `json:"price"`
+	PurchaseDate   *string  `json:"purchase_date"`
+	Capacity       *float64 `json:"capacity"`
+	CapacityUnit   *string  `json:"capacity_unit"`
+	Link           *string  `json:"link"`
+}
+
+// handlePatchItem handles PATCH /api/items/:id for partial item updates
+func handlePatchItem(c *gin.Context) {
+	userID := c.MustGet("user_id").(int)
+	db := c.MustGet("db").(*sql.DB)
+
+	itemIDStr := c.Param("id")
+	itemID, err := strconv.Atoi(itemIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid item ID"})
+		return
+	}
+
+	var req ItemPatchRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	updates := make(map[string]interface{})
+	errors := make(map[string]string)
+
+	// Validate and add fields to updates map
+	if req.Name != nil {
+		name := strings.TrimSpace(*req.Name)
+		if name == "" {
+			errors["name"] = "Item name cannot be empty"
+		} else if len(name) > 200 {
+			errors["name"] = "Item name must be less than 200 characters"
+		} else {
+			updates["name"] = name
+		}
+	}
+
+	if req.CategoryName != nil {
+		categoryName := strings.TrimSpace(*req.CategoryName)
+		if categoryName == "" {
+			errors["category_name"] = "Category cannot be empty"
+		} else if len(categoryName) > 100 {
+			errors["category_name"] = "Category name must be less than 100 characters"
+		} else {
+			category, err := database.GetOrCreateCategory(db, userID, categoryName)
+			if err != nil {
+				errors["category_name"] = "Failed to find or create category"
+			} else {
+				updates["category_id"] = category.ID
+			}
+		}
+	}
+
+	if req.WeightGrams != nil {
+		if *req.WeightGrams < 0 {
+			errors["weight_grams"] = "Weight must be a positive number"
+		} else {
+			updates["weight_grams"] = *req.WeightGrams
+		}
+	}
+
+	if req.WeightToVerify != nil {
+		updates["weight_to_verify"] = *req.WeightToVerify
+	}
+
+	if req.Note != nil {
+		updates["note"] = strings.TrimSpace(*req.Note)
+	}
+
+	if req.Brand != nil {
+		brand := strings.TrimSpace(*req.Brand)
+		if len(brand) > 100 {
+			errors["brand"] = "Brand must be less than 100 characters"
+		} else if brand == "" {
+			updates["brand"] = nil
+		} else {
+			updates["brand"] = brand
+		}
+	}
+
+	if req.Model != nil {
+		model := strings.TrimSpace(*req.Model)
+		if len(model) > 100 {
+			errors["model"] = "Model must be less than 100 characters"
+		} else if model == "" {
+			updates["model"] = nil
+		} else {
+			updates["model"] = model
+		}
+	}
+
+	if req.Price != nil {
+		if *req.Price < 0 {
+			errors["price"] = "Price must be a positive number"
+		} else {
+			updates["price"] = *req.Price
+		}
+	}
+
+	if req.PurchaseDate != nil {
+		if *req.PurchaseDate == "" {
+			updates["purchase_date"] = nil
+		} else {
+			t, err := time.Parse("2006-01-02", *req.PurchaseDate)
+			if err != nil {
+				errors["purchase_date"] = "Invalid date format (expected YYYY-MM-DD)"
+			} else {
+				updates["purchase_date"] = t
+			}
+		}
+	}
+
+	if req.Capacity != nil {
+		if *req.Capacity < 0 {
+			errors["capacity"] = "Capacity must be a positive number"
+		} else if *req.Capacity == 0 {
+			updates["capacity"] = nil
+			updates["capacity_unit"] = nil
+		} else {
+			updates["capacity"] = *req.Capacity
+			// Capacity unit is required when capacity is set
+			if req.CapacityUnit == nil || *req.CapacityUnit == "" {
+				errors["capacity_unit"] = "Unit is required when capacity is specified"
+			} else if !isValidCapacityUnit(*req.CapacityUnit) {
+				errors["capacity_unit"] = "Invalid capacity unit"
+			} else {
+				updates["capacity_unit"] = *req.CapacityUnit
+			}
+		}
+	} else if req.CapacityUnit != nil {
+		// Only capacity unit provided - validate it for potential future use
+		if *req.CapacityUnit != "" && !isValidCapacityUnit(*req.CapacityUnit) {
+			errors["capacity_unit"] = "Invalid capacity unit"
+		}
+	}
+
+	if req.Link != nil {
+		link := strings.TrimSpace(*req.Link)
+		if link == "" {
+			updates["link"] = nil
+		} else if len(link) > 500 {
+			errors["link"] = "Link must be less than 500 characters"
+		} else if !isValidURL(link) {
+			errors["link"] = "Invalid URL format (must start with http:// or https://)"
+		} else {
+			updates["link"] = link
+		}
+	}
+
+	// Return validation errors
+	if len(errors) > 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"errors": errors})
+		return
+	}
+
+	// Check if there are any updates to apply
+	if len(updates) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No valid fields to update"})
+		return
+	}
+
+	// Apply updates and get the updated item
+	updatedItem, err := database.PatchItem(db, userID, itemID, updates)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Item not found"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update item"})
+		}
+		return
+	}
+
+	// Return the updated item as JSON
+	c.JSON(http.StatusOK, gin.H{
+		"item": gin.H{
+			"id":               updatedItem.ID,
+			"name":             updatedItem.Name,
+			"category_id":      updatedItem.CategoryID,
+			"category_name":    updatedItem.Category.Name,
+			"weight_grams":     updatedItem.WeightGrams,
+			"weight_to_verify": updatedItem.WeightToVerify,
+			"note":             updatedItem.Note,
+			"brand":            updatedItem.Brand,
+			"model":            updatedItem.Model,
+			"price":            updatedItem.Price,
+			"purchase_date":    updatedItem.PurchaseDate,
+			"capacity":         updatedItem.Capacity,
+			"capacity_unit":    updatedItem.CapacityUnit,
+			"link":             updatedItem.Link,
+		},
+	})
+}
+
 // parseItemIDs parses a comma-separated string of item IDs into a slice of integers
 func parseItemIDs(itemIDsStr string) ([]int, error) {
 	parts := strings.Split(itemIDsStr, ",")
