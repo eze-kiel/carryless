@@ -870,11 +870,10 @@ a:hover {
 .available-items-table,
 .inventory-table {
     background: var(--color-white);
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-base);
     border: 1px solid var(--color-gray-200);
     overflow: visible; /* Changed from hidden to visible for dropdowns */
     width: 100%;
-    box-shadow: var(--shadow-sm);
     margin-bottom: var(--space-4);
     position: relative; /* Ensure proper stacking context */
 }
@@ -1576,9 +1575,8 @@ th .dropdown-menu {
     margin: var(--space-3) 0;
     background: var(--color-white);
     border: 1px solid var(--color-gray-200);
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-base);
     overflow: visible; /* Changed from hidden to allow dropdowns to appear */
-    box-shadow: var(--shadow-sm);
     position: relative; /* Ensure proper stacking context */
 }
 
