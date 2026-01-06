@@ -27,6 +27,25 @@
         {{end}}
 
         <div class="account-sections">
+            <!-- Display Name Section -->
+            <div class="account-section">
+                <h2>Display Name</h2>
+                <div class="form-container">
+                    <form action="/account/username" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+
+                        <div class="form-group">
+                            <label for="username">Username</label>
+                            <input type="text" id="username" name="username" value="{{.User.Username}}" required minlength="2" maxlength="50">
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">Update Username</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
             <!-- Change Password Section -->
             <div class="account-section">
                 <h2>Change Password</h2>

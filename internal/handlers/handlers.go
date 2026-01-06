@@ -39,6 +39,7 @@ func SetupRoutes(r *gin.Engine, db *sql.DB, emailService *email.Service, cfg *co
 		protected.GET("/account", handleAccountPage)
 		protected.POST("/account/password", handleChangePassword)
 		protected.POST("/account/currency", handleChangeCurrency)
+		protected.POST("/account/username", handleChangeUsername)
 		protected.GET("/api/csrf-token", handleCSRFToken)
 	}
 

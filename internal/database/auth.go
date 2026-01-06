@@ -243,6 +243,16 @@ func UpdateUserCurrency(db *sql.DB, userID int, currency string) error {
 	return nil
 }
 
+func UpdateUsername(db *sql.DB, userID int, username string) error {
+	query := "UPDATE users SET username = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+	_, err := db.Exec(query, username, userID)
+	if err != nil {
+		return fmt.Errorf("failed to update username: %w", err)
+	}
+
+	return nil
+}
+
 func RenewSession(db *sql.DB, sessionID string, sessionDuration time.Duration) error {
 	// Implementing sliding window - always extend on activity
 	now := time.Now()

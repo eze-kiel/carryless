@@ -98,6 +98,60 @@ func handleChangePassword(c *gin.Context) {
 	})
 }
 
+func handleChangeUsername(c *gin.Context) {
+	userID := c.MustGet("user_id").(int)
+	db := c.MustGet("db").(*sql.DB)
+	user := c.MustGet("user")
+
+	username := strings.TrimSpace(c.PostForm("username"))
+
+	if username == "" {
+		c.HTML(http.StatusBadRequest, "account.html", gin.H{
+			"Title": "Account - Carryless",
+			"User":  user,
+			"Error": "Username cannot be empty",
+		})
+		return
+	}
+
+	if len(username) < 2 {
+		c.HTML(http.StatusBadRequest, "account.html", gin.H{
+			"Title": "Account - Carryless",
+			"User":  user,
+			"Error": "Username must be at least 2 characters long",
+		})
+		return
+	}
+
+	if len(username) > 50 {
+		c.HTML(http.StatusBadRequest, "account.html", gin.H{
+			"Title": "Account - Carryless",
+			"User":  user,
+			"Error": "Username must be at most 50 characters long",
+		})
+		return
+	}
+
+	err := database.UpdateUsername(db, userID, username)
+	if err != nil {
+		c.HTML(http.StatusInternalServerError, "account.html", gin.H{
+			"Title": "Account - Carryless",
+			"User":  user,
+			"Error": "Failed to update username",
+		})
+		return
+	}
+
+	// Refresh user data
+	updatedUser, _ := database.GetUserByID(db, userID)
+
+	c.HTML(http.StatusOK, "account.html", gin.H{
+		"Title":   "Account - Carryless",
+		"User":    updatedUser,
+		"Success": "Username updated successfully",
+	})
+}
+
 func handleChangeCurrency(c *gin.Context) {
 	userID := c.MustGet("user_id").(int)
 	db := c.MustGet("db").(*sql.DB)
