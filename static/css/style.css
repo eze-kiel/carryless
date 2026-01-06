@@ -217,6 +217,7 @@ body {
 
 .nav-brand a:hover {
     color: var(--color-primary-hover);
+    text-decoration: none;
 }
 
 .nav-links {
@@ -495,30 +496,30 @@ a:hover {
     outline-offset: 2px;
 }
 
-/* Primary button */
+/* Primary button - outline/ghost style */
 .btn-primary {
-    background: var(--color-primary);
-    color: var(--color-white);
+    background: transparent;
+    color: var(--color-primary);
     border-color: var(--color-primary);
 }
 
 .btn-primary:hover {
-    background: var(--color-primary-hover);
-    border-color: var(--color-primary-hover);
+    background: var(--color-primary);
+    border-color: var(--color-primary);
     color: var(--color-white);
 }
 
-/* Secondary button */
+/* Secondary button - outline/ghost style */
 .btn-secondary {
-    background: var(--color-secondary);
-    color: var(--color-white);
-    border-color: var(--color-secondary);
+    background: transparent;
+    color: var(--color-gray-600);
+    border-color: var(--color-gray-300);
 }
 
 .btn-secondary:hover {
-    background: var(--color-secondary-hover);
-    border-color: var(--color-secondary-hover);
-    color: var(--color-white);
+    background: var(--color-gray-100);
+    border-color: var(--color-gray-400);
+    color: var(--color-gray-700);
 }
 
 /* Success button */
