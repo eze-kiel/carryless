@@ -392,14 +392,6 @@
             <input type="text" id="qe-name" maxlength="200">
             <span class="field-status" id="qe-name-status"></span>
         </div>
-        <div class="quick-edit-field">
-            <label for="qe-category">Category</label>
-            <div class="category-autocomplete-wrapper">
-                <input type="text" id="qe-category" autocomplete="off" maxlength="100">
-                <div id="qe-category-suggestions" class="category-suggestions"></div>
-            </div>
-            <span class="field-status" id="qe-category-status"></span>
-        </div>
         <div class="quick-edit-field quick-edit-row">
             <div class="quick-edit-weight">
                 <label for="qe-weight">Weight (g)</label>
@@ -1466,8 +1458,7 @@ function setupQuickEditHandlers() {
         });
     });
 
-    // Setup category autocomplete for quick edit
-    setupCategoryAutocomplete('qe-category', 'qe-category-suggestions');
+    // Setup category autocomplete for full edit modal
     setupCategoryAutocomplete('fe-category', 'fe-category-suggestions');
 
     // Setup auto-save on blur for quick edit fields
@@ -1504,7 +1495,6 @@ function openQuickEditPopover(itemId, event) {
     // Store original values for comparison
     quickEditOriginalValues = {
         name: item.name,
-        category: item.category,
         weight: item.weight,
         verify: item.verify || false,
         note: item.description || '',
@@ -1514,7 +1504,6 @@ function openQuickEditPopover(itemId, event) {
 
     // Populate form fields
     document.getElementById('qe-name').value = item.name;
-    document.getElementById('qe-category').value = item.category;
     document.getElementById('qe-weight').value = item.weight;
     document.getElementById('qe-verify').checked = item.verify || false;
     document.getElementById('qe-note').value = item.description || '';
@@ -1641,7 +1630,6 @@ function selectCategory(inputId, suggestionsId, category) {
 function setupQuickEditAutoSave() {
     const fields = [
         { id: 'qe-name', key: 'name', apiKey: 'name' },
-        { id: 'qe-category', key: 'category', apiKey: 'category_name' },
         { id: 'qe-weight', key: 'weight', apiKey: 'weight_grams', isNumber: true },
         { id: 'qe-verify', key: 'verify', apiKey: 'weight_to_verify', isCheckbox: true },
         { id: 'qe-note', key: 'note', apiKey: 'note' },
