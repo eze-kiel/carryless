@@ -1548,10 +1548,14 @@ function openQuickEditPopover(itemId, event) {
         }
         if (left < 10) left = 10;
 
-        let top = rect.top + window.scrollY;
-        if (top + 400 > window.innerHeight + window.scrollY) {
-            top = Math.max(10, window.innerHeight + window.scrollY - 420);
+        // For fixed positioning, use viewport-relative coordinates
+        const popoverHeight = 420; // Approximate height
+        let top = rect.top;
+        // Ensure popover stays within viewport
+        if (top + popoverHeight > window.innerHeight - 20) {
+            top = Math.max(20, window.innerHeight - popoverHeight - 20);
         }
+        if (top < 20) top = 20;
 
         popover.style.top = top + 'px';
         popover.style.left = left + 'px';
@@ -2708,12 +2712,14 @@ async function saveFullEdit(event) {
 
 /* Quick Edit Popover */
 .quick-edit-popover {
-    position: absolute;
+    position: fixed;
     background: #fff;
     border: 1px solid #dee2e6;
     border-radius: 8px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
     width: 340px;
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
     z-index: 1000;
     display: none;
     animation: popoverFadeIn 0.15s ease-out;
