@@ -1548,8 +1548,12 @@ function openQuickEditPopover(itemId, event) {
         }
         if (left < 10) left = 10;
 
+        // Show popover off-screen to measure its height
+        popover.style.visibility = 'hidden';
+        popover.style.display = 'block';
+        const popoverHeight = popover.offsetHeight;
+
         // For fixed positioning, use viewport-relative coordinates
-        const popoverHeight = 420; // Approximate height
         let top = rect.top;
         // Ensure popover stays within viewport
         if (top + popoverHeight > window.innerHeight - 20) {
@@ -1559,9 +1563,13 @@ function openQuickEditPopover(itemId, event) {
 
         popover.style.top = top + 'px';
         popover.style.left = left + 'px';
+        popover.style.visibility = 'visible';
     }
 
-    popover.style.display = 'block';
+    // Mobile: show popover (already positioned via CSS)
+    if (window.innerWidth < 768) {
+        popover.style.display = 'block';
+    }
 
     // Focus first field
     setTimeout(() => document.getElementById('qe-name').focus(), 100);
@@ -2718,8 +2726,6 @@ async function saveFullEdit(event) {
     border-radius: 8px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
     width: 340px;
-    max-height: calc(100vh - 40px);
-    overflow-y: auto;
     z-index: 1000;
     display: none;
     animation: popoverFadeIn 0.15s ease-out;
