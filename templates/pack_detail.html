@@ -544,6 +544,7 @@ const availableItems = [
         description: "{{.Note}}",
         category: "{{.Category.Name}}",
         weight: {{.WeightGrams}},
+        verify: {{.WeightToVerify}},
         inPack: {{if index $.ItemsInPack .ID}}true{{else}}false{{end}}
     },
     {{end}}
@@ -1820,13 +1821,13 @@ function updateItemDisplay(itemId, updatedItem) {
 
 // Full Edit Modal Functions
 function openFullEditModal() {
+    // Save itemId before closing popover (which clears currentEditItemId)
+    const itemId = currentEditItemId;
     closeQuickEditPopover();
 
-    const item = availableItems.find(i => i.id === currentEditItemId);
+    const item = availableItems.find(i => i.id === itemId);
     if (!item) return;
 
-    // Re-set currentEditItemId since closeQuickEditPopover clears it
-    const itemId = item.id;
     currentEditItemId = itemId;
 
     document.getElementById('fullEditTitle').textContent = `Edit: ${item.name}`;
