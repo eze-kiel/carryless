@@ -1,0 +1,917 @@
+{{define "public_trip.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}}</title>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-gpx@1.7.0/gpx.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    {{template "header" .}}
+
+    <main class="main">
+        <div class="trip-detail-page">
+            <div class="trip-header-public">
+                <h1>{{.Trip.Name}}</h1>
+                <div class="trip-header-meta">
+                    <span class="status-badge status-public"><i class="fas fa-globe"></i> Public</span>
+                    {{if and .Trip.StartDate .Trip.EndDate}}
+                        <span class="separator">·</span>
+                        <span><i class="fas fa-calendar"></i> {{.Trip.StartDate.Format "Jan 2"}} - {{.Trip.EndDate.Format "Jan 2, 2006"}}</span>
+                    {{else if .Trip.StartDate}}
+                        <span class="separator">·</span>
+                        <span><i class="fas fa-calendar"></i> {{.Trip.StartDate.Format "Jan 2, 2006"}}</span>
+                    {{end}}
+                    {{if .Trip.Location}}
+                        <span class="separator">·</span>
+                        <span><i class="fas fa-map-marker-alt"></i> {{.Trip.Location}}</span>
+                    {{end}}
+                </div>
+            </div>
+
+            {{if .Trip.Description}}
+                <section class="trip-section">
+                    <div class="trip-description-clean">
+                        <p>{{.Trip.Description}}</p>
+                    </div>
+                </section>
+            {{end}}
+
+        <!-- Associated Packs -->
+        {{$hasPublicPacks := false}}
+        {{range .Trip.Packs}}
+            {{if .IsPublic}}
+                {{$hasPublicPacks = true}}
+            {{end}}
+        {{end}}
+        {{if $hasPublicPacks}}
+            <section class="trip-section">
+                <div class="section-header">
+                    <h2>Associated Packs</h2>
+                </div>
+                <div class="packs-list-clean">
+                    {{range .Trip.Packs}}
+                        {{if .IsPublic}}
+                            <div class="pack-item-clean">
+                                <a href="{{if .ShortID}}/p/{{.ShortID}}{{else}}/p/packs/{{.ID}}{{end}}" class="pack-link-clean">
+                                    <i class="fas fa-backpack pack-icon"></i>
+                                    <span class="pack-name">{{.Name}}</span>
+                                </a>
+                            </div>
+                        {{end}}
+                    {{end}}
+                </div>
+            </section>
+        {{end}}
+
+        <!-- Trip Checklist -->
+        {{if .Trip.ChecklistItems}}
+            <section class="trip-section">
+                <div class="section-header">
+                    <h2>Trip Checklist</h2>
+                </div>
+                <ul class="checklist-items-clean">
+                    {{range .Trip.ChecklistItems}}
+                        <li class="checklist-item-clean-readonly">
+                            <span class="checkbox-readonly {{if .IsChecked}}checked{{end}}">
+                                {{if .IsChecked}}<i class="fas fa-check"></i>{{end}}
+                            </span>
+                            <span class="{{if .IsChecked}}checked-text{{end}}">{{.Content}}</span>
+                        </li>
+                    {{end}}
+                </ul>
+            </section>
+        {{end}}
+
+        <!-- Transportation Timeline -->
+        {{if .Trip.TransportSteps}}
+            <section class="trip-section">
+                <div class="section-header">
+                    <h2>Transportation</h2>
+                </div>
+
+                {{$hasOutbound := false}}
+                {{$hasReturn := false}}
+                {{range .Trip.TransportSteps}}
+                    {{if eq .JourneyType "outbound"}}{{$hasOutbound = true}}{{end}}
+                    {{if eq .JourneyType "return"}}{{$hasReturn = true}}{{end}}
+                {{end}}
+
+                {{if $hasOutbound}}
+                    <div class="transport-journey">
+                        <div class="journey-header-readonly">
+                            <h3>Outbound Journey</h3>
+                        </div>
+                        <div class="timeline-container-clean">
+                            {{range .Trip.TransportSteps}}
+                                {{if eq .JourneyType "outbound"}}
+                                    <div class="timeline-step-clean {{if .TransportType}}transport-{{.TransportType}}{{end}}">
+                                        {{if .TransportType}}
+                                            <span class="transport-type-label">{{.TransportType | toUpper}}</span>
+                                        {{end}}
+                                        <div class="timeline-marker"></div>
+                                        <div class="timeline-content-readonly">
+                                            <div class="transport-route">
+                                                <div class="transport-leg">
+                                                    <strong>{{.DeparturePlace}}</strong>
+                                                    {{if .DepartureDatetime}}
+                                                        <small>{{.DepartureDatetime.Format "Jan 2, 15:04"}}</small>
+                                                    {{end}}
+                                                </div>
+                                                {{if .ArrivalPlace}}
+                                                    <div class="transport-arrow">→</div>
+                                                    <div class="transport-leg">
+                                                        <strong>{{.ArrivalPlace}}</strong>
+                                                        {{if .ArrivalDatetime}}
+                                                            <small>{{.ArrivalDatetime.Format "Jan 2, 15:04"}}</small>
+                                                        {{end}}
+                                                    </div>
+                                                {{end}}
+                                            </div>
+                                            {{if .TransportNumber}}
+                                                <span class="transport-badge">{{.TransportNumber}}</span>
+                                            {{end}}
+                                        </div>
+                                    </div>
+                                {{end}}
+                            {{end}}
+                        </div>
+                    </div>
+                {{end}}
+
+                {{if $hasReturn}}
+                    <div class="transport-journey">
+                        <div class="journey-header-readonly">
+                            <h3>Return Journey</h3>
+                        </div>
+                        <div class="timeline-container-clean">
+                            {{range .Trip.TransportSteps}}
+                                {{if eq .JourneyType "return"}}
+                                    <div class="timeline-step-clean {{if .TransportType}}transport-{{.TransportType}}{{end}}">
+                                        {{if .TransportType}}
+                                            <span class="transport-type-label">{{.TransportType | toUpper}}</span>
+                                        {{end}}
+                                        <div class="timeline-marker"></div>
+                                        <div class="timeline-content-readonly">
+                                            <div class="transport-route">
+                                                <div class="transport-leg">
+                                                    <strong>{{.DeparturePlace}}</strong>
+                                                    {{if .DepartureDatetime}}
+                                                        <small>{{.DepartureDatetime.Format "Jan 2, 15:04"}}</small>
+                                                    {{end}}
+                                                </div>
+                                                {{if .ArrivalPlace}}
+                                                    <div class="transport-arrow">→</div>
+                                                    <div class="transport-leg">
+                                                        <strong>{{.ArrivalPlace}}</strong>
+                                                        {{if .ArrivalDatetime}}
+                                                            <small>{{.ArrivalDatetime.Format "Jan 2, 15:04"}}</small>
+                                                        {{end}}
+                                                    </div>
+                                                {{end}}
+                                            </div>
+                                            {{if .TransportNumber}}
+                                                <span class="transport-badge">{{.TransportNumber}}</span>
+                                            {{end}}
+                                        </div>
+                                    </div>
+                                {{end}}
+                            {{end}}
+                        </div>
+                    </div>
+                {{end}}
+            </section>
+        {{end}}
+
+        <!-- GPX Map -->
+        {{if .Trip.GPXData}}
+            <section class="trip-section">
+                <div class="section-header">
+                    <h2>Route Map</h2>
+                    <a href="/t/{{.Trip.ShortID}}/gpx/download" class="btn-text btn-sm" download>
+                        <i class="fas fa-download"></i> Download GPX
+                    </a>
+                </div>
+                    <div class="gpx-content">
+                        <div class="gpx-stats-clean" id="gpx-stats" style="display: none;">
+                            <div class="trip-stat-item">
+                                <span class="trip-stat-value" id="gpx-distance">-</span>
+                                <span class="trip-stat-label">Distance</span>
+                            </div>
+                            <div class="trip-stat-item">
+                                <span class="trip-stat-value" id="gpx-elevation-gain">-</span>
+                                <span class="trip-stat-label">Elevation Gain</span>
+                            </div>
+                            <div class="trip-stat-item">
+                                <span class="trip-stat-value" id="gpx-elevation-loss">-</span>
+                                <span class="trip-stat-label">Elevation Loss</span>
+                            </div>
+                        </div>
+                        <div class="gpx-map-container">
+                            <div id="gpx-map"></div>
+                        </div>
+                        <div class="elevation-chart-wrapper">
+                            <div class="chart-header">
+                                <h4>Elevation Profile</h4>
+                            </div>
+                            <div class="elevation-chart-container">
+                                <canvas id="elevation-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+            </section>
+        {{end}}
+
+        <!-- Trip Notes -->
+        {{if .Trip.Notes}}
+            <section class="trip-section">
+                <div class="section-header">
+                    <h2>Trip Notes</h2>
+                </div>
+                <p class="notes-text">{{.Trip.Notes}}</p>
+            </section>
+        {{end}}
+
+        </div>
+    </main>
+
+    {{template "footer" .}}
+
+    <script src="/static/js/app.js"></script>
+
+    <script>
+    // GPX Map Initialization
+    {{if .Trip.GPXData}}
+    document.addEventListener('DOMContentLoaded', function() {
+        const map = L.map('gpx-map').setView([45.0, 6.0], 10);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Variable to hold the hover marker
+        let elevationHoverMarker = null;
+
+        // Marker management functions
+        function showElevationMarker(latlng) {
+            if (!elevationHoverMarker) {
+                // Create marker with distinct styling (different from route markers)
+                elevationHoverMarker = L.circleMarker(latlng, {
+                    radius: 8,
+                    fillColor: '#ff4444',
+                    color: '#ffffff',
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.9
+                }).addTo(map);
+            } else {
+                // Update existing marker position
+                elevationHoverMarker.setLatLng(latlng);
+            }
+        }
+
+        function hideElevationMarker() {
+            if (elevationHoverMarker) {
+                map.removeLayer(elevationHoverMarker);
+                elevationHoverMarker = null;
+            }
+        }
+
+        // Define createElevationChart function here so it has access to map and marker functions
+        function createElevationChart(gpxLayer) {
+            // Get track points with coordinates
+            // leaflet-gpx creates a FeatureGroup containing polyline layers
+            const layers = gpxLayer.getLayers();
+            if (!layers || layers.length === 0) return;
+
+            // Find the actual track polyline (may be nested in a LayerGroup)
+            let polyline = null;
+
+            // First, check if layers[0] is directly a polyline
+            if (layers[0] && typeof layers[0].getLatLngs === 'function') {
+                polyline = layers[0];
+            } else if (layers[0] && typeof layers[0].getLayers === 'function') {
+                // It's a LayerGroup, search for the polyline inside
+                const nestedLayers = layers[0].getLayers();
+                for (let layer of nestedLayers) {
+                    if (typeof layer.getLatLngs === 'function') {
+                        polyline = layer;
+                        break;
+                    }
+                }
+            }
+
+            if (!polyline) return;
+
+            const points = polyline.getLatLngs();
+            if (!points || points.length === 0) return;
+
+            // Get elevation data (which has distance and elevation)
+            const elevationData = gpxLayer.get_elevation_data();
+            if (!elevationData || elevationData.length === 0) return;
+
+            // Build combined data: [distance, elevation, lat, lng]
+            // Combine lat/lng from points with distance/elevation from elevationData
+            const trackData = [];
+            const minLength = Math.min(points.length, elevationData.length);
+
+            for (let i = 0; i < minLength; i++) {
+                const point = points[i];
+                const elevPoint = elevationData[i];
+
+                // elevPoint format: [distance_meters, elevation_meters, description]
+                trackData.push([
+                    elevPoint[0],                 // [0] distance in meters (from elevation data)
+                    elevPoint[1],                 // [1] elevation in meters (from elevation data)
+                    point.lat,                    // [2] latitude (from polyline)
+                    point.lng                     // [3] longitude (from polyline)
+                ]);
+            }
+
+            // Sample the data if there are too many points (for performance)
+            let sampledData = trackData;
+            if (trackData.length > 200) {
+                const step = Math.ceil(trackData.length / 200);
+                sampledData = trackData.filter((_, index) => index % step === 0);
+            }
+
+            // Create labels in km using actual distances from the data
+            const labels = sampledData.map(point => (point[0] / 1000).toFixed(1)); // Convert m to km
+            const elevations = sampledData.map(point => point[1]); // Elevation unchanged
+
+            const ctx = document.getElementById('elevation-chart').getContext('2d');
+            const elevationChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Elevation',
+                        data: elevations,
+                        fill: true,
+                        backgroundColor: 'rgba(0, 74, 173, 0.1)',
+                        borderColor: '#004aad',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    aspectRatio: 4,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            enabled: true,
+                            callbacks: {
+                                title: function(context) {
+                                    return context[0].label + ' km';
+                                },
+                                label: function(context) {
+                                    return 'Elevation: ' + Math.round(context.parsed.y) + ' m';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Distance (km)',
+                                font: {
+                                    size: 11,
+                                    weight: 500
+                                },
+                                color: '#6b7280'
+                            },
+                            ticks: {
+                                font: {
+                                    size: 10
+                                },
+                                color: '#6b7280',
+                                maxRotation: 0,
+                                autoSkipPadding: 20
+                            },
+                            grid: {
+                                display: false
+                            }
+                        },
+                        y: {
+                            display: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'Elevation (m)',
+                                font: {
+                                    size: 11,
+                                    weight: 500
+                                },
+                                color: '#6b7280'
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return Math.round(value) + 'm';
+                                },
+                                font: {
+                                    size: 10
+                                },
+                                color: '#6b7280'
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            }
+                        }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    }
+                }
+            });
+
+            // Add hover interaction for map marker
+            const canvas = document.getElementById('elevation-chart');
+            canvas.addEventListener('mousemove', function(e) {
+                // Get active elements at cursor position
+                const activePoints = elevationChart.getElementsAtEventForMode(
+                    e,
+                    'index',
+                    { intersect: false },
+                    false
+                );
+
+                if (activePoints.length > 0) {
+                    const pointIndex = activePoints[0].index;
+
+                    // Get coordinates from sampledData
+                    if (pointIndex >= 0 && pointIndex < sampledData.length) {
+                        const point = sampledData[pointIndex];
+                        // New format: [distance, elevation, lat, lng]
+                        // point[0] = distance, point[1] = elevation, point[2] = lat, point[3] = lng
+                        if (point.length >= 4) {
+                            const lat = point[2]; // Latitude at index 2
+                            const lng = point[3]; // Longitude at index 3
+                            const latlng = L.latLng(lat, lng);
+                            showElevationMarker(latlng);
+                        }
+                    }
+                }
+            });
+
+            // Remove marker when mouse leaves chart
+            canvas.addEventListener('mouseleave', function() {
+                hideElevationMarker();
+            });
+        }
+
+        const gpxData = {{.Trip.GPXData}};
+        new L.GPX(gpxData, {
+            async: true,
+            polyline_options: {
+                color: '#004aad',
+                weight: 3,
+                opacity: 0.8
+            },
+            marker_options: {
+                startIconUrl: null,
+                endIconUrl: null,
+                shadowUrl: null,
+                wptIconUrls: {
+                    '': 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png'
+                }
+            }
+        }).on('loaded', function(e) {
+            map.fitBounds(e.target.getBounds());
+
+            // Extract GPX statistics
+            const distanceKm = (e.target.get_distance() / 1000).toFixed(2);
+            const elevationGain = Math.round(e.target.get_elevation_gain());
+            const elevationLoss = Math.round(e.target.get_elevation_loss());
+
+            // Display stats
+            document.getElementById('gpx-stats').style.display = 'flex';
+            document.getElementById('gpx-distance').textContent = distanceKm + ' km';
+            document.getElementById('gpx-elevation-gain').textContent = elevationGain + ' m';
+            document.getElementById('gpx-elevation-loss').textContent = elevationLoss + ' m';
+
+            // Create elevation chart
+            createElevationChart(e.target);
+        }).addTo(map);
+    });
+    {{end}}
+    </script>
+
+    <style>
+    .trip-header-public {
+        margin-bottom: var(--space-6);
+    }
+
+    .trip-header-public h1 {
+        font-size: var(--font-size-2xl);
+        font-weight: 600;
+        margin-bottom: var(--space-2);
+        color: var(--color-gray-900);
+    }
+
+    .trip-header-meta {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--color-gray-600);
+        font-size: 0.875rem;
+    }
+
+    .trip-header-meta i {
+        margin-right: 0.25rem;
+    }
+
+    .trip-header-meta .separator {
+        color: var(--color-gray-400);
+    }
+
+    .trip-description-clean {
+        padding: 1rem 0;
+    }
+
+    .trip-description-clean p {
+        line-height: 1.6;
+        color: var(--color-gray-700);
+    }
+
+    .trip-section {
+        margin-bottom: 1.5rem;
+    }
+
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid var(--color-gray-200);
+    }
+
+    .section-header h2 {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: var(--color-gray-800);
+        margin: 0;
+    }
+
+    .packs-list-clean {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .pack-item-clean {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem;
+        border-radius: 0.5rem;
+    }
+
+    .pack-link-clean {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        text-decoration: none;
+        color: var(--color-gray-900);
+        flex: 1;
+        font-weight: 500;
+        font-size: 0.9375rem;
+    }
+
+    .pack-icon {
+        color: var(--color-gray-500);
+        font-size: 1rem;
+    }
+
+    .pack-name {
+        flex: 1;
+    }
+
+    .checklist-items-clean {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .checklist-item-clean-readonly {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem;
+        border-radius: 0.5rem;
+    }
+
+    .trip-info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .trip-info-item label {
+        font-weight: 600;
+        color: var(--color-gray-600);
+        font-size: 0.875rem;
+        display: block;
+        margin-bottom: 0.25rem;
+    }
+
+    .trip-description {
+        margin-top: 1.5rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--color-gray-200);
+    }
+
+    .trip-description label {
+        font-weight: 600;
+        color: var(--color-gray-600);
+        font-size: 0.875rem;
+        display: block;
+        margin-bottom: 0.5rem;
+    }
+
+    .packs-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .pack-item-readonly {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem;
+        border: 1px solid var(--color-gray-200);
+        border-radius: 8px;
+    }
+
+    .checklist-items-readonly {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .checklist-item-readonly {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem;
+        border-bottom: 1px solid var(--color-gray-200);
+    }
+
+    .checklist-item-readonly:last-child {
+        border-bottom: none;
+    }
+
+    .checkbox-readonly {
+        width: 20px;
+        height: 20px;
+        border: 2px solid var(--color-gray-400);
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .checkbox-readonly.checked {
+        background: var(--color-primary);
+        border-color: var(--color-primary);
+        color: white;
+    }
+
+    .checked-text {
+        text-decoration: line-through;
+        color: var(--color-gray-500);
+    }
+
+    .transport-journey {
+        margin-bottom: 2rem;
+    }
+
+    .journey-header-readonly {
+        margin-bottom: 1rem;
+    }
+
+    .journey-header-readonly h3 {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--color-gray-800);
+        margin: 0;
+    }
+
+    .timeline-container-clean {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .timeline-step-clean {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem;
+        border-radius: 0.5rem;
+    }
+
+    .transport-type-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--color-gray-600);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        flex-shrink: 0;
+        min-width: 50px;
+        text-align: right;
+    }
+
+    .timeline-marker {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--color-gray-500);
+        flex-shrink: 0;
+    }
+
+    .transport-train .timeline-marker { background: #198754; }
+    .transport-plane .timeline-marker { background: #dc3545; }
+    .transport-bus .timeline-marker { background: #0d6efd; }
+    .transport-other .timeline-marker { background: #6c757d; }
+
+    .transport-train .transport-type-label { color: #198754; }
+    .transport-plane .transport-type-label { color: #dc3545; }
+    .transport-bus .transport-type-label { color: #0d6efd; }
+    .transport-other .transport-type-label { color: #6c757d; }
+
+    .timeline-content-readonly {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        flex: 1;
+        flex-wrap: wrap;
+    }
+
+    .transport-route {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex: 1;
+        flex-wrap: wrap;
+    }
+
+    .transport-leg {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .transport-leg strong {
+        font-size: 0.875rem;
+        color: var(--color-gray-900);
+    }
+
+    .transport-leg small {
+        color: var(--color-gray-600);
+        font-size: 0.75rem;
+    }
+
+    .transport-arrow {
+        font-size: 1.125rem;
+        color: var(--color-gray-400);
+        font-weight: 600;
+        padding: 0 0.25rem;
+    }
+
+    .transport-badge {
+        padding: 2px 8px;
+        background: var(--color-gray-100);
+        border-radius: 4px;
+        font-size: 0.75rem;
+        color: var(--color-gray-700);
+        font-weight: 500;
+    }
+
+    .notes-text {
+        white-space: pre-wrap;
+        line-height: 1.6;
+    }
+
+    /* GPX Section */
+    .gpx-content {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .gpx-stats-clean {
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+        gap: 3rem;
+        margin-bottom: 0;
+        flex-wrap: nowrap;
+    }
+
+    .trip-stat-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.25rem;
+        flex-shrink: 0;
+    }
+
+    .trip-stat-value {
+        font-size: 1.875rem;
+        font-weight: 600;
+        color: var(--color-gray-900);
+        line-height: 1;
+    }
+
+    .trip-stat-label {
+        font-size: 0.75rem;
+        color: var(--color-gray-600);
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        white-space: nowrap;
+    }
+
+    @media (max-width: 640px) {
+        .gpx-stats-clean {
+            gap: 2rem;
+        }
+
+        .trip-stat-value {
+            font-size: 1.5rem;
+        }
+    }
+
+    .gpx-map-container {
+        border-radius: 0.5rem;
+        overflow: hidden;
+        border: 1px solid var(--color-gray-200);
+        position: relative;
+        z-index: 1;
+    }
+
+    #gpx-map {
+        height: 400px;
+        width: 100%;
+    }
+
+    .elevation-chart-wrapper {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .chart-header {
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid var(--color-gray-200);
+    }
+
+    .chart-header h4 {
+        font-size: 0.9375rem;
+        font-weight: 600;
+        color: var(--color-gray-800);
+        margin: 0;
+    }
+
+    .elevation-chart-container {
+        background: white;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        border: 1px solid var(--color-gray-200);
+    }
+
+    #elevation-chart {
+        max-height: 180px;
+    }
+
+    @media (max-width: 768px) {
+        .gpx-stats-clean {
+            grid-template-columns: 1fr;
+        }
+
+        #gpx-map {
+            height: 300px;
+        }
+    }
+    </style>
+</body>
+</html>
+{{end}}

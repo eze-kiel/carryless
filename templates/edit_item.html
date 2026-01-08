@@ -11,30 +11,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <header class="header">
-        <nav class="nav">
-            <div class="nav-brand">
-                <a href="/">Carryless</a>
-            </div>
-            <div class="nav-links">
-                {{if .User}}
-                    <a href="/inventory">Items</a>
-                    <a href="/categories">Categories</a>
-                    <a href="/packs">Packs</a>
-                    <a href="/account">Account</a>
-                    {{if .User.IsAdmin}}
-                        <a href="/admin">Admin</a>
-                    {{end}}
-                    <form class="logout-form" action="/logout" method="POST">
-                        <button type="submit" class="btn btn-secondary">Logout</button>
-                    </form>
-                {{else}}
-                    <a href="/login">Login</a>
-                    <a href="/register">Register</a>
-                {{end}}
-            </div>
-        </nav>
-    </header>
+    {{template "header" .}}
 
     <main class="main">
         {{if .Error}}

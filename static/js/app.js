@@ -21,14 +21,14 @@ async function fetchCSRFToken() {
 function showModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
-        modal.style.display = 'flex';
+        modal.classList.add('active');
     }
 }
 
 function hideModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
-        modal.style.display = 'none';
+        modal.classList.remove('active');
         // Reset form if it exists
         const form = modal.querySelector('form');
         if (form) {

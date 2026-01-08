@@ -91,6 +91,39 @@ func SetupRoutes(r *gin.Engine, db *sql.DB, emailService *email.Service, cfg *co
 		activated.DELETE("/packs/:id/labels/:label_id", handleDeletePackLabel)
 		activated.POST("/packs/:id/items/:item_id/labels", handleAssignLabelToItem)
 		activated.DELETE("/packs/:id/items/:item_id/labels/:label_id", handleRemoveLabelFromItem)
+
+		// Trip routes
+		activated.GET("/trips", handleTrips)
+		activated.GET("/trips/new", handleNewTripPage)
+		activated.POST("/trips", handleCreateTrip)
+		activated.GET("/trips/:id", handleTripDetail)
+		activated.GET("/trips/:id/edit", handleEditTripPage)
+		activated.POST("/trips/:id", handleUpdateTrip)
+		activated.POST("/trips/:id/delete", handleDeleteTrip)
+		activated.POST("/trips/:id/archive", handleArchiveTrip)
+		activated.POST("/trips/:id/notes", handleUpdateTripNotes)
+
+		// Pack associations
+		activated.POST("/trips/:id/packs", handleAddPackToTrip)
+		activated.DELETE("/trips/:id/packs/:pack_id", handleRemovePackFromTrip)
+
+		// Checklist API
+		activated.POST("/trips/:id/checklist", handleAddChecklistItem)
+		activated.PUT("/trips/:id/checklist/:item_id", handleUpdateChecklistItem)
+		activated.DELETE("/trips/:id/checklist/:item_id", handleDeleteChecklistItem)
+		activated.POST("/trips/:id/checklist/:item_id/toggle", handleToggleChecklistItem)
+		activated.POST("/trips/:id/checklist/reorder", handleReorderChecklist)
+
+		// Transport timeline API
+		activated.POST("/trips/:id/transport", handleAddTransportStep)
+		activated.PUT("/trips/:id/transport/:step_id", handleUpdateTransportStep)
+		activated.DELETE("/trips/:id/transport/:step_id", handleDeleteTransportStep)
+		activated.POST("/trips/:id/transport/reorder", handleReorderTransportSteps)
+
+		// GPX upload
+		activated.POST("/trips/:id/gpx", handleUploadGPX)
+		activated.DELETE("/trips/:id/gpx", handleDeleteGPX)
+		activated.GET("/trips/:id/gpx/download", handleDownloadGPX)
 	}
 
 	// Admin routes
@@ -110,7 +143,11 @@ func SetupRoutes(r *gin.Engine, db *sql.DB, emailService *email.Service, cfg *co
 	r.GET("/p/:id/checklist", middleware.AuthOptional(db, cfg), handlePackChecklistByShortID)
 	r.GET("/p/packs/:id", middleware.AuthOptional(db, cfg), handlePublicPack)
 	r.GET("/packs/:id/checklist", middleware.AuthOptional(db, cfg), handlePackChecklist)
-	
+
+	// Public trip route
+	r.GET("/t/:id", middleware.AuthOptional(db, cfg), handlePublicTripByShortID)
+	r.GET("/t/:id/gpx/download", middleware.AuthOptional(db, cfg), handlePublicDownloadGPX)
+
 	r.NoRoute(handle404)
 }
 

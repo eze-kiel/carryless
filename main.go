@@ -65,6 +65,9 @@ func main() {
 		"sub": func(a, b int) int {
 			return a - b
 		},
+		"toUpper": func(s string) string {
+			return strings.ToUpper(s)
+		},
 		"groupByCategory": func(items []models.PackItem) map[string][]models.PackItem {
 			groups := make(map[string][]models.PackItem)
 			for _, item := range items {

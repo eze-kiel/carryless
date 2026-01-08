@@ -1,0 +1,101 @@
+{{define "edit_trip.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}}</title>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    {{template "header" .}}
+
+    <main class="main">
+        {{if .Error}}
+            <div class="alert alert-error">{{.Error}}</div>
+        {{end}}
+
+        <div class="page-header">
+            <h1>Edit Trip</h1>
+            <a href="/trips/{{.Trip.ID}}" class="btn btn-secondary">Back to Trip</a>
+        </div>
+
+        <div class="form-container">
+            <form action="/trips/{{.Trip.ID}}" method="POST" class="form">
+                <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+
+                <div class="form-group">
+                    <label for="name">Trip Name *</label>
+                    <input type="text" id="name" name="name" required maxlength="200" value="{{.Trip.Name}}" placeholder="Enter trip name" autofocus>
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <textarea id="description" name="description" rows="4" placeholder="Describe your trip">{{if .Trip.Description}}{{.Trip.Description}}{{end}}</textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="location">Location</label>
+                    <input type="text" id="location" name="location" maxlength="200" value="{{if .Trip.Location}}{{.Trip.Location}}{{end}}" placeholder="Where are you going?">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="start_date">Start Date</label>
+                        <input type="date" id="start_date" name="start_date" value="{{if .Trip.StartDate}}{{.Trip.StartDate.Format "2006-01-02"}}{{end}}">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="end_date">End Date</label>
+                        <input type="date" id="end_date" name="end_date" value="{{if .Trip.EndDate}}{{.Trip.EndDate.Format "2006-01-02"}}{{end}}">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="is_public" value="true" {{if .Trip.IsPublic}}checked{{end}}>
+                        Make this trip public (allows read-only sharing with others)
+                    </label>
+                    {{if .Trip.IsPublic}}
+                        {{if .Trip.ShortID}}
+                            <small class="form-help">Public URL: <a href="/t/{{.Trip.ShortID}}" target="_blank">/t/{{.Trip.ShortID}}</a></small>
+                        {{end}}
+                    {{end}}
+                </div>
+
+                <div class="form-actions">
+                    <a href="/trips/{{.Trip.ID}}" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    {{template "footer" .}}
+
+    <script src="/static/js/app.js"></script>
+
+    <style>
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+
+    @media (max-width: 768px) {
+        .form-row {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .form-help {
+        display: block;
+        margin-top: 0.5rem;
+        color: var(--color-gray-600);
+    }
+    </style>
+</body>
+</html>
+{{end}}

@@ -1,0 +1,1612 @@
+{{define "trip_detail.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}}</title>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-gpx@1.7.0/gpx.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    {{template "header" .}}
+
+    <main class="main">
+        {{if .Error}}
+            <div class="alert alert-error">{{.Error}}</div>
+        {{end}}
+
+        <div class="trip-detail-page">
+            <div class="trip-header">
+                <div class="trip-header-top">
+                    <h1>{{.Trip.Name}}</h1>
+                    <a href="/trips/{{.Trip.ID}}/edit" class="btn btn-primary">Edit Trip</a>
+                </div>
+                <div class="trip-header-meta">
+                    {{if and .Trip.StartDate .Trip.EndDate}}
+                        <span><i class="fas fa-calendar"></i> {{.Trip.StartDate.Format "Jan 2"}} - {{.Trip.EndDate.Format "Jan 2, 2006"}}</span>
+                    {{else if .Trip.StartDate}}
+                        <span><i class="fas fa-calendar"></i> {{.Trip.StartDate.Format "Jan 2, 2006"}}</span>
+                    {{end}}
+                    {{if .Trip.Location}}
+                        <span class="separator">·</span>
+                        <span><i class="fas fa-map-marker-alt"></i> {{.Trip.Location}}</span>
+                    {{end}}
+                    <span class="separator">·</span>
+                    {{if .Trip.IsArchived}}
+                        <span class="status-badge status-archived">Archived</span>
+                    {{else}}
+                        <span class="status-badge status-active">Active</span>
+                    {{end}}
+                    {{if .Trip.IsPublic}}
+                        <span class="status-badge status-public">Public</span>
+                    {{else}}
+                        <span class="status-badge status-private">Private</span>
+                    {{end}}
+                    {{if .Trip.IsPublic}}
+                        {{if .Trip.ShortID}}
+                            <span class="separator">·</span>
+                            <a href="/t/{{.Trip.ShortID}}" target="_blank" class="view-public-link"><i class="fas fa-external-link-alt"></i> View Public</a>
+                        {{end}}
+                    {{end}}
+                </div>
+            </div>
+
+            {{if .Trip.Description}}
+                <section class="trip-section">
+                    <div class="trip-description-clean">
+                        <p>{{.Trip.Description}}</p>
+                    </div>
+                </section>
+            {{end}}
+
+        <!-- Associated Packs -->
+        <section class="trip-section">
+            <div class="section-header">
+                <h2>Associated Packs</h2>
+                <button onclick="showModal('addPackModal')" class="btn-text btn-sm">
+                    <i class="fas fa-plus"></i> Add Pack
+                </button>
+            </div>
+            {{if .Trip.Packs}}
+                <div class="packs-list-clean">
+                    {{range .Trip.Packs}}
+                        <div class="pack-item-clean">
+                            <a href="/packs/{{.ID}}" class="pack-link-clean">
+                                <i class="fas fa-backpack pack-icon"></i>
+                                <span class="pack-name">{{.Name}}</span>
+                            </a>
+                            <button onclick="removePack('{{.ID}}')" class="btn-icon-minimal" title="Remove pack">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    {{end}}
+                </div>
+            {{else}}
+                <p class="empty-message">No packs associated with this trip yet.</p>
+            {{end}}
+        </section>
+
+        <!-- Trip Checklist -->
+        <section class="trip-section">
+            <div class="section-header">
+                <h2>Trip Checklist</h2>
+                <button onclick="showAddChecklistItem()" class="btn-text btn-sm">
+                    <i class="fas fa-plus"></i> Add Item
+                </button>
+            </div>
+            <div id="checklist-container">
+                {{if .Trip.ChecklistItems}}
+                    <ul class="checklist-items-clean">
+                        {{range .Trip.ChecklistItems}}
+                            <li class="checklist-item-clean" data-item-id="{{.ID}}">
+                                <div class="checklist-main">
+                                    <input type="checkbox" id="check-{{.ID}}" {{if .IsChecked}}checked{{end}} onchange="toggleChecklistItem({{.ID}})">
+                                    <label for="check-{{.ID}}" class="checklist-content">{{.Content}}</label>
+                                </div>
+                                <div class="checklist-actions">
+                                    <button onclick="editChecklistItem({{.ID}}, '{{.Content}}', {{.IsChecked}})" class="btn-icon-minimal" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button onclick="deleteChecklistItem({{.ID}})" class="btn-icon-minimal" title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </li>
+                        {{end}}
+                    </ul>
+                {{else}}
+                    <p class="empty-message">No checklist items yet. Add items to keep track of your trip preparations.</p>
+                {{end}}
+            </div>
+        </section>
+
+        <!-- Transportation Timeline -->
+        <section class="trip-section">
+            <div class="section-header">
+                <h2>Transportation</h2>
+            </div>
+
+            <!-- Outbound Journey -->
+            <div class="transport-journey">
+                <div class="journey-header">
+                    <h3>Outbound Journey</h3>
+                    <button onclick="showAddTransportStep('outbound')" class="btn-text btn-sm">
+                        <i class="fas fa-plus"></i> Add Step
+                    </button>
+                </div>
+                <div class="timeline-container-clean" id="outbound-timeline">
+                    {{$hasOutbound := false}}
+                    {{range .Trip.TransportSteps}}
+                        {{if eq .JourneyType "outbound"}}
+                            {{$hasOutbound = true}}
+                        {{end}}
+                    {{end}}
+                    {{if $hasOutbound}}
+                        {{range .Trip.TransportSteps}}
+                            {{if eq .JourneyType "outbound"}}
+                                <div class="timeline-step-clean {{if .TransportType}}transport-{{.TransportType}}{{end}}" data-step-id="{{.ID}}">
+                                    {{if .TransportType}}
+                                        <span class="transport-type-label">{{.TransportType | toUpper}}</span>
+                                    {{end}}
+                                    <div class="timeline-marker"></div>
+                                    <div class="timeline-content">
+                                        <div class="transport-route">
+                                            <div class="transport-leg">
+                                                <strong>{{.DeparturePlace}}</strong>
+                                                {{if .DepartureDatetime}}
+                                                    <small>{{.DepartureDatetime.Format "Jan 2, 15:04"}}</small>
+                                                {{end}}
+                                            </div>
+                                            {{if .ArrivalPlace}}
+                                                <div class="transport-arrow">→</div>
+                                                <div class="transport-leg">
+                                                    <strong>{{.ArrivalPlace}}</strong>
+                                                    {{if .ArrivalDatetime}}
+                                                        <small>{{.ArrivalDatetime.Format "Jan 2, 15:04"}}</small>
+                                                    {{end}}
+                                                </div>
+                                            {{end}}
+                                        </div>
+                                        {{if .TransportNumber}}
+                                            <span class="transport-badge">{{.TransportNumber}}</span>
+                                        {{end}}
+                                    </div>
+                                    <button onclick="deleteTransportStep({{.ID}})" class="btn-icon-minimal" title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            {{end}}
+                        {{end}}
+                    {{else}}
+                        <p class="empty-message">No outbound journey steps yet.</p>
+                    {{end}}
+                </div>
+            </div>
+
+            <!-- Return Journey -->
+            <div class="transport-journey">
+                <div class="journey-header">
+                    <h3>Return Journey</h3>
+                    <button onclick="showAddTransportStep('return')" class="btn-text btn-sm">
+                        <i class="fas fa-plus"></i> Add Step
+                    </button>
+                </div>
+                <div class="timeline-container-clean" id="return-timeline">
+                    {{$hasReturn := false}}
+                    {{range .Trip.TransportSteps}}
+                        {{if eq .JourneyType "return"}}
+                            {{$hasReturn = true}}
+                        {{end}}
+                    {{end}}
+                    {{if $hasReturn}}
+                        {{range .Trip.TransportSteps}}
+                            {{if eq .JourneyType "return"}}
+                                <div class="timeline-step-clean {{if .TransportType}}transport-{{.TransportType}}{{end}}" data-step-id="{{.ID}}">
+                                    {{if .TransportType}}
+                                        <span class="transport-type-label">{{.TransportType | toUpper}}</span>
+                                    {{end}}
+                                    <div class="timeline-marker"></div>
+                                    <div class="timeline-content">
+                                        <div class="transport-route">
+                                            <div class="transport-leg">
+                                                <strong>{{.DeparturePlace}}</strong>
+                                                {{if .DepartureDatetime}}
+                                                    <small>{{.DepartureDatetime.Format "Jan 2, 15:04"}}</small>
+                                                {{end}}
+                                            </div>
+                                            {{if .ArrivalPlace}}
+                                                <div class="transport-arrow">→</div>
+                                                <div class="transport-leg">
+                                                    <strong>{{.ArrivalPlace}}</strong>
+                                                    {{if .ArrivalDatetime}}
+                                                        <small>{{.ArrivalDatetime.Format "Jan 2, 15:04"}}</small>
+                                                    {{end}}
+                                                </div>
+                                            {{end}}
+                                        </div>
+                                        {{if .TransportNumber}}
+                                            <span class="transport-badge">{{.TransportNumber}}</span>
+                                        {{end}}
+                                    </div>
+                                    <button onclick="deleteTransportStep({{.ID}})" class="btn-icon-minimal" title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            {{end}}
+                        {{end}}
+                    {{else}}
+                        <p class="empty-message">No return journey steps yet.</p>
+                    {{end}}
+                </div>
+            </div>
+        </section>
+
+        <!-- GPX Map -->
+        <section class="trip-section">
+            <div class="section-header">
+                <h2>Route Map</h2>
+                {{if .Trip.GPXData}}
+                    <div class="button-group">
+                        <a href="/trips/{{.Trip.ID}}/gpx/download" class="btn-text btn-sm" download>
+                            <i class="fas fa-download"></i> Download GPX
+                        </a>
+                        <button onclick="deleteGPX()" class="btn-text btn-sm" style="color: var(--color-danger);">
+                            <i class="fas fa-trash"></i> Remove GPX
+                        </button>
+                    </div>
+                {{else}}
+                    <button onclick="document.getElementById('gpxFileInput').click()" class="btn-text btn-sm">
+                        <i class="fas fa-upload"></i> Upload GPX
+                    </button>
+                    <input type="file" id="gpxFileInput" accept=".gpx" style="display: none;" onchange="uploadGPX(this.files[0])">
+                {{end}}
+            </div>
+            {{if .Trip.GPXData}}
+                <div class="gpx-content">
+                    <div class="gpx-stats-clean" id="gpx-stats" style="display: none;">
+                        <div class="trip-stat-item">
+                            <span class="trip-stat-value" id="gpx-distance">-</span>
+                            <span class="trip-stat-label">Distance</span>
+                        </div>
+                        <div class="trip-stat-item">
+                            <span class="trip-stat-value" id="gpx-elevation-gain">-</span>
+                            <span class="trip-stat-label">Elevation Gain</span>
+                        </div>
+                        <div class="trip-stat-item">
+                            <span class="trip-stat-value" id="gpx-elevation-loss">-</span>
+                            <span class="trip-stat-label">Elevation Loss</span>
+                        </div>
+                    </div>
+                    <div class="gpx-map-container">
+                        <div id="gpx-map"></div>
+                    </div>
+                    <div class="elevation-chart-wrapper">
+                        <div class="chart-header">
+                            <h4>Elevation Profile</h4>
+                        </div>
+                        <div class="elevation-chart-container">
+                            <canvas id="elevation-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            {{else}}
+                <p class="empty-message">No GPX track uploaded yet. Upload a GPX file to display your route on the map.</p>
+            {{end}}
+        </section>
+
+        <!-- Trip Notes -->
+        <section class="trip-section">
+            <div class="section-header">
+                <h2>Trip Notes</h2>
+            </div>
+            <div class="notes-editor">
+                <textarea id="trip-notes" placeholder="Add notes about your trip..." rows="6" maxlength="500">{{if .Trip.Notes}}{{.Trip.Notes}}{{end}}</textarea>
+                <div class="notes-controls">
+                    <span id="trip-notes-char-count" class="char-count">{{if .Trip.Notes}}{{len .Trip.Notes}}{{else}}0{{end}}/500</span>
+                    <span id="trip-notes-status" class="save-status" style="display: none;"></span>
+                </div>
+            </div>
+        </section>
+
+        </div>
+    </main>
+
+    <!-- Add Pack Modal -->
+    <div id="addPackModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add Pack to Trip</h3>
+                <button class="modal-close" onclick="hideModal('addPackModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <select id="packSelect" class="form-control">
+                    <option value="">Select a pack</option>
+                    {{range .AllPacks}}
+                        <option value="{{.ID}}">{{.Name}}</option>
+                    {{end}}
+                </select>
+            </div>
+            <div class="modal-footer">
+                <button onclick="hideModal('addPackModal')" class="btn btn-secondary">Cancel</button>
+                <button onclick="addPack()" class="btn btn-primary">Add Pack</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Checklist Item Modal -->
+    <div id="addChecklistModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add Checklist Item</h3>
+                <button class="modal-close" onclick="hideModal('addChecklistModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="text" id="checklistContent" placeholder="Enter item" class="form-control">
+            </div>
+            <div class="modal-footer">
+                <button onclick="hideModal('addChecklistModal')" class="btn btn-secondary">Cancel</button>
+                <button onclick="addChecklistItem()" class="btn btn-primary">Add</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Transport Step Modal -->
+    <div id="addTransportModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add Transport Step</h3>
+                <button class="modal-close" onclick="hideModal('addTransportModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="transportJourneyType">
+                <h4>Departure</h4>
+                <div class="form-group">
+                    <label for="transportDeparturePlace">Departure Place *</label>
+                    <input type="text" id="transportDeparturePlace" placeholder="City or location" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="transportDepartureDatetime">Departure Date & Time</label>
+                    <input type="datetime-local" id="transportDepartureDatetime" class="form-control">
+                </div>
+                <h4>Arrival</h4>
+                <div class="form-group">
+                    <label for="transportArrivalPlace">Arrival Place</label>
+                    <input type="text" id="transportArrivalPlace" placeholder="City or location" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="transportArrivalDatetime">Arrival Date & Time</label>
+                    <input type="datetime-local" id="transportArrivalDatetime" class="form-control">
+                </div>
+                <h4>Transport Details</h4>
+                <div class="form-group">
+                    <label for="transportType">Transport Type</label>
+                    <select id="transportType" class="form-control">
+                        <option value="">Select type</option>
+                        <option value="train">Train</option>
+                        <option value="plane">Plane</option>
+                        <option value="bus">Bus</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="transportNumber">Transport Number</label>
+                    <input type="text" id="transportNumber" placeholder="e.g., TGV 6123" class="form-control">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button onclick="hideModal('addTransportModal')" class="btn btn-secondary">Cancel</button>
+                <button onclick="addTransportStep()" class="btn btn-primary">Add Step</button>
+            </div>
+        </div>
+    </div>
+
+    {{template "footer" .}}
+
+    <script src="/static/js/app.js"></script>
+
+    <script>
+    const tripId = '{{.Trip.ID}}';
+    csrfToken = '{{.CSRFToken}}';
+
+    // Pack Management
+    async function addPack() {
+        const packId = document.getElementById('packSelect').value;
+        if (!packId) {
+            alert('Please select a pack');
+            return;
+        }
+
+        const response = await fetch(`/trips/${tripId}/packs`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRF-Token': csrfToken
+            },
+            body: new URLSearchParams({ pack_id: packId })
+        });
+
+        if (response.ok) {
+            location.reload();
+        } else {
+            alert('Failed to add pack');
+        }
+    }
+
+    async function removePack(packId) {
+        if (!confirm('Remove this pack from the trip?')) return;
+
+        const response = await fetch(`/trips/${tripId}/packs/${packId}`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRF-Token': csrfToken
+            }
+        });
+
+        if (response.ok) {
+            location.reload();
+        } else {
+            alert('Failed to remove pack');
+        }
+    }
+
+    // Checklist Management
+    function showAddChecklistItem() {
+        document.getElementById('checklistContent').value = '';
+        showModal('addChecklistModal');
+    }
+
+    async function addChecklistItem() {
+        const content = document.getElementById('checklistContent').value.trim();
+        if (!content) return;
+
+        const response = await fetch(`/trips/${tripId}/checklist`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            },
+            body: JSON.stringify({ content })
+        });
+
+        if (response.ok) {
+            location.reload();
+        } else {
+            alert('Failed to add checklist item');
+        }
+    }
+
+    async function toggleChecklistItem(itemId) {
+        const response = await fetch(`/trips/${tripId}/checklist/${itemId}/toggle`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-Token': csrfToken
+            }
+        });
+
+        if (!response.ok) {
+            alert('Failed to update checklist item');
+            location.reload();
+        }
+    }
+
+    async function deleteChecklistItem(itemId) {
+        if (!confirm('Delete this checklist item?')) return;
+
+        const response = await fetch(`/trips/${tripId}/checklist/${itemId}`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRF-Token': csrfToken
+            }
+        });
+
+        if (response.ok) {
+            location.reload();
+        } else {
+            alert('Failed to delete checklist item');
+        }
+    }
+
+    async function editChecklistItem(itemId, content, isChecked) {
+        const newContent = prompt('Edit checklist item:', content);
+        if (!newContent || newContent.trim() === '') return;
+
+        const response = await fetch(`/trips/${tripId}/checklist/${itemId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            },
+            body: JSON.stringify({
+                content: newContent.trim(),
+                is_checked: isChecked
+            })
+        });
+
+        if (response.ok) {
+            location.reload();
+        } else {
+            alert('Failed to update checklist item');
+        }
+    }
+
+    // Transport Timeline Management
+    function showAddTransportStep(journeyType) {
+        document.getElementById('transportJourneyType').value = journeyType;
+        document.getElementById('transportDeparturePlace').value = '';
+        document.getElementById('transportDepartureDatetime').value = '';
+        document.getElementById('transportArrivalPlace').value = '';
+        document.getElementById('transportArrivalDatetime').value = '';
+        document.getElementById('transportType').value = '';
+        document.getElementById('transportNumber').value = '';
+        showModal('addTransportModal');
+    }
+
+    async function addTransportStep() {
+        const journeyType = document.getElementById('transportJourneyType').value;
+        const departurePlace = document.getElementById('transportDeparturePlace').value.trim();
+        if (!departurePlace) {
+            alert('Departure place is required');
+            return;
+        }
+
+        const departureDatetimeValue = document.getElementById('transportDepartureDatetime').value;
+        const arrivalPlace = document.getElementById('transportArrivalPlace').value.trim() || null;
+        const arrivalDatetimeValue = document.getElementById('transportArrivalDatetime').value;
+        const transportType = document.getElementById('transportType').value || null;
+        const transportNumber = document.getElementById('transportNumber').value.trim() || null;
+
+        let departureDatetime = null;
+        if (departureDatetimeValue) {
+            departureDatetime = new Date(departureDatetimeValue).toISOString();
+        }
+
+        let arrivalDatetime = null;
+        if (arrivalDatetimeValue) {
+            arrivalDatetime = new Date(arrivalDatetimeValue).toISOString();
+        }
+
+        const response = await fetch(`/trips/${tripId}/transport`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            },
+            body: JSON.stringify({
+                journey_type: journeyType,
+                departure_place: departurePlace,
+                departure_datetime: departureDatetime,
+                arrival_place: arrivalPlace,
+                arrival_datetime: arrivalDatetime,
+                transport_type: transportType,
+                transport_number: transportNumber
+            })
+        });
+
+        if (response.ok) {
+            location.reload();
+        } else {
+            alert('Failed to add transport step');
+        }
+    }
+
+    async function deleteTransportStep(stepId) {
+        if (!confirm('Delete this transport step?')) return;
+
+        const response = await fetch(`/trips/${tripId}/transport/${stepId}`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRF-Token': csrfToken
+            }
+        });
+
+        if (response.ok) {
+            location.reload();
+        } else {
+            alert('Failed to delete transport step');
+        }
+    }
+
+    // GPX Management
+    async function uploadGPX(file) {
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('gpx_file', file);
+
+        const response = await fetch(`/trips/${tripId}/gpx`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-Token': csrfToken
+            },
+            body: formData
+        });
+
+        if (response.ok) {
+            location.reload();
+        } else {
+            alert('Failed to upload GPX file');
+        }
+    }
+
+    async function deleteGPX() {
+        if (!confirm('Delete the GPX track?')) return;
+
+        const response = await fetch(`/trips/${tripId}/gpx`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRF-Token': csrfToken
+            }
+        });
+
+        if (response.ok) {
+            location.reload();
+        } else {
+            alert('Failed to delete GPX');
+        }
+    }
+
+    // Trip Notes Autosave
+    const tripNotesTextarea = document.getElementById('trip-notes');
+    const tripNotesCharCount = document.getElementById('trip-notes-char-count');
+    const tripNotesStatus = document.getElementById('trip-notes-status');
+
+    if (tripNotesTextarea && tripNotesCharCount && tripNotesStatus) {
+        // Store original note value for diff checking
+        let tripNotesOriginal = tripNotesTextarea.value;
+        let tripNotesSaveTimeout = null;
+        let tripNotesIsSaving = false;
+
+        tripNotesTextarea.addEventListener('input', function() {
+            const length = this.value.length;
+            tripNotesCharCount.textContent = length + '/500';
+
+            if (length > 450) {
+                tripNotesCharCount.style.color = '#dc3545'; // Red when approaching limit
+            } else {
+                tripNotesCharCount.style.color = '#6c757d'; // Default gray
+            }
+
+            // Clear existing autosave timeout
+            if (tripNotesSaveTimeout) {
+                clearTimeout(tripNotesSaveTimeout);
+            }
+
+            // Hide status when user is typing
+            tripNotesStatus.style.display = 'none';
+
+            // Set new timeout for autosave (1 second after user stops typing)
+            tripNotesSaveTimeout = setTimeout(async () => {
+                const currentValue = tripNotesTextarea.value;
+
+                // Only save if there's a difference from the original value
+                if (currentValue !== tripNotesOriginal) {
+                    await autoSaveTripNotes(tripNotesTextarea, tripNotesStatus);
+                    // Update original value after successful save
+                    tripNotesOriginal = currentValue;
+                }
+            }, 1000);
+        });
+
+        // Autosave function for trip notes
+        async function autoSaveTripNotes(textarea, statusElement) {
+            if (tripNotesIsSaving) return; // Prevent concurrent saves
+
+            tripNotesIsSaving = true;
+
+            const notes = textarea.value.trim();
+
+            // Validate note length
+            if (notes.length > 500) {
+                statusElement.textContent = 'Note too long (max 500 chars)';
+                statusElement.style.color = '#dc3545';
+                statusElement.style.display = 'inline';
+                tripNotesIsSaving = false;
+                return;
+            }
+
+            // Show "Saving..." indicator
+            statusElement.textContent = 'Saving...';
+            statusElement.style.color = '#6c757d';
+            statusElement.style.display = 'inline';
+
+            try {
+                const response = await fetch(`/trips/${tripId}/notes`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    },
+                    body: JSON.stringify({ notes: notes || null })
+                });
+
+                if (response.ok) {
+                    // Show success feedback
+                    statusElement.textContent = 'Saved';
+                    statusElement.style.color = '#28a745';
+
+                    // Hide status after 2 seconds
+                    setTimeout(() => {
+                        statusElement.style.display = 'none';
+                    }, 2000);
+                } else {
+                    const data = await response.json();
+                    statusElement.textContent = data.error || 'Failed to save';
+                    statusElement.style.color = '#dc3545';
+                }
+            } catch (error) {
+                statusElement.textContent = 'Failed to save';
+                statusElement.style.color = '#dc3545';
+            } finally {
+                tripNotesIsSaving = false;
+            }
+        }
+    }
+
+    // GPX Map Initialization
+    {{if .Trip.GPXData}}
+    document.addEventListener('DOMContentLoaded', function() {
+        const map = L.map('gpx-map').setView([45.0, 6.0], 10);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Variable to hold the hover marker
+        let elevationHoverMarker = null;
+
+        // Marker management functions
+        function showElevationMarker(latlng) {
+            if (!elevationHoverMarker) {
+                // Create marker with distinct styling (different from route markers)
+                elevationHoverMarker = L.circleMarker(latlng, {
+                    radius: 8,
+                    fillColor: '#ff4444',
+                    color: '#ffffff',
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.9
+                }).addTo(map);
+            } else {
+                // Update existing marker position
+                elevationHoverMarker.setLatLng(latlng);
+            }
+        }
+
+        function hideElevationMarker() {
+            if (elevationHoverMarker) {
+                map.removeLayer(elevationHoverMarker);
+                elevationHoverMarker = null;
+            }
+        }
+
+        // Define createElevationChart function here so it has access to map and marker functions
+        function createElevationChart(gpxLayer) {
+            console.log('createElevationChart called');
+            console.log('gpxLayer:', gpxLayer);
+
+            // Get track points with coordinates
+            // leaflet-gpx creates a FeatureGroup containing polyline layers
+            const layers = gpxLayer.getLayers();
+            console.log('layers:', layers, 'count:', layers ? layers.length : 0);
+            if (!layers || layers.length === 0) {
+                console.error('No layers found');
+                return;
+            }
+
+            // Find the actual track polyline (may be nested in a LayerGroup)
+            let polyline = null;
+
+            // First, check if layers[0] is directly a polyline
+            if (layers[0] && typeof layers[0].getLatLngs === 'function') {
+                polyline = layers[0];
+            } else if (layers[0] && typeof layers[0].getLayers === 'function') {
+                // It's a LayerGroup, search for the polyline inside
+                const nestedLayers = layers[0].getLayers();
+                console.log('Nested layers:', nestedLayers);
+                for (let layer of nestedLayers) {
+                    if (typeof layer.getLatLngs === 'function') {
+                        polyline = layer;
+                        console.log('Found polyline in nested layer:', polyline);
+                        break;
+                    }
+                }
+            }
+
+            if (!polyline) {
+                console.error('No polyline with getLatLngs method found');
+                return;
+            }
+
+            const points = polyline.getLatLngs();
+            console.log('points:', points, 'count:', points ? points.length : 0);
+            if (!points || points.length === 0) {
+                console.error('No points found');
+                return;
+            }
+
+            const ctx = document.getElementById('elevation-chart');
+            if (!ctx) return;
+
+            // Get elevation data (which has distance and elevation)
+            const elevationData = gpxLayer.get_elevation_data();
+            console.log('Points count:', points.length);
+            console.log('Elevation data count:', elevationData ? elevationData.length : 0);
+
+            if (!elevationData || elevationData.length === 0) {
+                console.error('No elevation data available');
+                return;
+            }
+
+            // Build combined data: [distance, elevation, lat, lng]
+            // Combine lat/lng from points with distance/elevation from elevationData
+            const trackData = [];
+            const minLength = Math.min(points.length, elevationData.length);
+
+            for (let i = 0; i < minLength; i++) {
+                const point = points[i];
+                const elevPoint = elevationData[i];
+
+                // elevPoint format: [distance_meters, elevation_meters, description]
+                trackData.push([
+                    elevPoint[0],                 // [0] distance in meters (from elevation data)
+                    elevPoint[1],                 // [1] elevation in meters (from elevation data)
+                    point.lat,                    // [2] latitude (from polyline)
+                    point.lng                     // [3] longitude (from polyline)
+                ]);
+            }
+
+            console.log('Combined trackData count:', trackData.length);
+            console.log('First trackData point:', trackData[0]);
+
+            // Sample the data if there are too many points (for performance)
+            let sampledData = trackData;
+            if (trackData.length > 200) {
+                const step = Math.ceil(trackData.length / 200);
+                sampledData = trackData.filter((_, index) => index % step === 0);
+            }
+
+            // Create labels in km using actual distances from the data
+            const labels = sampledData.map(point => (point[0] / 1000).toFixed(1)); // Convert m to km
+            const elevations = sampledData.map(point => point[1]); // Elevation unchanged
+
+            const elevationChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Elevation',
+                        data: elevations,
+                        fill: true,
+                        backgroundColor: 'rgba(0, 74, 173, 0.1)',
+                        borderColor: '#004aad',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    aspectRatio: 4,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            enabled: true,
+                            callbacks: {
+                                title: function(context) {
+                                    return context[0].label + ' km';
+                                },
+                                label: function(context) {
+                                    return 'Elevation: ' + Math.round(context.parsed.y) + ' m';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Distance (km)',
+                                font: {
+                                    size: 11,
+                                    weight: 500
+                                },
+                                color: '#6b7280'
+                            },
+                            ticks: {
+                                font: {
+                                    size: 10
+                                },
+                                color: '#6b7280',
+                                maxRotation: 0,
+                                autoSkipPadding: 20
+                            },
+                            grid: {
+                                display: false
+                            }
+                        },
+                        y: {
+                            display: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'Elevation (m)',
+                                font: {
+                                    size: 11,
+                                    weight: 500
+                                },
+                                color: '#6b7280'
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return Math.round(value) + 'm';
+                                },
+                                font: {
+                                    size: 10
+                                },
+                                color: '#6b7280'
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            }
+                        }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    }
+                }
+            });
+
+            // Add hover interaction for map marker
+            const canvas = document.getElementById('elevation-chart');
+            canvas.addEventListener('mousemove', function(e) {
+                // Get active elements at cursor position
+                const activePoints = elevationChart.getElementsAtEventForMode(
+                    e,
+                    'index',
+                    { intersect: false },
+                    false
+                );
+
+                if (activePoints.length > 0) {
+                    const pointIndex = activePoints[0].index;
+
+                    // Get coordinates from sampledData
+                    if (pointIndex >= 0 && pointIndex < sampledData.length) {
+                        const point = sampledData[pointIndex];
+                        // New format: [distance, elevation, lat, lng]
+                        // point[0] = distance, point[1] = elevation, point[2] = lat, point[3] = lng
+                        if (point.length >= 4) {
+                            const lat = point[2]; // Latitude at index 2
+                            const lng = point[3]; // Longitude at index 3
+                            const latlng = L.latLng(lat, lng);
+                            showElevationMarker(latlng);
+                        }
+                    }
+                }
+            });
+
+            // Remove marker when mouse leaves chart
+            canvas.addEventListener('mouseleave', function() {
+                hideElevationMarker();
+            });
+        }
+
+        const gpxData = {{.Trip.GPXData}};
+        const gpx = new L.GPX(gpxData, {
+            async: true,
+            polyline_options: {
+                color: '#004aad',
+                weight: 3,
+                opacity: 0.8
+            },
+            marker_options: {
+                startIconUrl: null,
+                endIconUrl: null,
+                shadowUrl: null,
+                wptIconUrls: {
+                    '': 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png'
+                }
+            }
+        }).on('loaded', function(e) {
+            map.fitBounds(e.target.getBounds());
+
+            // Extract GPX statistics
+            const distanceKm = (e.target.get_distance() / 1000).toFixed(2);
+            const elevationGain = Math.round(e.target.get_elevation_gain());
+            const elevationLoss = Math.round(e.target.get_elevation_loss());
+
+            // Display stats
+            document.getElementById('gpx-stats').style.display = 'flex';
+            document.getElementById('gpx-distance').textContent = distanceKm + ' km';
+            document.getElementById('gpx-elevation-gain').textContent = elevationGain + ' m';
+            document.getElementById('gpx-elevation-loss').textContent = elevationLoss + ' m';
+
+            // Create elevation profile chart
+            createElevationChart(e.target);
+        }).addTo(map);
+    });
+    {{end}}
+    </script>
+
+    <style>
+    .trip-detail-page {
+        max-width: 900px;
+        margin: 0 auto;
+    }
+
+    .trip-header {
+        margin-bottom: var(--space-6);
+    }
+
+    .trip-header-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: var(--space-3);
+        gap: 1rem;
+    }
+
+    .trip-header-top h1 {
+        font-size: var(--font-size-2xl);
+        font-weight: 600;
+        color: var(--color-gray-900);
+        margin: 0;
+        flex: 1;
+    }
+
+    .trip-header-meta {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--color-gray-600);
+        font-size: 0.875rem;
+    }
+
+    .trip-header-meta i {
+        margin-right: 0.25rem;
+    }
+
+    .trip-header-meta .separator {
+        color: var(--color-gray-400);
+    }
+
+    .view-public-link {
+        color: var(--color-primary);
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+    .view-public-link:hover {
+        text-decoration: underline;
+    }
+
+    .trip-description-clean {
+        padding: 1rem 0;
+    }
+
+    .trip-description-clean p {
+        line-height: 1.6;
+        color: var(--color-gray-700);
+    }
+
+    .status-badge {
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 500;
+    }
+
+    .status-active {
+        background-color: #d1fae5;
+        color: #065f46;
+    }
+
+    .status-archived {
+        background-color: #f3f4f6;
+        color: #6b7280;
+    }
+
+    .status-public {
+        background-color: #dbeafe;
+        color: #1e40af;
+    }
+
+    .status-private {
+        background-color: #f3f4f6;
+        color: #6b7280;
+    }
+
+    .public-link {
+        margin-left: 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    .packs-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .pack-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem;
+        border: 1px solid var(--color-gray-200);
+        border-radius: 8px;
+    }
+
+    .pack-link {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        text-decoration: none;
+        color: var(--color-primary);
+    }
+
+    .checklist-items-clean {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .checklist-item-clean {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.75rem;
+        border-radius: 0.5rem;
+        transition: background-color 0.15s ease;
+    }
+
+    .checklist-item-clean:hover {
+        background-color: var(--color-gray-50);
+    }
+
+    .checklist-main {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        flex: 1;
+    }
+
+    .checklist-content {
+        flex: 1;
+        cursor: pointer;
+        font-size: 0.9375rem;
+    }
+
+    .checklist-item-clean input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+    }
+
+    .checklist-item-clean input[type="checkbox"]:checked + .checklist-content {
+        text-decoration: line-through;
+        color: var(--color-gray-500);
+    }
+
+    .checklist-actions {
+        display: flex;
+        gap: 0.25rem;
+    }
+
+    .transport-journey {
+        margin-bottom: 2rem;
+    }
+
+    .journey-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+    }
+
+    .journey-header h3 {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--color-gray-800);
+        margin: 0;
+    }
+
+    .timeline-container-clean {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .timeline-step-clean {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem;
+        border-radius: 0.5rem;
+        transition: background-color 0.15s ease;
+    }
+
+    .timeline-step-clean:hover {
+        background-color: var(--color-gray-50);
+    }
+
+    .transport-type-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--color-gray-600);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        flex-shrink: 0;
+        min-width: 50px;
+        text-align: right;
+    }
+
+    .timeline-marker {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--color-gray-500);
+        flex-shrink: 0;
+    }
+
+    .transport-train .timeline-marker { background: #198754; }
+    .transport-plane .timeline-marker { background: #dc3545; }
+    .transport-bus .timeline-marker { background: #0d6efd; }
+    .transport-other .timeline-marker { background: #6c757d; }
+
+    .transport-train .transport-type-label { color: #198754; }
+    .transport-plane .transport-type-label { color: #dc3545; }
+    .transport-bus .transport-type-label { color: #0d6efd; }
+    .transport-other .transport-type-label { color: #6c757d; }
+
+    .timeline-content {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        flex: 1;
+        flex-wrap: wrap;
+    }
+
+    .transport-route {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex: 1;
+        flex-wrap: wrap;
+    }
+
+    .transport-leg {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .transport-leg strong {
+        font-size: 0.875rem;
+        color: var(--color-gray-900);
+    }
+
+    .transport-leg small {
+        color: var(--color-gray-600);
+        font-size: 0.75rem;
+    }
+
+    .transport-arrow {
+        font-size: 1.125rem;
+        color: var(--color-gray-400);
+        font-weight: 600;
+        padding: 0 0.25rem;
+    }
+
+    .transport-badge {
+        padding: 2px 8px;
+        background: var(--color-gray-100);
+        border-radius: 4px;
+        font-size: 0.75rem;
+        color: var(--color-gray-700);
+        font-weight: 500;
+    }
+
+    .notes-editor {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    #trip-notes {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid var(--color-gray-300);
+        border-radius: 0.5rem;
+        font-family: inherit;
+        font-size: 0.9375rem;
+        line-height: 1.5;
+        resize: vertical;
+    }
+
+    #trip-notes:focus {
+        outline: none;
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px rgba(0, 74, 173, 0.1);
+    }
+
+    .notes-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .notes-controls {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.75rem;
+        margin-top: 0.5rem;
+    }
+
+    .char-count {
+        font-size: 0.8rem;
+        color: #6c757d;
+        font-weight: 500;
+    }
+
+    .save-status {
+        font-size: 0.8rem;
+        font-weight: 500;
+        transition: opacity 0.2s ease;
+    }
+
+    @media (max-width: 768px) {
+        .trip-header-top {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .trip-header-top h1 {
+            font-size: var(--font-size-xl);
+        }
+
+        .trip-header-top .btn {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .transport-route {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .transport-arrow {
+            transform: rotate(90deg);
+        }
+    }
+
+    /* Clean Section Styling */
+    .trip-section {
+        margin-bottom: 1.5rem;
+    }
+
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid var(--color-gray-200);
+    }
+
+    .section-header h2 {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: var(--color-gray-800);
+        margin: 0;
+    }
+
+    .button-group {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+    }
+
+    .btn-text {
+        background: none;
+        border: none;
+        color: var(--color-primary);
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        transition: background-color 0.15s ease;
+    }
+
+    .btn-text:hover {
+        background-color: var(--color-gray-100);
+    }
+
+    .btn-text i {
+        font-size: 0.75rem;
+        margin-right: 0.25rem;
+    }
+
+    .packs-list-clean {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .pack-item-clean {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem;
+        border-radius: 0.5rem;
+        transition: background-color 0.15s ease;
+    }
+
+    .pack-item-clean:hover {
+        background-color: var(--color-gray-50);
+    }
+
+    .pack-link-clean {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        text-decoration: none;
+        color: var(--color-gray-900);
+        flex: 1;
+        font-weight: 500;
+        font-size: 0.9375rem;
+    }
+
+    .pack-link-clean:hover {
+        color: var(--color-primary);
+    }
+
+    .pack-icon {
+        color: var(--color-gray-500);
+        font-size: 1rem;
+    }
+
+    .pack-name {
+        flex: 1;
+    }
+
+    .btn-icon-minimal {
+        background: none;
+        border: none;
+        color: var(--color-gray-400);
+        cursor: pointer;
+        padding: 0.25rem;
+        border-radius: 0.25rem;
+        transition: all 0.15s ease;
+        font-size: 0.875rem;
+    }
+
+    .btn-icon-minimal:hover {
+        background-color: var(--color-red-50, #fef2f2);
+        color: var(--color-red-600, #dc2626);
+    }
+
+    .empty-message {
+        color: var(--color-gray-500);
+        font-size: 0.875rem;
+        padding: 1rem 0;
+    }
+
+    /* GPX Section */
+    .gpx-content {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .gpx-stats-clean {
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+        gap: 3rem;
+        margin-bottom: 0;
+        flex-wrap: nowrap;
+    }
+
+    .trip-stat-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.25rem;
+        flex-shrink: 0;
+    }
+
+    .trip-stat-value {
+        font-size: 1.875rem;
+        font-weight: 600;
+        color: var(--color-gray-900);
+        line-height: 1;
+    }
+
+    .trip-stat-label {
+        font-size: 0.75rem;
+        color: var(--color-gray-600);
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        white-space: nowrap;
+    }
+
+    @media (max-width: 640px) {
+        .gpx-stats-clean {
+            gap: 2rem;
+        }
+
+        .trip-stat-value {
+            font-size: 1.5rem;
+        }
+    }
+
+    .gpx-map-container {
+        border-radius: 0.5rem;
+        overflow: hidden;
+        border: 1px solid var(--color-gray-200);
+        position: relative;
+        z-index: 1;
+    }
+
+    #gpx-map {
+        height: 400px;
+        width: 100%;
+    }
+
+    .elevation-chart-wrapper {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .chart-header {
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid var(--color-gray-200);
+    }
+
+    .chart-header h4 {
+        font-size: 0.9375rem;
+        font-weight: 600;
+        color: var(--color-gray-800);
+        margin: 0;
+    }
+
+    .elevation-chart-container {
+        background: white;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        border: 1px solid var(--color-gray-200);
+    }
+
+    #elevation-chart {
+        max-height: 180px;
+    }
+
+    @media (max-width: 768px) {
+        .gpx-stats-clean {
+            grid-template-columns: 1fr;
+        }
+
+        #gpx-map {
+            height: 300px;
+        }
+    }
+    </style>
+</body>
+</html>
+{{end}}

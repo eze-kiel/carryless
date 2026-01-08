@@ -114,3 +114,57 @@ type ItemLabel struct {
 	PackLabel    *PackLabel `json:"pack_label,omitempty"`
 }
 
+type Trip struct {
+	ID             string               `json:"id" db:"id"`
+	UserID         int                  `json:"user_id" db:"user_id"`
+	Name           string               `json:"name" db:"name"`
+	Description    *string              `json:"description,omitempty" db:"description"`
+	Location       *string              `json:"location,omitempty" db:"location"`
+	StartDate      *time.Time           `json:"start_date,omitempty" db:"start_date"`
+	EndDate        *time.Time           `json:"end_date,omitempty" db:"end_date"`
+	Notes          *string              `json:"notes,omitempty" db:"notes"`
+	GPXData        *string              `json:"gpx_data,omitempty" db:"gpx_data"`
+	IsPublic       bool                 `json:"is_public" db:"is_public"`
+	IsArchived     bool                 `json:"is_archived" db:"is_archived"`
+	ShortID        string               `json:"short_id,omitempty" db:"short_id"`
+	CreatedAt      time.Time            `json:"created_at" db:"created_at"`
+	UpdatedAt      time.Time            `json:"updated_at" db:"updated_at"`
+	Packs          []Pack               `json:"packs,omitempty"`
+	ChecklistItems []TripChecklistItem  `json:"checklist_items,omitempty"`
+	TransportSteps []TripTransportStep  `json:"transport_steps,omitempty"`
+}
+
+type TripChecklistItem struct {
+	ID        int       `json:"id" db:"id"`
+	TripID    string    `json:"trip_id" db:"trip_id"`
+	Content   string    `json:"content" db:"content"`
+	IsChecked bool      `json:"is_checked" db:"is_checked"`
+	SortOrder int       `json:"sort_order" db:"sort_order"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
+}
+
+type TripTransportStep struct {
+	ID                int        `json:"id" db:"id"`
+	TripID            string     `json:"trip_id" db:"trip_id"`
+	JourneyType       string     `json:"journey_type" db:"journey_type"`
+	StepOrder         int        `json:"step_order" db:"step_order"`
+	DeparturePlace    string     `json:"departure_place" db:"departure_place"`
+	DepartureDatetime *time.Time `json:"departure_datetime,omitempty" db:"departure_datetime"`
+	ArrivalPlace      *string    `json:"arrival_place,omitempty" db:"arrival_place"`
+	ArrivalDatetime   *time.Time `json:"arrival_datetime,omitempty" db:"arrival_datetime"`
+	TransportType     *string    `json:"transport_type,omitempty" db:"transport_type"`
+	TransportNumber   *string    `json:"transport_number,omitempty" db:"transport_number"`
+	Notes             *string    `json:"notes,omitempty" db:"notes"`
+	CreatedAt         time.Time  `json:"created_at" db:"created_at"`
+}
+
+// Duration returns the duration of the transport step if both departure and arrival times are set
+func (t *TripTransportStep) Duration() *time.Duration {
+	if t.DepartureDatetime != nil && t.ArrivalDatetime != nil {
+		duration := t.ArrivalDatetime.Sub(*t.DepartureDatetime)
+		return &duration
+	}
+	return nil
+}
+

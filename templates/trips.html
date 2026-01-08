@@ -1,0 +1,199 @@
+{{define "trips.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}}</title>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    {{template "header" .}}
+
+    <main class="main">
+        {{if .Error}}
+            <div class="alert alert-error">{{.Error}}</div>
+        {{end}}
+
+        <div class="page-header">
+            <h1>Trips</h1>
+            <a href="/trips/new" class="btn btn-primary">Create Trip</a>
+        </div>
+
+        {{if .Trips}}
+            <div class="trips-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Trip Name</th>
+                            <th>Location</th>
+                            <th>Dates</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{range .Trips}}
+                            <tr class="item-row{{if .IsArchived}} archived-row{{end}}">
+                                <td>
+                                    <a href="/trips/{{.ID}}">{{.Name}}</a>
+                                    {{if .IsPublic}}
+                                        <small class="text-muted">(Public)</small>
+                                    {{end}}
+                                </td>
+                                <td>
+                                    {{if .Location}}
+                                        {{.Location}}
+                                    {{else}}
+                                        <span class="text-muted">-</span>
+                                    {{end}}
+                                </td>
+                                <td>
+                                    {{if and .StartDate .EndDate}}
+                                        {{.StartDate.Format "Jan 2"}} - {{.EndDate.Format "Jan 2, 2006"}}
+                                    {{else if .StartDate}}
+                                        {{.StartDate.Format "Jan 2, 2006"}}
+                                    {{else}}
+                                        <span class="text-muted">-</span>
+                                    {{end}}
+                                </td>
+                                <td>
+                                    {{if .IsArchived}}
+                                        <span class="status-badge status-archived">Archived</span>
+                                    {{else}}
+                                        <span class="status-badge status-active">Active</span>
+                                    {{end}}
+                                </td>
+                                <td>
+                                    <div class="dropdown">
+                                        <details>
+                                            <summary>
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <circle cx="12" cy="12" r="1"></circle>
+                                                    <circle cx="12" cy="5" r="1"></circle>
+                                                    <circle cx="12" cy="19" r="1"></circle>
+                                                </svg>
+                                            </summary>
+                                            <div class="dropdown-menu">
+                                                <form action="/trips/{{.ID}}/edit" method="GET">
+                                                    <button type="submit" class="dropdown-item">Edit</button>
+                                                </form>
+                                                <form action="/trips/{{.ID}}/archive" method="POST">
+                                                    <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                                                    <input type="hidden" name="is_archived" value="{{if .IsArchived}}false{{else}}true{{end}}">
+                                                    <button type="submit" class="dropdown-item">
+                                                        {{if .IsArchived}}<i class="fas fa-box-open"></i> Unarchive{{else}}<i class="fas fa-archive"></i> Archive{{end}}
+                                                    </button>
+                                                </form>
+                                                {{if .IsPublic}}
+                                                    <form action="/t/{{.ShortID}}" method="GET" target="_blank">
+                                                        <button type="submit" class="dropdown-item">View Public</button>
+                                                    </form>
+                                                {{end}}
+                                                <form action="/trips/{{.ID}}/delete" method="POST" onsubmit="return confirm('Are you sure you want to delete this trip? This will also remove all associated checklist items and transport steps.')">
+                                                    <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                                                    <button type="submit" class="dropdown-item dropdown-item-danger">Delete</button>
+                                                </form>
+                                            </div>
+                                        </details>
+                                    </div>
+                                </td>
+                            </tr>
+                        {{end}}
+                    </tbody>
+                </table>
+            </div>
+        {{else}}
+            <div class="empty-state">
+                <p>No trips yet. Create your first trip to start planning your adventures.</p>
+            </div>
+        {{end}}
+    </main>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <p>Built with love by Hugo Blanc. Free and <a href="https://github.com/eze-kiel/carryless">open-source</a>, forever. <a href="https://ko-fi.com/carryless" class="donate-link" target="_blank" rel="noopener noreferrer">Support Carryless <i class="fas fa-heart"></i></a></p>
+            <div class="legal-links">
+                <a href="/terms">Terms of Service</a> | <a href="/privacy">Privacy Policy</a>
+            </div>
+            <div class="weight-unit-selector">
+                <label for="weightUnitSelector">Units:</label>
+                <select id="weightUnitSelector" onchange="changeWeightUnit(this.value)">
+                    <option value="g">Grams</option>
+                    <option value="oz">Ounces</option>
+                </select>
+            </div>
+        </div>
+    </footer>
+
+    <script src="/static/js/app.js"></script>
+
+    <style>
+    .clickable-row {
+        cursor: pointer;
+    }
+    .clickable-row:hover {
+        background-color: var(--color-gray-50);
+    }
+    .archived-row {
+        opacity: 0.7;
+    }
+    .badge-archived {
+        background-color: var(--color-gray-400);
+        color: white;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 11px;
+        margin-left: 8px;
+    }
+    .status-badge {
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 500;
+    }
+    .status-active {
+        background-color: #d1fae5;
+        color: #065f46;
+    }
+    .status-archived {
+        background-color: #f3f4f6;
+        color: #6b7280;
+    }
+    .text-muted {
+        color: var(--color-gray-400);
+    }
+    .trip-name-cell {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    </style>
+
+    <script>
+    // Close other dropdowns when one is opened
+    document.addEventListener('click', function(event) {
+        if (event.target.closest('summary')) {
+            document.querySelectorAll('details[open]').forEach(details => {
+                if (!details.contains(event.target)) {
+                    details.removeAttribute('open');
+                }
+            });
+        }
+    });
+
+    // Make rows clickable
+    document.querySelectorAll('.clickable-row').forEach(row => {
+        row.addEventListener('click', function(event) {
+            if (event.target.closest('a, button, .dropdown, details, summary')) {
+                return;
+            }
+            window.location.href = this.dataset.href;
+        });
+    });
+    </script>
+</body>
+</html>
+{{end}}

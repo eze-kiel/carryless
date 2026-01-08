@@ -176,6 +176,16 @@ func Migrate(db *sql.DB) error {
 		return fmt.Errorf("failed to add optional fields to items: %w", err)
 	}
 
+	// Create trips tables if they don't exist
+	if err := createTripsTable(db); err != nil {
+		return fmt.Errorf("failed to create trips tables: %w", err)
+	}
+
+	// Migrate transport steps to use departure/arrival fields
+	if err := migrateTransportStepsDepartureArrival(db); err != nil {
+		return fmt.Errorf("failed to migrate transport steps: %w", err)
+	}
+
 	return nil
 }
 
@@ -807,6 +817,136 @@ func addItemOptionalFields(db *sql.DB) error {
 			if _, err := db.Exec(sql); err != nil {
 				return fmt.Errorf("failed to add %s column: %w", column, err)
 			}
+		}
+	}
+
+	return nil
+}
+
+func createTripsTable(db *sql.DB) error {
+	migrations := []string{
+		`CREATE TABLE IF NOT EXISTS trips (
+			id TEXT PRIMARY KEY,
+			user_id INTEGER NOT NULL,
+			name TEXT NOT NULL,
+			description TEXT,
+			location TEXT,
+			start_date DATETIME,
+			end_date DATETIME,
+			notes TEXT,
+			gpx_data TEXT,
+			is_public BOOLEAN DEFAULT FALSE,
+			is_archived BOOLEAN DEFAULT FALSE,
+			short_id TEXT,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+		)`,
+		`CREATE TABLE IF NOT EXISTS trip_packs (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			trip_id TEXT NOT NULL,
+			pack_id TEXT NOT NULL,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE,
+			FOREIGN KEY (pack_id) REFERENCES packs(id) ON DELETE CASCADE,
+			UNIQUE(trip_id, pack_id)
+		)`,
+		`CREATE TABLE IF NOT EXISTS trip_checklist_items (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			trip_id TEXT NOT NULL,
+			content TEXT NOT NULL,
+			is_checked BOOLEAN DEFAULT FALSE,
+			sort_order INTEGER DEFAULT 0,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE
+		)`,
+		`CREATE TABLE IF NOT EXISTS trip_transport_steps (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			trip_id TEXT NOT NULL,
+			journey_type TEXT NOT NULL CHECK(journey_type IN ('outbound', 'return')),
+			step_order INTEGER NOT NULL,
+			place_name TEXT NOT NULL,
+			datetime DATETIME,
+			transport_type TEXT CHECK(transport_type IN ('train', 'plane', 'bus', 'other')),
+			transport_number TEXT,
+			notes TEXT,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE
+		)`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS idx_trips_short_id ON trips(short_id) WHERE short_id IS NOT NULL`,
+		`CREATE INDEX IF NOT EXISTS idx_trips_user_id ON trips(user_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_trip_packs_trip_id ON trip_packs(trip_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_trip_packs_pack_id ON trip_packs(pack_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_trip_checklist_items_trip_id ON trip_checklist_items(trip_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_trip_transport_steps_trip_id ON trip_transport_steps(trip_id)`,
+	}
+
+	for _, migration := range migrations {
+		if _, err := db.Exec(migration); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// migrateTransportStepsDepartureArrival migrates transport steps to use departure/arrival fields
+func migrateTransportStepsDepartureArrival(db *sql.DB) error {
+	// Check if migration is needed by looking for the old place_name column
+	var hasOldSchema bool
+	err := db.QueryRow(`
+		SELECT COUNT(*) FROM pragma_table_info('trip_transport_steps')
+		WHERE name = 'place_name'
+	`).Scan(&hasOldSchema)
+	if err != nil {
+		return err
+	}
+
+	// If we don't have the old schema, migration already done
+	if !hasOldSchema {
+		return nil
+	}
+
+	migrations := []string{
+		// Add new columns
+		`ALTER TABLE trip_transport_steps ADD COLUMN departure_place TEXT`,
+		`ALTER TABLE trip_transport_steps ADD COLUMN departure_datetime DATETIME`,
+		`ALTER TABLE trip_transport_steps ADD COLUMN arrival_place TEXT`,
+		`ALTER TABLE trip_transport_steps ADD COLUMN arrival_datetime DATETIME`,
+		// Copy data from old columns to new columns
+		`UPDATE trip_transport_steps SET departure_place = place_name, departure_datetime = datetime`,
+		// Create new table with correct schema
+		`CREATE TABLE trip_transport_steps_new (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			trip_id TEXT NOT NULL,
+			journey_type TEXT NOT NULL CHECK(journey_type IN ('outbound', 'return')),
+			step_order INTEGER NOT NULL,
+			departure_place TEXT NOT NULL,
+			departure_datetime DATETIME,
+			arrival_place TEXT,
+			arrival_datetime DATETIME,
+			transport_type TEXT CHECK(transport_type IN ('train', 'plane', 'bus', 'other')),
+			transport_number TEXT,
+			notes TEXT,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE
+		)`,
+		// Copy data to new table
+		`INSERT INTO trip_transport_steps_new (id, trip_id, journey_type, step_order, departure_place, departure_datetime, arrival_place, arrival_datetime, transport_type, transport_number, notes, created_at)
+		 SELECT id, trip_id, journey_type, step_order, departure_place, departure_datetime, arrival_place, arrival_datetime, transport_type, transport_number, notes, created_at
+		 FROM trip_transport_steps`,
+		// Drop old table
+		`DROP TABLE trip_transport_steps`,
+		// Rename new table
+		`ALTER TABLE trip_transport_steps_new RENAME TO trip_transport_steps`,
+		// Recreate index
+		`CREATE INDEX IF NOT EXISTS idx_trip_transport_steps_trip_id ON trip_transport_steps(trip_id)`,
+	}
+
+	for _, migration := range migrations {
+		if _, err := db.Exec(migration); err != nil {
+			return err
 		}
 	}
 
