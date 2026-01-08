@@ -98,10 +98,38 @@ func handleCreateTrip(c *gin.Context) {
 		return
 	}
 
+	// Parse optional fields
+	var description, location *string
+	descriptionStr := strings.TrimSpace(c.PostForm("description"))
+	if descriptionStr != "" {
+		description = &descriptionStr
+	}
+	locationStr := strings.TrimSpace(c.PostForm("location"))
+	if locationStr != "" {
+		location = &locationStr
+	}
+
+	// Parse dates
+	var startDate, endDate *time.Time
+	startDateStr := c.PostForm("start_date")
+	if startDateStr != "" {
+		parsedDate, err := time.Parse("2006-01-02", startDateStr)
+		if err == nil {
+			startDate = &parsedDate
+		}
+	}
+	endDateStr := c.PostForm("end_date")
+	if endDateStr != "" {
+		parsedDate, err := time.Parse("2006-01-02", endDateStr)
+		if err == nil {
+			endDate = &parsedDate
+		}
+	}
+
 	isPublicStr := c.PostForm("is_public")
 	isPublic := isPublicStr == "true"
 
-	trip, err := database.CreateTrip(db, userID, name, isPublic)
+	trip, err := database.CreateTrip(db, userID, name, description, location, startDate, endDate, isPublic)
 	if err != nil {
 		logger.Error("Failed to create trip", "user_id", userID, "error", err)
 		c.HTML(http.StatusInternalServerError, "new_trip.html", gin.H{

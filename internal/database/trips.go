@@ -24,7 +24,7 @@ func updateTripTimestamp(db *sql.DB, tripID string) error {
 }
 
 // CreateTrip creates a new trip
-func CreateTrip(db *sql.DB, userID int, name string, isPublic bool) (*models.Trip, error) {
+func CreateTrip(db *sql.DB, userID int, name string, description, location *string, startDate, endDate *time.Time, isPublic bool) (*models.Trip, error) {
 	tripID := uuid.New().String()
 
 	var shortID sql.NullString
@@ -37,24 +37,28 @@ func CreateTrip(db *sql.DB, userID int, name string, isPublic bool) (*models.Tri
 	}
 
 	query := `
-		INSERT INTO trips (id, user_id, name, is_public, short_id)
-		VALUES (?, ?, ?, ?, ?)
+		INSERT INTO trips (id, user_id, name, description, location, start_date, end_date, is_public, short_id)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
-	_, err := db.Exec(query, tripID, userID, name, isPublic, shortID)
+	_, err := db.Exec(query, tripID, userID, name, description, location, startDate, endDate, isPublic, shortID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create trip: %w", err)
 	}
 
 	trip := &models.Trip{
-		ID:         tripID,
-		UserID:     userID,
-		Name:       name,
-		IsPublic:   isPublic,
-		IsArchived: false,
-		ShortID:    shortID.String,
-		CreatedAt:  time.Now(),
-		UpdatedAt:  time.Now(),
+		ID:          tripID,
+		UserID:      userID,
+		Name:        name,
+		Description: description,
+		Location:    location,
+		StartDate:   startDate,
+		EndDate:     endDate,
+		IsPublic:    isPublic,
+		IsArchived:  false,
+		ShortID:     shortID.String,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
 	}
 
 	return trip, nil
