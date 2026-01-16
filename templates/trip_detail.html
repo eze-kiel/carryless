@@ -178,7 +178,7 @@
                                         {{end}}
                                     </div>
                                     <div class="transport-actions">
-                                        <button onclick="editTransportStep({{.ID}}, '{{.JourneyType}}', '{{.DeparturePlace}}', '{{if .DepartureDatetime}}{{.DepartureDatetime.Format "2006-01-02T15:04"}}{{end}}', '{{.ArrivalPlace}}', '{{if .ArrivalDatetime}}{{.ArrivalDatetime.Format "2006-01-02T15:04"}}{{end}}', '{{.TransportType}}', '{{.TransportNumber}}')" class="btn-icon-minimal" title="Edit">
+                                        <button onclick="editTransportStep({{.ID}}, '{{.JourneyType}}', '{{.DeparturePlace}}', '{{if .DepartureDatetime}}{{.DepartureDatetime.Format "2006-01-02T15:04"}}{{end}}', '{{.ArrivalPlace}}', '{{if .ArrivalDatetime}}{{.ArrivalDatetime.Format "2006-01-02T15:04"}}{{end}}', '{{.TransportType}}', '{{if .TransportNumber}}{{.TransportNumber}}{{end}}')" class="btn-icon-minimal" title="Edit">
                                             <i class="fas fa-edit"></i>
                                         </button>
                                         <button onclick="deleteTransportStep({{.ID}})" class="btn-icon-minimal" title="Delete">
@@ -240,7 +240,7 @@
                                         {{end}}
                                     </div>
                                     <div class="transport-actions">
-                                        <button onclick="editTransportStep({{.ID}}, '{{.JourneyType}}', '{{.DeparturePlace}}', '{{if .DepartureDatetime}}{{.DepartureDatetime.Format "2006-01-02T15:04"}}{{end}}', '{{.ArrivalPlace}}', '{{if .ArrivalDatetime}}{{.ArrivalDatetime.Format "2006-01-02T15:04"}}{{end}}', '{{.TransportType}}', '{{.TransportNumber}}')" class="btn-icon-minimal" title="Edit">
+                                        <button onclick="editTransportStep({{.ID}}, '{{.JourneyType}}', '{{.DeparturePlace}}', '{{if .DepartureDatetime}}{{.DepartureDatetime.Format "2006-01-02T15:04"}}{{end}}', '{{.ArrivalPlace}}', '{{if .ArrivalDatetime}}{{.ArrivalDatetime.Format "2006-01-02T15:04"}}{{end}}', '{{.TransportType}}', '{{if .TransportNumber}}{{.TransportNumber}}{{end}}')" class="btn-icon-minimal" title="Edit">
                                             <i class="fas fa-edit"></i>
                                         </button>
                                         <button onclick="deleteTransportStep({{.ID}})" class="btn-icon-minimal" title="Delete">
@@ -425,6 +425,18 @@
     const tripId = '{{.Trip.ID}}';
     csrfToken = '{{.CSRFToken}}';
 
+    // Helper function to convert datetime-local value to RFC3339 with local timezone
+    function toRFC3339WithLocalTimezone(datetimeLocalValue) {
+        if (!datetimeLocalValue) return null;
+        const date = new Date(datetimeLocalValue);
+        const offset = -date.getTimezoneOffset();
+        const sign = offset >= 0 ? '+' : '-';
+        const pad = (num) => String(Math.abs(num)).padStart(2, '0');
+        const offsetHours = pad(Math.floor(Math.abs(offset) / 60));
+        const offsetMinutes = pad(Math.abs(offset) % 60);
+        return datetimeLocalValue + ':00' + sign + offsetHours + ':' + offsetMinutes;
+    }
+
     // Pack Management
     async function addPack() {
         const packId = document.getElementById('packSelect').value;
@@ -598,15 +610,8 @@
         const transportType = document.getElementById('transportType').value || null;
         const transportNumber = document.getElementById('transportNumber').value.trim() || null;
 
-        let departureDatetime = null;
-        if (departureDatetimeValue) {
-            departureDatetime = new Date(departureDatetimeValue).toISOString();
-        }
-
-        let arrivalDatetime = null;
-        if (arrivalDatetimeValue) {
-            arrivalDatetime = new Date(arrivalDatetimeValue).toISOString();
-        }
+        const departureDatetime = toRFC3339WithLocalTimezone(departureDatetimeValue);
+        const arrivalDatetime = toRFC3339WithLocalTimezone(arrivalDatetimeValue);
 
         const response = await fetch(`/trips/${tripId}/transport`, {
             method: 'POST',
@@ -646,15 +651,8 @@
         const transportType = document.getElementById('transportType').value || null;
         const transportNumber = document.getElementById('transportNumber').value.trim() || null;
 
-        let departureDatetime = null;
-        if (departureDatetimeValue) {
-            departureDatetime = new Date(departureDatetimeValue).toISOString();
-        }
-
-        let arrivalDatetime = null;
-        if (arrivalDatetimeValue) {
-            arrivalDatetime = new Date(arrivalDatetimeValue).toISOString();
-        }
+        const departureDatetime = toRFC3339WithLocalTimezone(departureDatetimeValue);
+        const arrivalDatetime = toRFC3339WithLocalTimezone(arrivalDatetimeValue);
 
         const response = await fetch(`/trips/${tripId}/transport/${stepId}`, {
             method: 'PUT',
