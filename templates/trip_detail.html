@@ -1566,10 +1566,41 @@
     .pack-icon {
         color: var(--color-gray-500);
         font-size: 1rem;
+        transition: color var(--transition-fast);
     }
 
     .pack-name {
         flex: 1;
+    }
+
+    .pack-name::after {
+        content: '\2192';
+        font-size: 1rem;
+        color: var(--color-primary);
+        opacity: 0;
+        transform: translateX(-4px);
+        transition: all var(--transition-fast);
+        margin-left: 0.25rem;
+    }
+
+    .pack-link-clean:hover .pack-name::after {
+        opacity: 1;
+        transform: translateX(0);
+    }
+
+    .pack-link-clean:hover .pack-icon {
+        color: var(--color-primary);
+    }
+
+    /* Keyboard focus state */
+    .pack-link-clean:focus-visible {
+        outline: 2px solid var(--color-primary);
+        outline-offset: 2px;
+    }
+
+    .pack-link-clean:focus-visible .pack-name::after {
+        opacity: 1;
+        transform: translateX(0);
     }
 
     .btn-icon-minimal {
