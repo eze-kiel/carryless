@@ -177,9 +177,14 @@
                                             <span class="transport-badge">{{.TransportNumber}}</span>
                                         {{end}}
                                     </div>
-                                    <button onclick="deleteTransportStep({{.ID}})" class="btn-icon-minimal" title="Delete">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
+                                    <div class="transport-actions">
+                                        <button onclick="editTransportStep({{.ID}}, '{{.JourneyType}}', '{{.DeparturePlace}}', '{{if .DepartureDatetime}}{{.DepartureDatetime.Format "2006-01-02T15:04"}}{{end}}', '{{.ArrivalPlace}}', '{{if .ArrivalDatetime}}{{.ArrivalDatetime.Format "2006-01-02T15:04"}}{{end}}', '{{.TransportType}}', '{{.TransportNumber}}')" class="btn-icon-minimal" title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button onclick="deleteTransportStep({{.ID}})" class="btn-icon-minimal" title="Delete">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
                                 </div>
                             {{end}}
                         {{end}}
@@ -234,9 +239,14 @@
                                             <span class="transport-badge">{{.TransportNumber}}</span>
                                         {{end}}
                                     </div>
-                                    <button onclick="deleteTransportStep({{.ID}})" class="btn-icon-minimal" title="Delete">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
+                                    <div class="transport-actions">
+                                        <button onclick="editTransportStep({{.ID}}, '{{.JourneyType}}', '{{.DeparturePlace}}', '{{if .DepartureDatetime}}{{.DepartureDatetime.Format "2006-01-02T15:04"}}{{end}}', '{{.ArrivalPlace}}', '{{if .ArrivalDatetime}}{{.ArrivalDatetime.Format "2006-01-02T15:04"}}{{end}}', '{{.TransportType}}', '{{.TransportNumber}}')" class="btn-icon-minimal" title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button onclick="deleteTransportStep({{.ID}})" class="btn-icon-minimal" title="Delete">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
                                 </div>
                             {{end}}
                         {{end}}
@@ -360,10 +370,11 @@
     <div id="addTransportModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Add Transport Step</h3>
+                <h3 id="transportModalTitle">Add Transport Step</h3>
                 <button class="modal-close" onclick="hideModal('addTransportModal')">&times;</button>
             </div>
             <div class="modal-body">
+                <input type="hidden" id="transportStepId">
                 <input type="hidden" id="transportJourneyType">
                 <h4>Departure</h4>
                 <div class="form-group">
@@ -401,7 +412,7 @@
             </div>
             <div class="modal-footer">
                 <button onclick="hideModal('addTransportModal')" class="btn btn-secondary">Cancel</button>
-                <button onclick="addTransportStep()" class="btn btn-primary">Add Step</button>
+                <button id="transportSubmitBtn" onclick="saveTransportStep()" class="btn btn-primary">Add Step</button>
             </div>
         </div>
     </div>
@@ -537,6 +548,7 @@
 
     // Transport Timeline Management
     function showAddTransportStep(journeyType) {
+        document.getElementById('transportStepId').value = '';
         document.getElementById('transportJourneyType').value = journeyType;
         document.getElementById('transportDeparturePlace').value = '';
         document.getElementById('transportDepartureDatetime').value = '';
@@ -544,7 +556,32 @@
         document.getElementById('transportArrivalDatetime').value = '';
         document.getElementById('transportType').value = '';
         document.getElementById('transportNumber').value = '';
+        document.getElementById('transportModalTitle').textContent = 'Add Transport Step';
+        document.getElementById('transportSubmitBtn').textContent = 'Add Step';
         showModal('addTransportModal');
+    }
+
+    function editTransportStep(stepId, journeyType, departurePlace, departureDatetime, arrivalPlace, arrivalDatetime, transportType, transportNumber) {
+        document.getElementById('transportStepId').value = stepId;
+        document.getElementById('transportJourneyType').value = journeyType;
+        document.getElementById('transportDeparturePlace').value = departurePlace || '';
+        document.getElementById('transportDepartureDatetime').value = departureDatetime || '';
+        document.getElementById('transportArrivalPlace').value = arrivalPlace || '';
+        document.getElementById('transportArrivalDatetime').value = arrivalDatetime || '';
+        document.getElementById('transportType').value = transportType || '';
+        document.getElementById('transportNumber').value = transportNumber || '';
+        document.getElementById('transportModalTitle').textContent = 'Edit Transport Step';
+        document.getElementById('transportSubmitBtn').textContent = 'Save Changes';
+        showModal('addTransportModal');
+    }
+
+    async function saveTransportStep() {
+        const stepId = document.getElementById('transportStepId').value;
+        if (stepId) {
+            await updateTransportStep(stepId);
+        } else {
+            await addTransportStep();
+        }
     }
 
     async function addTransportStep() {
@@ -589,9 +626,57 @@
         });
 
         if (response.ok) {
+            hideModal('addTransportModal');
             location.reload();
         } else {
             alert('Failed to add transport step');
+        }
+    }
+
+    async function updateTransportStep(stepId) {
+        const departurePlace = document.getElementById('transportDeparturePlace').value.trim();
+        if (!departurePlace) {
+            alert('Departure place is required');
+            return;
+        }
+
+        const departureDatetimeValue = document.getElementById('transportDepartureDatetime').value;
+        const arrivalPlace = document.getElementById('transportArrivalPlace').value.trim() || null;
+        const arrivalDatetimeValue = document.getElementById('transportArrivalDatetime').value;
+        const transportType = document.getElementById('transportType').value || null;
+        const transportNumber = document.getElementById('transportNumber').value.trim() || null;
+
+        let departureDatetime = null;
+        if (departureDatetimeValue) {
+            departureDatetime = new Date(departureDatetimeValue).toISOString();
+        }
+
+        let arrivalDatetime = null;
+        if (arrivalDatetimeValue) {
+            arrivalDatetime = new Date(arrivalDatetimeValue).toISOString();
+        }
+
+        const response = await fetch(`/trips/${tripId}/transport/${stepId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            },
+            body: JSON.stringify({
+                departure_place: departurePlace,
+                departure_datetime: departureDatetime,
+                arrival_place: arrivalPlace,
+                arrival_datetime: arrivalDatetime,
+                transport_type: transportType,
+                transport_number: transportNumber
+            })
+        });
+
+        if (response.ok) {
+            hideModal('addTransportModal');
+            location.reload();
+        } else {
+            alert('Failed to update transport step');
         }
     }
 
@@ -1202,6 +1287,12 @@
     .checklist-actions {
         display: flex;
         gap: 0.25rem;
+    }
+
+    .transport-actions {
+        display: flex;
+        gap: 0.25rem;
+        margin-left: auto;
     }
 
     .transport-journey {
