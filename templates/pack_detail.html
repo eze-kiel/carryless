@@ -3154,6 +3154,7 @@ async function saveFullEdit(event) {
             <button type="button" class="modal-close" onclick="closeEditPackModal()"><i class="fas fa-times"></i></button>
         </div>
         <form id="editPackForm" onsubmit="handleEditPackSubmit(event)">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
             <div class="form-group">
                 <label for="packName">Pack Name *</label>
                 <input type="text" id="packName" name="name" value="{{.Pack.Name}}" required maxlength="200">

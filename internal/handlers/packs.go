@@ -182,6 +182,17 @@ func handlePackDetail(c *gin.Context) {
 		}
 	}
 
+	csrfToken, err := database.CreateCSRFToken(db, userID)
+	if err != nil {
+		c.HTML(http.StatusInternalServerError, "pack_detail.html", gin.H{
+			"Title": "Pack Detail - Carryless",
+			"User":  user,
+			"Pack":  pack,
+			"Error": "Failed to generate security token",
+		})
+		return
+	}
+
 	c.HTML(http.StatusOK, "pack_detail.html", gin.H{
 		"Title":               "Pack Detail - Carryless",
 		"User":                user,
@@ -195,6 +206,7 @@ func handlePackDetail(c *gin.Context) {
 		"TotalWeight":         totalWeight,
 		"TotalWornWeight":     totalWornWeight,
 		"TotalItemCount":      totalItemCount,
+		"CSRFToken":           csrfToken.Token,
 	})
 }
 
