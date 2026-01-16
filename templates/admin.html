@@ -65,6 +65,9 @@
             
             <div class="admin-users">
                 <h2>All Users</h2>
+                <div class="search-container" style="margin-bottom: 1rem;">
+                    <input type="text" id="userSearch" placeholder="Search users by username or email..." autocomplete="off" style="width: 100%; padding: 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-base); font-size: 1rem;">
+                </div>
                 <div class="table-container">
                     <table class="users-table">
                         <thead>
@@ -72,10 +75,10 @@
                                 <th>ID</th>
                                 <th>Username</th>
                                 <th>Email</th>
-                                <th>Admin</th>
                                 <th>Activated</th>
                                 <th>Items</th>
                                 <th>Packs</th>
+                                <th>Trips</th>
                                 <th>Last Seen</th>
                                 <th>Created At</th>
                                 <th>Actions</th>
@@ -83,14 +86,14 @@
                         </thead>
                         <tbody>
                             {{range .Users}}
-                            <tr>
+                            <tr class="user-row" data-username="{{.Username}}" data-email="{{.Email}}">
                                 <td>{{.ID}}</td>
-                                <td>{{.Username}}</td>
+                                <td>{{.Username}}{{if .IsAdmin}}<i class="fas fa-star" style="color: #a855f7; margin-left: 6px;"></i>{{end}}</td>
                                 <td>{{redactEmail .Email}}</td>
-                                <td>{{if .IsAdmin}}<span class="badge badge-success"><i class="fas fa-check"></i> Yes</span>{{else}}<span class="badge badge-danger"><i class="fas fa-times"></i> No</span>{{end}}</td>
-                                <td>{{if .IsActivated}}<span class="badge badge-success"><i class="fas fa-check"></i> Yes</span>{{else}}<span class="badge badge-danger"><i class="fas fa-times"></i> No</span>{{end}}</td>
+                                <td>{{if .IsActivated}}<span class="status-badge status-active">Active</span>{{else}}<span class="status-badge status-inactive">Inactive</span>{{end}}</td>
                                 <td>{{.ItemCount}}</td>
                                 <td>{{.PackCount}}</td>
+                                <td>{{.TripCount}}</td>
                                 <td>
                                     {{if .LastSeen.Valid}}
                                         <span class="last-seen" data-timestamp="{{.LastSeen.Time.Format "2006-01-02T15:04:05Z07:00"}}">{{.LastSeen.Time.Format "2006-01-02 15:04:05"}}</span>
@@ -644,6 +647,27 @@ document.addEventListener('DOMContentLoaded', function() {
             element.title = new Date(timestamp).toLocaleString(); // Show full date on hover
         }
     });
+
+    // User search functionality
+    const searchInput = document.getElementById('userSearch');
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const searchQuery = this.value.toLowerCase().trim();
+            const userRows = document.querySelectorAll('.user-row');
+
+            userRows.forEach(row => {
+                const username = row.getAttribute('data-username').toLowerCase();
+                const email = row.getAttribute('data-email').toLowerCase();
+
+                // Show row if username or email matches the search query
+                if (username.includes(searchQuery) || email.includes(searchQuery)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+    }
 });
 
 </script>

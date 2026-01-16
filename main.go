@@ -163,9 +163,9 @@ func main() {
 	r.Static("/static", "./static")
 
 	r.Use(middleware.CORS(cfg.AllowedOrigins))
-	r.Use(middleware.IPBlocker())
-	r.Use(middleware.RateLimit())
-	r.Use(middleware.Track404AndBlock())
+	r.Use(middleware.IPBlocker(cfg))
+	r.Use(middleware.RateLimit(cfg))
+	r.Use(middleware.Track404AndBlock(cfg))
 
 	handlers.SetupRoutes(r, db, emailService, cfg)
 

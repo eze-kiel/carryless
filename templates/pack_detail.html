@@ -20,7 +20,7 @@
 <div class="pack-detail">
     <div class="pack-header">
         <div class="page-header">
-            <h1>{{.Pack.Name}} {{if .Pack.IsLocked}}<i class="fas fa-lock" title="Pack is locked"></i>{{end}}</h1>
+            <h1 id="packNameDisplay">{{.Pack.Name}} {{if .Pack.IsLocked}}<i class="fas fa-lock" title="Pack is locked"></i>{{end}}</h1>
             <div>
                 {{if .Pack.IsPublic}}
                     <a href="{{if .Pack.ShortID}}/p/{{.Pack.ShortID}}{{else}}/p/packs/{{.Pack.ID}}{{end}}" class="btn btn-secondary">Public View</a>
@@ -28,6 +28,9 @@
                 <a href="{{if and .Pack.IsPublic .Pack.ShortID}}/p/{{.Pack.ShortID}}/checklist{{else}}/packs/{{.Pack.ID}}/checklist{{end}}" class="btn btn-secondary">Prep Mode</a>
                 <button type="button" class="btn btn-secondary" onclick="togglePackLock('{{.Pack.ID}}', {{if .Pack.IsLocked}}false{{else}}true{{end}})">
                     {{if .Pack.IsLocked}}<i class="fas fa-unlock"></i> Unlock{{else}}<i class="fas fa-lock"></i> Lock{{end}}
+                </button>
+                <button type="button" class="btn btn-primary" onclick="openEditPackModal()">
+                    <i class="fas fa-edit"></i> Edit
                 </button>
             </div>
         </div>
@@ -3142,6 +3145,34 @@ async function saveFullEdit(event) {
     }
 }
 </style>
+
+<!-- Edit Pack Modal -->
+<div id="editPackModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Edit Pack</h2>
+            <button type="button" class="modal-close" onclick="closeEditPackModal()"><i class="fas fa-times"></i></button>
+        </div>
+        <form id="editPackForm" onsubmit="handleEditPackSubmit(event)">
+            <div class="form-group">
+                <label for="packName">Pack Name *</label>
+                <input type="text" id="packName" name="name" value="{{.Pack.Name}}" required maxlength="200">
+            </div>
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="packIsPublic" name="is_public" value="1" {{if .Pack.IsPublic}}checked{{end}}>
+                    <span>Make this pack public</span>
+                </label>
+                <p class="form-hint">Public packs can be viewed by anyone with the link</p>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeEditPackModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
     </main>
 
     <footer class="footer">
@@ -3159,6 +3190,59 @@ async function saveFullEdit(event) {
             </div>
         </div>
     </footer>
+
+    <script>
+        // Edit Pack Modal Functions
+        function openEditPackModal() {
+            document.getElementById('editPackModal').style.display = 'flex';
+        }
+
+        function closeEditPackModal() {
+            document.getElementById('editPackModal').style.display = 'none';
+        }
+
+        async function handleEditPackSubmit(event) {
+            event.preventDefault();
+
+            const form = event.target;
+            const formData = new FormData(form);
+
+            // Convert is_public checkbox value to proper format
+            if (formData.get('is_public')) {
+                formData.set('is_public', '1');
+            } else {
+                formData.set('is_public', '0');
+            }
+
+            try {
+                const response = await fetch('/packs/{{.Pack.ID}}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-Token': '{{.CSRFToken}}'
+                    },
+                    body: formData
+                });
+
+                if (response.ok) {
+                    // Reload the page to show updated pack details
+                    window.location.reload();
+                } else {
+                    const data = await response.json();
+                    alert(data.error || 'Failed to update pack');
+                }
+            } catch (error) {
+                console.error('Error updating pack:', error);
+                alert('Failed to update pack. Please try again.');
+            }
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('editPackModal')?.addEventListener('click', function(event) {
+            if (event.target === this) {
+                closeEditPackModal();
+            }
+        });
+    </script>
 
     <script src="/static/js/app.js"></script>
 

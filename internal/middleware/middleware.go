@@ -36,10 +36,16 @@ var (
 	trackersMu   sync.Mutex
 )
 
-func RateLimit() gin.HandlerFunc {
+func RateLimit(cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// Skip rate limiting in development mode
+		if cfg.IsDevelopment() {
+			c.Next()
+			return
+		}
+
 		ip := c.ClientIP()
-		
+
 		mu.Lock()
 		defer mu.Unlock()
 
@@ -62,13 +68,19 @@ func RateLimit() gin.HandlerFunc {
 	}
 }
 
-func AuthRateLimit() gin.HandlerFunc {
+func AuthRateLimit(cfg *config.Config) gin.HandlerFunc {
 	authClients := make(map[string]*rateLimiter)
 	var authMu sync.Mutex
-	
+
 	return func(c *gin.Context) {
+		// Skip rate limiting in development mode
+		if cfg.IsDevelopment() {
+			c.Next()
+			return
+		}
+
 		ip := c.ClientIP()
-		
+
 		authMu.Lock()
 		defer authMu.Unlock()
 
@@ -92,18 +104,24 @@ func AuthRateLimit() gin.HandlerFunc {
 				delete(authClients, ip)
 			}
 		}
-		
+
 		c.Next()
 	}
 }
 
-func ActivationRateLimit() gin.HandlerFunc {
+func ActivationRateLimit(cfg *config.Config) gin.HandlerFunc {
 	activationClients := make(map[string]*rateLimiter)
 	var activationMu sync.Mutex
-	
+
 	return func(c *gin.Context) {
+		// Skip rate limiting in development mode
+		if cfg.IsDevelopment() {
+			c.Next()
+			return
+		}
+
 		ip := c.ClientIP()
-		
+
 		activationMu.Lock()
 		defer activationMu.Unlock()
 
@@ -131,19 +149,25 @@ func ActivationRateLimit() gin.HandlerFunc {
 				delete(activationClients, ip)
 			}
 		}
-		
+
 		c.Next()
 	}
 }
 
-func IPBlocker() gin.HandlerFunc {
+func IPBlocker(cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// Skip IP blocking in development mode
+		if cfg.IsDevelopment() {
+			c.Next()
+			return
+		}
+
 		ip := c.ClientIP()
-		
+
 		trackersMu.Lock()
 		tracker, exists := trackers[ip]
 		trackersMu.Unlock()
-		
+
 		if exists && time.Now().Before(tracker.blockedUntil) {
 			c.HTML(http.StatusForbidden, "blocked.html", gin.H{
 				"Title":   "Access Blocked - Carryless",
@@ -152,22 +176,27 @@ func IPBlocker() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		
+
 		c.Next()
 	}
 }
 
-func Track404AndBlock() gin.HandlerFunc {
+func Track404AndBlock(cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Next()
-		
+
+		// Skip 404 tracking in development mode
+		if cfg.IsDevelopment() {
+			return
+		}
+
 		if c.Writer.Status() == http.StatusNotFound {
 			ip := c.ClientIP()
 			now := time.Now()
-			
+
 			trackersMu.Lock()
 			defer trackersMu.Unlock()
-			
+
 			tracker, exists := trackers[ip]
 			if !exists {
 				tracker = &clientTracker{
@@ -176,10 +205,10 @@ func Track404AndBlock() gin.HandlerFunc {
 				}
 				trackers[ip] = tracker
 			}
-			
+
 			tracker.lastSeen = now
 			tracker.errors404 = append(tracker.errors404, now)
-			
+
 			// Remove 404 errors older than 5 minutes
 			cutoff := now.Add(-5 * time.Minute)
 			validErrors := make([]time.Time, 0)
@@ -189,14 +218,14 @@ func Track404AndBlock() gin.HandlerFunc {
 				}
 			}
 			tracker.errors404 = validErrors
-			
+
 			// Check if we should block this IP
 			if len(tracker.errors404) >= 10 {
 				tracker.blockedUntil = now.Add(15 * time.Minute)
 				tracker.errors404 = make([]time.Time, 0) // Reset counter
 				log.Printf("Blocked IP %s for 15 minutes due to %d 404 errors in 5 minutes", ip, len(validErrors))
 			}
-			
+
 			// Cleanup old trackers
 			for trackerIP, trackerData := range trackers {
 				if time.Since(trackerData.lastSeen) > 30*time.Minute && time.Now().After(trackerData.blockedUntil) {
@@ -248,8 +277,14 @@ func CORS(allowedOrigins string) gin.HandlerFunc {
 	}
 }
 
-func CSRF() gin.HandlerFunc {
+func CSRF(cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// Skip CSRF validation in development mode
+		if cfg.IsDevelopment() {
+			c.Next()
+			return
+		}
+
 		if c.Request.Method == "GET" || c.Request.Method == "HEAD" || c.Request.Method == "OPTIONS" {
 			c.Next()
 			return
@@ -331,8 +366,14 @@ func AuthOptional(db *sql.DB, cfg *config.Config) gin.HandlerFunc {
 	}
 }
 
-func SecurityHeaders() gin.HandlerFunc {
+func SecurityHeaders(cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// Skip security headers in development mode to allow browser automation tools
+		if cfg.IsDevelopment() {
+			c.Next()
+			return
+		}
+
 		c.Header("X-Content-Type-Options", "nosniff")
 		c.Header("X-Frame-Options", "DENY")
 		c.Header("X-XSS-Protection", "1; mode=block")

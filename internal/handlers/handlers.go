@@ -15,7 +15,7 @@ import (
 
 func SetupRoutes(r *gin.Engine, db *sql.DB, emailService *email.Service, cfg *config.Config) {
 	r.Use(middleware.LogRequests())
-	r.Use(middleware.SecurityHeaders())
+	r.Use(middleware.SecurityHeaders(cfg))
 	r.Use(middleware.AddDBContext(db))
 	r.Use(addEmailServiceContext(emailService))
 	r.Use(addConfigContext(cfg))
@@ -25,15 +25,15 @@ func SetupRoutes(r *gin.Engine, db *sql.DB, emailService *email.Service, cfg *co
 	r.GET("/terms", middleware.AuthOptional(db, cfg), handleTermsPage)
 	r.GET("/privacy", middleware.AuthOptional(db, cfg), handlePrivacyPage)
 	r.GET("/register", handleRegisterPage)
-	r.POST("/register", middleware.AuthRateLimit(), handleRegister)
+	r.POST("/register", middleware.AuthRateLimit(cfg), handleRegister)
 	r.GET("/login", handleLoginPage)
-	r.POST("/login", middleware.AuthRateLimit(), handleLogin)
+	r.POST("/login", middleware.AuthRateLimit(cfg), handleLogin)
 	r.POST("/logout", middleware.AuthRequired(db, cfg), handleLogout)
-	r.GET("/activate/:token", middleware.ActivationRateLimit(), middleware.AddDBContext(db), handleActivate)
+	r.GET("/activate/:token", middleware.ActivationRateLimit(cfg), middleware.AddDBContext(db), handleActivate)
 
 	protected := r.Group("/")
 	protected.Use(middleware.AuthRequired(db, cfg))
-	protected.Use(middleware.CSRF())
+	protected.Use(middleware.CSRF(cfg))
 	{
 		protected.GET("/dashboard", handleDashboard)
 		protected.GET("/account", handleAccountPage)
@@ -47,7 +47,7 @@ func SetupRoutes(r *gin.Engine, db *sql.DB, emailService *email.Service, cfg *co
 	activated := r.Group("/")
 	activated.Use(middleware.AuthRequired(db, cfg))
 	activated.Use(middleware.RequireActivation())
-	activated.Use(middleware.CSRF())
+	activated.Use(middleware.CSRF(cfg))
 	{
 		activated.GET("/inventory", handleInventory)
 		activated.GET("/inventory/export", handleExportInventory)
@@ -129,7 +129,7 @@ func SetupRoutes(r *gin.Engine, db *sql.DB, emailService *email.Service, cfg *co
 	// Admin routes
 	admin := r.Group("/admin")
 	admin.Use(middleware.AdminRequired(db, cfg))
-	admin.Use(middleware.CSRF())
+	admin.Use(middleware.CSRF(cfg))
 	{
 		admin.GET("/", handleAdminPanel)
 		admin.POST("/users/:id/toggle-admin", handleToggleUserAdmin)

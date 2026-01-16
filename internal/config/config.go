@@ -55,3 +55,9 @@ func getDurationEnv(key string, defaultValue time.Duration) time.Duration {
 	}
 	return defaultValue
 }
+
+// IsDevelopment returns true if the environment is set to development.
+// In development mode, security measures like CSRF, rate limiting, and security headers are disabled.
+func (c *Config) IsDevelopment() bool {
+	return c.Environment == "development"
+}
