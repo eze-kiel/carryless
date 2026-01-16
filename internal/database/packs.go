@@ -118,7 +118,7 @@ func GetPacks(db *sql.DB, userID int) ([]models.Pack, error) {
 		SELECT id, user_id, name, COALESCE(note, ''), is_public, COALESCE(is_locked, FALSE), COALESCE(short_id, ''), created_at, updated_at
 		FROM packs
 		WHERE user_id = ?
-		ORDER BY updated_at DESC
+		ORDER BY COALESCE(is_locked, FALSE) ASC, updated_at DESC
 	`
 
 	rows, err := db.Query(query, userID)

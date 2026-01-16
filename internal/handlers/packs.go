@@ -1004,9 +1004,9 @@ func handleTogglePackLock(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Pack not found or unauthorized"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update lock status"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update archive status"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Lock status updated successfully"})
+	c.JSON(http.StatusOK, gin.H{"message": "Archive status updated successfully"})
 }

@@ -22,6 +22,13 @@
             <a href="/packs/new" class="btn btn-primary">Create Pack</a>
         </div>
 
+        <div class="filter-row">
+            <label class="filter-label">
+                <input type="checkbox" id="hideArchivedPacks" class="standard-checkbox">
+                Hide archived packs
+            </label>
+        </div>
+
         {{if .Packs}}
             <div class="packs-table">
                 <table>
@@ -34,55 +41,48 @@
                     </thead>
                     <tbody>
                         {{range .Packs}}
-                            <tr class="clickable-row" data-href="/packs/{{.ID}}">
-                                <td>
+                            <tr class="clickable-row{{if .IsLocked}} locked-pack{{end}}" data-href="/packs/{{.ID}}" data-locked="{{.IsLocked}}">
+                                <td onclick="window.location.href='/packs/{{.ID}}'">
                                     <div class="pack-name-cell">
-                                        <a href="/packs/{{.ID}}" class="pack-name">{{.Name}}</a>
-                                        {{if .IsLocked}}<i class="fas fa-lock" title="Locked"></i>{{end}}
+                                        {{.Name}}
+                                        {{if .IsLocked}}<i class="fas fa-archive" title="Archived" style="margin-left: 8px; opacity: 0.6;"></i>{{end}}
                                         {{if .IsPublic}}
-                                            <small>(Public)</small>
+                                            <small style="color: #6c757d; margin-left: 8px;">(Public)</small>
                                         {{else}}
-                                            <small>(Private)</small>
+                                            <small style="color: #6c757d; margin-left: 8px;">(Private)</small>
                                         {{end}}
                                     </div>
                                 </td>
-                                <td>{{.CreatedAt.Format "Jan 2, 2006"}}</td>
-                                <td>
-                                    <div class="dropdown">
-                                        <details>
-                                            <summary>
-                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                    <circle cx="12" cy="12" r="1"></circle>
-                                                    <circle cx="12" cy="5" r="1"></circle>
-                                                    <circle cx="12" cy="19" r="1"></circle>
-                                                </svg>
-                                            </summary>
-                                            <div class="dropdown-menu">
-                                                <form action="/packs/{{.ID}}/edit" method="GET">
-                                                    <button type="submit" class="dropdown-item">Edit</button>
-                                                </form>
-                                                <form action="/packs/{{.ID}}/lock" method="POST">
-                                                    <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
-                                                    <input type="hidden" name="is_locked" value="{{if .IsLocked}}false{{else}}true{{end}}">
-                                                    <button type="submit" class="dropdown-item">
-                                                        {{if .IsLocked}}<i class="fas fa-unlock"></i> Unlock{{else}}<i class="fas fa-lock"></i> Lock{{end}}
-                                                    </button>
-                                                </form>
-                                                <form action="/packs/{{.ID}}/duplicate" method="POST">
-                                                    <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
-                                                    <button type="submit" class="dropdown-item">Duplicate</button>
-                                                </form>
-                                                {{if .IsPublic}}
-                                                    <form action="{{if .ShortID}}/p/{{.ShortID}}{{else}}/p/packs/{{.ID}}{{end}}" method="GET" target="_blank">
-                                                        <button type="submit" class="dropdown-item">View Public</button>
-                                                    </form>
-                                                {{end}}
-                                                <form action="/packs/{{.ID}}/delete" method="POST" onsubmit="return confirm('Are you sure you want to delete this pack?')">
-                                                    <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
-                                                    <button type="submit" class="dropdown-item dropdown-item-danger">Delete</button>
-                                                </form>
-                                            </div>
-                                        </details>
+                                <td onclick="window.location.href='/packs/{{.ID}}'">{{.CreatedAt.Format "Jan 2, 2006"}}</td>
+                                <td onclick="event.stopPropagation()">
+                                    <div class="action-buttons">
+                                        <a href="/packs/{{.ID}}/edit" class="action-icon" title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <form action="/packs/{{.ID}}/lock" method="POST" style="display: inline;">
+                                            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                                            <input type="hidden" name="is_locked" value="{{if .IsLocked}}false{{else}}true{{end}}">
+                                            <button type="submit" class="action-icon" title="{{if .IsLocked}}Unarchive{{else}}Archive{{end}}">
+                                                <i class="fas fa-{{if .IsLocked}}box-open{{else}}archive{{end}}"></i>
+                                            </button>
+                                        </form>
+                                        <form action="/packs/{{.ID}}/duplicate" method="POST" style="display: inline;">
+                                            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                                            <button type="submit" class="action-icon" title="Duplicate">
+                                                <i class="fas fa-copy"></i>
+                                            </button>
+                                        </form>
+                                        {{if .IsPublic}}
+                                            <a href="{{if .ShortID}}/p/{{.ShortID}}{{else}}/p/packs/{{.ID}}{{end}}" target="_blank" class="action-icon" title="View Public">
+                                                <i class="fas fa-external-link-alt"></i>
+                                            </a>
+                                        {{end}}
+                                        <form action="/packs/{{.ID}}/delete" method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this pack?')">
+                                            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                                            <button type="submit" class="action-icon action-icon-danger" title="Delete">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
                                     </div>
                                 </td>
                             </tr>
@@ -101,32 +101,83 @@
     cursor: pointer;
 }
 .clickable-row:hover {
-    background-color: var(--color-gray-50);
+    background-color: #fffbea;
+}
+.locked-pack {
+    opacity: 0.6;
+    background-color: #f8f9fa;
+}
+.locked-pack:hover {
+    opacity: 0.75;
+    background-color: #fffbea;
+}
+.pack-name-cell {
+    display: flex;
+    align-items: center;
+}
+.action-buttons {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+.action-icon {
+    background: none;
+    border: none;
+    color: #495057;
+    cursor: pointer;
+    padding: 4px 8px;
+    font-size: 14px;
+    transition: color 0.2s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+}
+.action-icon:hover {
+    color: #007bff;
+}
+.action-icon-danger:hover {
+    color: #dc3545;
+}
+.filter-row {
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+.filter-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #495057;
+}
+.standard-checkbox {
+    cursor: pointer;
 }
 </style>
 <script>
-// Close other dropdowns when one is opened
-document.addEventListener('click', function(event) {
-    if (event.target.closest('summary')) {
-        // Close all other open details elements
-        document.querySelectorAll('details[open]').forEach(details => {
-            if (!details.contains(event.target)) {
-                details.removeAttribute('open');
-            }
-        });
-    }
-});
+// Hide/show archived packs filter
+const hideArchivedCheckbox = document.getElementById('hideArchivedPacks');
+if (hideArchivedCheckbox) {
+    // Load saved preference
+    const hideArchivedPref = localStorage.getItem('hideArchivedPacks') === 'true';
+    hideArchivedCheckbox.checked = hideArchivedPref;
+    filterArchivedPacks(hideArchivedPref);
 
-// Make rows clickable
-document.querySelectorAll('.clickable-row').forEach(row => {
-    row.addEventListener('click', function(event) {
-        // Don't navigate if clicking on a link, button, or dropdown
-        if (event.target.closest('a, button, .dropdown, details, summary')) {
-            return;
-        }
-        window.location.href = this.dataset.href;
+    hideArchivedCheckbox.addEventListener('change', function() {
+        const shouldHide = this.checked;
+        localStorage.setItem('hideArchivedPacks', shouldHide);
+        filterArchivedPacks(shouldHide);
     });
-});
+}
+
+function filterArchivedPacks(shouldHide) {
+    const archivedRows = document.querySelectorAll('tr.locked-pack');
+    archivedRows.forEach(row => {
+        row.style.display = shouldHide ? 'none' : '';
+    });
+}
 </script>
     </main>
 

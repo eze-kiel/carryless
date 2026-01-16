@@ -20,14 +20,14 @@
 <div class="pack-detail">
     <div class="pack-header">
         <div class="page-header">
-            <h1 id="packNameDisplay">{{.Pack.Name}} {{if .Pack.IsLocked}}<i class="fas fa-lock" title="Pack is locked"></i>{{end}}</h1>
+            <h1 id="packNameDisplay">{{.Pack.Name}} {{if .Pack.IsLocked}}<i class="fas fa-archive" title="Pack is archived"></i>{{end}}</h1>
             <div>
                 {{if .Pack.IsPublic}}
                     <a href="{{if .Pack.ShortID}}/p/{{.Pack.ShortID}}{{else}}/p/packs/{{.Pack.ID}}{{end}}" class="btn btn-secondary">Public View</a>
                 {{end}}
                 <a href="{{if and .Pack.IsPublic .Pack.ShortID}}/p/{{.Pack.ShortID}}/checklist{{else}}/packs/{{.Pack.ID}}/checklist{{end}}" class="btn btn-secondary">Prep Mode</a>
                 <button type="button" class="btn btn-secondary" onclick="togglePackLock('{{.Pack.ID}}', {{if .Pack.IsLocked}}false{{else}}true{{end}})">
-                    {{if .Pack.IsLocked}}<i class="fas fa-unlock"></i> Unlock{{else}}<i class="fas fa-lock"></i> Lock{{end}}
+                    {{if .Pack.IsLocked}}<i class="fas fa-box-open"></i> Unarchive{{else}}<i class="fas fa-archive"></i> Archive{{end}}
                 </button>
                 <button type="button" class="btn btn-primary" onclick="openEditPackModal()">
                     <i class="fas fa-edit"></i> Edit
@@ -1013,10 +1013,10 @@ async function togglePackLock(packId, isLocked) {
             location.reload();
         } else {
             const data = await response.json();
-            alert(data.error || 'Failed to update lock status');
+            alert(data.error || 'Failed to update archive status');
         }
     } catch (error) {
-        alert('Failed to update lock status');
+        alert('Failed to update archive status');
     }
 }
 
