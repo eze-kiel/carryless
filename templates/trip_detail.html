@@ -809,6 +809,13 @@
                 });
 
                 if (response.ok) {
+                    const data = await response.json();
+
+                    // Update CSRF token if a new one was returned
+                    if (data.csrf_token) {
+                        csrfToken = data.csrf_token;
+                    }
+
                     // Show success feedback
                     statusElement.textContent = 'Saved';
                     statusElement.style.color = '#28a745';

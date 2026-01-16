@@ -70,7 +70,7 @@ func SetupRoutes(r *gin.Engine, db *sql.DB, emailService *email.Service, cfg *co
 		activated.POST("/categories/:id", handleUpdateCategory)
 		activated.GET("/categories/:id/items", handleCheckCategoryItems)
 		activated.POST("/categories/:id/delete", handleDeleteCategory)
-		
+
 		activated.GET("/packs", handlePacks)
 		activated.GET("/packs/new", handleNewPackPage)
 		activated.POST("/packs", handleCreatePack)
@@ -79,7 +79,6 @@ func SetupRoutes(r *gin.Engine, db *sql.DB, emailService *email.Service, cfg *co
 		activated.POST("/packs/:id", handleUpdatePack)
 		activated.POST("/packs/:id/delete", handleDeletePack)
 		activated.POST("/packs/:id/duplicate", handleDuplicatePack)
-		activated.POST("/packs/:id/note", handleUpdatePackNote)
 		activated.POST("/packs/:id/items", handleAddItemToPack)
 		activated.DELETE("/packs/:id/items/:item_id", handleRemoveItemFromPack)
 		activated.PUT("/packs/:id/items/:item_id/worn", handleToggleWorn)
@@ -101,7 +100,6 @@ func SetupRoutes(r *gin.Engine, db *sql.DB, emailService *email.Service, cfg *co
 		activated.POST("/trips/:id", handleUpdateTrip)
 		activated.POST("/trips/:id/delete", handleDeleteTrip)
 		activated.POST("/trips/:id/archive", handleArchiveTrip)
-		activated.POST("/trips/:id/notes", handleUpdateTripNotes)
 
 		// Pack associations
 		activated.POST("/trips/:id/packs", handleAddPackToTrip)
@@ -124,6 +122,16 @@ func SetupRoutes(r *gin.Engine, db *sql.DB, emailService *email.Service, cfg *co
 		activated.POST("/trips/:id/gpx", handleUploadGPX)
 		activated.DELETE("/trips/:id/gpx", handleDeleteGPX)
 		activated.GET("/trips/:id/gpx/download", handleDownloadGPX)
+	}
+
+	// Autosave routes that need new CSRF tokens returned after each request
+	autosave := r.Group("/")
+	autosave.Use(middleware.AuthRequired(db, cfg))
+	autosave.Use(middleware.RequireActivation())
+	autosave.Use(middleware.CSRFWithRenewal(cfg))
+	{
+		autosave.POST("/packs/:id/note", handleUpdatePackNote)
+		autosave.POST("/trips/:id/notes", handleUpdateTripNotes)
 	}
 
 	// Admin routes

@@ -326,6 +326,71 @@ func CSRF(cfg *config.Config) gin.HandlerFunc {
 	}
 }
 
+// CSRFWithRenewal validates CSRF tokens and issues a new token in the response.
+// This should be used for autosave endpoints that may be called multiple times.
+// The new token is returned in the response body under the "csrf_token" field.
+func CSRFWithRenewal(cfg *config.Config) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Skip CSRF validation in development mode
+		if cfg.IsDevelopment() {
+			c.Next()
+			return
+		}
+
+		if c.Request.Method == "GET" || c.Request.Method == "HEAD" || c.Request.Method == "OPTIONS" {
+			c.Next()
+			return
+		}
+
+		token := c.GetHeader("X-CSRF-Token")
+		if token == "" {
+			token = c.PostForm("csrf_token")
+		}
+
+		if token == "" {
+			c.JSON(http.StatusForbidden, gin.H{"error": "CSRF token required"})
+			c.Abort()
+			return
+		}
+
+		userID, exists := c.Get("user_id")
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+			c.Abort()
+			return
+		}
+
+		db, exists := c.Get("db")
+		if !exists {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection not available"})
+			c.Abort()
+			return
+		}
+
+		// Validate and delete the old token (normal CSRF behavior)
+		err := database.ValidateCSRFToken(db.(*sql.DB), token, userID.(int))
+		if err != nil {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Invalid CSRF token"})
+			c.Abort()
+			return
+		}
+
+		// Create a new token for the next request
+		newToken, err := database.CreateCSRFToken(db.(*sql.DB), userID.(int))
+		if err != nil {
+			log.Printf("Failed to create new CSRF token for user %d: %v", userID.(int), err)
+			// Don't fail the request if we can't create a new token
+			c.Next()
+			return
+		}
+
+		// Store the new token so it can be added to the response
+		c.Set("new_csrf_token", newToken.Token)
+
+		c.Next()
+	}
+}
+
 func AuthRequired(db *sql.DB, cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		sessionCookie, err := c.Cookie("session_id")

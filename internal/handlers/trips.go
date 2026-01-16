@@ -916,5 +916,12 @@ func handleUpdateTripNotes(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"success": true})
+	response := gin.H{"success": true}
+
+	// Include new CSRF token if available (set by CSRFWithRenewal middleware)
+	if newToken, exists := c.Get("new_csrf_token"); exists {
+		response["csrf_token"] = newToken
+	}
+
+	c.JSON(http.StatusOK, response)
 }

@@ -503,9 +503,9 @@ func handleUpdatePackNote(c *gin.Context) {
 	userID := c.MustGet("user_id").(int)
 	db := c.MustGet("db").(*sql.DB)
 	packID := c.Param("id")
-	
+
 	note := strings.TrimSpace(c.PostForm("note"))
-	
+
 	// Validate note length (500 character limit)
 	if len(note) > 500 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Note must be less than 500 characters"})
@@ -522,7 +522,14 @@ func handleUpdatePackNote(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Pack note updated successfully"})
+	response := gin.H{"message": "Pack note updated successfully"}
+
+	// Include new CSRF token if available (set by CSRFWithRenewal middleware)
+	if newToken, exists := c.Get("new_csrf_token"); exists {
+		response["csrf_token"] = newToken
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
 func handleAddItemToPack(c *gin.Context) {
