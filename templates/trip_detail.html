@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet-gpx@1.7.0/gpx.js"></script>
+    <script src="https://unpkg.com/leaflet-polylinedecorator@1.6.0/dist/leaflet.polylineDecorator.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
@@ -843,8 +844,9 @@
     document.addEventListener('DOMContentLoaded', function() {
         const map = L.map('gpx-map').setView([45.0, 6.0], 10);
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors'
+        L.tileLayer('https://tile.opentopomap.org/{z}/{x}/{y}.png', {
+            maxZoom: 17,
+            attribution: 'Map data: &copy; <a href="https://openstreetmap.org">OpenStreetMap</a> contributors, SRTM | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (CC-BY-SA)'
         }).addTo(map);
 
         // Variable to hold the hover marker
@@ -934,17 +936,23 @@
             }
 
             // Build combined data: [distance, elevation, lat, lng]
-            // Combine lat/lng from points with distance/elevation from elevationData
+            // Calculate cumulative distances from polyline points (more reliable than elevation data distances)
             const trackData = [];
             const minLength = Math.min(points.length, elevationData.length);
+            let cumulativeDistance = 0;
 
             for (let i = 0; i < minLength; i++) {
                 const point = points[i];
                 const elevPoint = elevationData[i];
 
+                // Calculate cumulative distance from polyline points
+                if (i > 0) {
+                    cumulativeDistance += points[i - 1].distanceTo(points[i]);
+                }
+
                 // elevPoint format: [distance_meters, elevation_meters, description]
                 trackData.push([
-                    elevPoint[0],                 // [0] distance in meters (from elevation data)
+                    cumulativeDistance,           // [0] distance in meters (calculated from polyline)
                     elevPoint[1],                 // [1] elevation in meters (from elevation data)
                     point.lat,                    // [2] latitude (from polyline)
                     point.lng                     // [3] longitude (from polyline)
@@ -965,6 +973,50 @@
             const labels = sampledData.map(point => (point[0] / 1000).toFixed(1)); // Convert m to km
             const elevations = sampledData.map(point => point[1]); // Elevation unchanged
 
+            // Calculate slopes between consecutive points
+            function calculateSlopes(data) {
+                const slopes = [0]; // First point has no slope
+                for (let i = 1; i < data.length; i++) {
+                    const elevChange = data[i][1] - data[i-1][1];
+                    const distChange = data[i][0] - data[i-1][0];
+                    const slopePercent = distChange > 0 ? (elevChange / distChange) * 100 : 0;
+                    slopes.push(slopePercent);
+                }
+                return slopes;
+            }
+
+            // Map slope to color (green for descent, red for ascent)
+            function getSlopeColor(slope) {
+                // Descending (negative slope) - green shades
+                if (slope <= -20) return '#006400';  // Very steep descent - dark green
+                if (slope <= -15) return '#228B22';  // Steep descent - forest green
+                if (slope <= -10) return '#32CD32';  // Moderate descent - lime green
+                if (slope <= -5) return '#90EE90';   // Gentle descent - light green
+                if (slope < -0.5) return '#C8E6C9'; // Very gentle descent - very light green
+                // Flat terrain - white/light gray
+                if (slope >= -0.5 && slope <= 0.5) return '#F5F5F5';
+                // Ascending (positive slope) - red shades
+                if (slope < 5) return '#FFCDD2';     // Very gentle ascent - very light red
+                if (slope < 10) return '#EF9A9A';    // Gentle ascent - light red
+                if (slope < 15) return '#EF5350';    // Moderate ascent - medium red
+                if (slope < 20) return '#D32F2F';    // Steep ascent - dark red
+                return '#8B0000';                    // Very steep ascent - very dark red
+            }
+
+            const slopes = calculateSlopes(sampledData);
+
+            // Use different aspect ratio on mobile for taller chart
+            const isMobile = window.innerWidth <= 768;
+            const chartAspectRatio = isMobile ? 2 : 4;
+
+            // Calculate min/max elevation with padding for better mobile display
+            const minElevation = Math.min(...elevations);
+            const maxElevation = Math.max(...elevations);
+            const elevationRange = maxElevation - minElevation;
+            const padding = elevationRange * 0.1;
+            const yMin = isMobile ? Math.floor((minElevation - padding) / 10) * 10 : undefined;
+            const yMax = isMobile ? Math.ceil((maxElevation + padding) / 10) * 10 : undefined;
+
             const elevationChart = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -973,8 +1025,17 @@
                         label: 'Elevation',
                         data: elevations,
                         fill: true,
-                        backgroundColor: 'rgba(0, 74, 173, 0.1)',
-                        borderColor: '#004aad',
+                        segment: {
+                            borderColor: ctx => {
+                                const idx = ctx.p0DataIndex;
+                                return slopes[idx + 1] !== undefined ? getSlopeColor(slopes[idx + 1]) : getSlopeColor(slopes[idx]);
+                            },
+                            backgroundColor: ctx => {
+                                const idx = ctx.p0DataIndex;
+                                const color = slopes[idx + 1] !== undefined ? getSlopeColor(slopes[idx + 1]) : getSlopeColor(slopes[idx]);
+                                return color + 'CC'; // Add alpha for fill (80% opacity)
+                            }
+                        },
                         borderWidth: 2,
                         tension: 0.4,
                         pointRadius: 0
@@ -983,19 +1044,26 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: true,
-                    aspectRatio: 4,
+                    aspectRatio: chartAspectRatio,
                     plugins: {
                         legend: {
                             display: false
                         },
                         tooltip: {
                             enabled: true,
+                            displayColors: false,
                             callbacks: {
                                 title: function(context) {
                                     return context[0].label + ' km';
                                 },
                                 label: function(context) {
-                                    return 'Elevation: ' + Math.round(context.parsed.y) + ' m';
+                                    const elevation = Math.round(context.parsed.y);
+                                    const slope = slopes[context.dataIndex] || 0;
+                                    const slopeSign = slope >= 0 ? '+' : '';
+                                    return [
+                                        'Elevation: ' + elevation + ' m',
+                                        'Slope: ' + slopeSign + slope.toFixed(1) + '%'
+                                    ];
                                 }
                             }
                         }
@@ -1004,7 +1072,7 @@
                         x: {
                             display: true,
                             title: {
-                                display: true,
+                                display: !isMobile,
                                 text: 'Distance (km)',
                                 font: {
                                     size: 11,
@@ -1014,11 +1082,12 @@
                             },
                             ticks: {
                                 font: {
-                                    size: 10
+                                    size: isMobile ? 9 : 10
                                 },
                                 color: '#6b7280',
                                 maxRotation: 0,
-                                autoSkipPadding: 20
+                                autoSkipPadding: isMobile ? 30 : 20,
+                                maxTicksLimit: isMobile ? 6 : 12
                             },
                             grid: {
                                 display: false
@@ -1027,8 +1096,10 @@
                         y: {
                             display: true,
                             position: 'left',
+                            min: yMin,
+                            max: yMax,
                             title: {
-                                display: true,
+                                display: !isMobile,
                                 text: 'Elevation (m)',
                                 font: {
                                     size: 11,
@@ -1041,9 +1112,10 @@
                                     return Math.round(value) + 'm';
                                 },
                                 font: {
-                                    size: 10
+                                    size: isMobile ? 9 : 10
                                 },
-                                color: '#6b7280'
+                                color: '#6b7280',
+                                maxTicksLimit: isMobile ? 5 : 8
                             },
                             grid: {
                                 color: 'rgba(0, 0, 0, 0.05)'
@@ -1097,8 +1169,8 @@
             async: true,
             polyline_options: {
                 color: '#004aad',
-                weight: 3,
-                opacity: 0.8
+                weight: 7,
+                opacity: 0.9
             },
             marker_options: {
                 startIconUrl: null,
@@ -1110,6 +1182,41 @@
             }
         }).on('loaded', function(e) {
             map.fitBounds(e.target.getBounds());
+
+            // Add direction arrows to the track
+            const layers = e.target.getLayers();
+            let trackPolyline = null;
+            layers.forEach(layer => {
+                if (layer.getLatLngs) {
+                    trackPolyline = layer;
+                } else if (layer.getLayers) {
+                    layer.getLayers().forEach(sublayer => {
+                        if (sublayer.getLatLngs) {
+                            trackPolyline = sublayer;
+                        }
+                    });
+                }
+            });
+            if (trackPolyline) {
+                L.polylineDecorator(trackPolyline, {
+                    patterns: [
+                        {
+                            offset: 50,
+                            repeat: 60,
+                            symbol: L.Symbol.arrowHead({
+                                pixelSize: 6,
+                                polygon: false,
+                                pathOptions: {
+                                    stroke: true,
+                                    color: '#ffffff',
+                                    weight: 2,
+                                    opacity: 1
+                                }
+                            })
+                        }
+                    ]
+                }).addTo(map);
+            }
 
             // Extract GPX statistics
             const distanceKm = (e.target.get_distance() / 1000).toFixed(2);
@@ -1691,7 +1798,7 @@
     }
 
     #gpx-map {
-        height: 400px;
+        height: 500px;
         width: 100%;
     }
 
@@ -1730,7 +1837,15 @@
         }
 
         #gpx-map {
-            height: 300px;
+            height: 350px;
+        }
+
+        #elevation-chart {
+            max-height: 250px;
+        }
+
+        .elevation-chart-container {
+            padding: 0.75rem;
         }
     }
     </style>

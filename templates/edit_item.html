@@ -322,6 +322,16 @@
         color: var(--color-gray-500);
     }
 
+    .linked-item-suggestion .suggestion-note {
+        font-size: 0.7rem;
+        color: var(--color-gray-400);
+        font-style: italic;
+        display: block;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
     .linked-items-list .empty-text,
     .linked-items-list .loading-text,
     .linked-items-list .error-text {
@@ -488,13 +498,13 @@
     <script>
     // Linked Items Management
     const currentItemId = {{.Item.ID}};
-    const editPageCsrfToken = '{{.CSRFToken}}';
+    let editPageCsrfToken = '{{.CSRFToken}}';
 
     // Items data for picker (excluding current item)
     const allItems = [
         {{range .Items}}
         {{if ne .ID $.Item.ID}}
-        {id: {{.ID}}, name: "{{.Name}}", category: "{{.Category.Name}}", weight: {{.WeightGrams}}},
+        {id: {{.ID}}, name: "{{.Name}}", category: "{{.Category.Name}}", weight: {{.WeightGrams}}, brand: "{{if .Brand}}{{.Brand}}{{end}}", model: "{{if .Model}}{{.Model}}{{end}}", note: "{{.Note}}"},
         {{end}}
         {{end}}
     ];
@@ -503,6 +513,22 @@
     document.addEventListener('DOMContentLoaded', function() {
         loadLinkedItems();
     });
+
+    function fetchNewCSRFToken() {
+        fetch('/api/csrf-token', {
+            method: 'GET',
+            credentials: 'same-origin'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.token) {
+                editPageCsrfToken = data.token;
+            }
+        })
+        .catch(error => {
+            console.error('Failed to fetch new CSRF token:', error);
+        });
+    }
 
     async function loadLinkedItems() {
         const listEl = document.getElementById('linkedItemsList');
@@ -553,7 +579,10 @@
         }
 
         const matches = allItems.filter(item =>
-            item.name.toLowerCase().includes(query)
+            item.name.toLowerCase().includes(query) ||
+            item.category.toLowerCase().includes(query) ||
+            (item.brand && item.brand.toLowerCase().includes(query)) ||
+            (item.model && item.model.toLowerCase().includes(query))
         ).slice(0, 5);
 
         if (matches.length === 0) {
@@ -561,12 +590,18 @@
             return;
         }
 
-        suggestionsDiv.innerHTML = matches.map(item => `
-            <div class="linked-item-suggestion" onclick="addLinkedItem(${item.id})">
-                <span class="suggestion-name">${item.name}</span>
-                <span class="suggestion-meta">${item.category} - ${item.weight}g</span>
-            </div>
-        `).join('');
+        suggestionsDiv.innerHTML = matches.map(item => {
+            const brandModel = [item.brand, item.model].filter(Boolean).join(' ');
+            const displayName = brandModel ? `${item.name} (${brandModel})` : item.name;
+            const noteHtml = item.note ? `<span class="suggestion-note">${item.note}</span>` : '';
+            return `
+                <div class="linked-item-suggestion" onclick="addLinkedItem(${item.id})">
+                    <span class="suggestion-name">${displayName}</span>
+                    <span class="suggestion-meta">${item.category} - ${item.weight}g</span>
+                    ${noteHtml}
+                </div>
+            `;
+        }).join('');
     });
 
     async function addLinkedItem(linkedItemId) {
@@ -588,6 +623,7 @@
 
             // Reload linked items and hide picker
             loadLinkedItems();
+            fetchNewCSRFToken();
             document.getElementById('linkedItemPicker').style.display = 'none';
             document.getElementById('linkedItemSearch').value = '';
         } catch (err) {
@@ -610,6 +646,7 @@
 
             // Reload linked items
             loadLinkedItems();
+            fetchNewCSRFToken();
         } catch (err) {
             alert('Failed to remove linked item');
         }
