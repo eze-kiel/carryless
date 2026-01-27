@@ -106,6 +106,21 @@
                     <input type="url" id="link" name="link" maxlength="500" placeholder="https://..." value="{{if .Item.Link}}{{.Item.Link}}{{end}}">
                 </div>
 
+                <!-- Linked Items Section -->
+                <div class="linked-items-section">
+                    <div class="linked-items-header">
+                        <label>Linked Items <span class="tooltip-icon" title="When you add this item to a pack, its linked items will be automatically added too."><i class="fas fa-question-circle"></i></span></label>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="showAddLinkedItemPicker()">+ Add</button>
+                    </div>
+                    <div id="linkedItemsList" class="linked-items-list">
+                        <span class="loading-text">Loading...</span>
+                    </div>
+                    <div id="linkedItemPicker" class="linked-item-picker" style="display: none;">
+                        <input type="text" id="linkedItemSearch" class="form-control" placeholder="Search for item to link...">
+                        <div id="linkedItemSuggestions" class="linked-item-suggestions"></div>
+                    </div>
+                </div>
+
                 <div class="form-actions">
                     <a href="/inventory" class="btn btn-secondary">Cancel</a>
                     <button type="submit" class="btn btn-primary">Update Item</button>
@@ -207,6 +222,129 @@
 
     .form-row .form-group {
         margin-bottom: var(--space-4);
+    }
+
+    /* Linked Items Styles */
+    .linked-items-section {
+        margin-bottom: var(--space-4);
+    }
+
+    .linked-items-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+
+    .linked-items-header label {
+        font-weight: 500;
+        color: var(--color-gray-700);
+        margin-bottom: 0;
+    }
+
+    .linked-items-header .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+    }
+
+    .linked-items-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        min-height: 24px;
+    }
+
+    .linked-item-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.25rem 0.5rem;
+        background: #fef3c7;
+        color: #92400e;
+        border-radius: var(--radius-sm);
+        font-size: 0.8rem;
+    }
+
+    .linked-item-remove {
+        background: none;
+        border: none;
+        color: #92400e;
+        cursor: pointer;
+        font-size: 1rem;
+        line-height: 1;
+        padding: 0;
+        margin-left: 0.25rem;
+    }
+
+    .linked-item-remove:hover {
+        color: #78350f;
+    }
+
+    .linked-item-picker {
+        margin-top: 0.75rem;
+    }
+
+    .linked-item-picker input {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+
+    .linked-item-suggestions {
+        max-height: 200px;
+        overflow-y: auto;
+        border: 1px solid var(--color-gray-200);
+        border-radius: var(--radius-sm);
+        background: white;
+    }
+
+    .linked-item-suggestion {
+        padding: 0.5rem 0.75rem;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        border-bottom: 1px solid var(--color-gray-100);
+    }
+
+    .linked-item-suggestion:last-child {
+        border-bottom: none;
+    }
+
+    .linked-item-suggestion:hover {
+        background: var(--color-gray-50);
+    }
+
+    .linked-item-suggestion .suggestion-name {
+        font-weight: 500;
+    }
+
+    .linked-item-suggestion .suggestion-meta {
+        font-size: 0.75rem;
+        color: var(--color-gray-500);
+    }
+
+    .linked-items-list .empty-text,
+    .linked-items-list .loading-text,
+    .linked-items-list .error-text {
+        color: var(--color-gray-500);
+        font-size: 0.875rem;
+        font-style: italic;
+    }
+
+    .linked-item-suggestions .no-matches {
+        padding: 0.5rem 0.75rem;
+        color: var(--color-gray-500);
+        font-size: 0.875rem;
+    }
+
+    .tooltip-icon {
+        color: var(--color-gray-400);
+        cursor: help;
+        font-size: 0.8rem;
+        margin-left: 0.25rem;
+    }
+
+    .tooltip-icon:hover {
+        color: var(--color-gray-600);
     }
     </style>
     
@@ -345,6 +483,137 @@
             }
         });
     });
+    </script>
+
+    <script>
+    // Linked Items Management
+    const currentItemId = {{.Item.ID}};
+    const editPageCsrfToken = '{{.CSRFToken}}';
+
+    // Items data for picker (excluding current item)
+    const allItems = [
+        {{range .Items}}
+        {{if ne .ID $.Item.ID}}
+        {id: {{.ID}}, name: "{{.Name}}", category: "{{.Category.Name}}", weight: {{.WeightGrams}}},
+        {{end}}
+        {{end}}
+    ];
+
+    // Load linked items on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        loadLinkedItems();
+    });
+
+    async function loadLinkedItems() {
+        const listEl = document.getElementById('linkedItemsList');
+        listEl.innerHTML = '<span class="loading-text">Loading...</span>';
+
+        try {
+            const response = await fetch(`/api/items/${currentItemId}/links`, {
+                headers: {'X-CSRF-Token': editPageCsrfToken}
+            });
+            if (!response.ok) throw new Error('Failed to load links');
+            const data = await response.json();
+
+            if (data.links && data.links.length > 0) {
+                listEl.innerHTML = data.links.map(link => {
+                    const item = link.linked_item;
+                    const brandModel = [item.brand, item.model].filter(Boolean).join(' ');
+                    const displayName = brandModel ? `${item.name} (${brandModel})` : item.name;
+                    return `
+                    <div class="linked-item-tag">
+                        <span>${displayName}</span>
+                        <button type="button" class="linked-item-remove" onclick="removeLinkedItem(${link.linked_item_id})">&times;</button>
+                    </div>
+                `}).join('');
+            } else {
+                listEl.innerHTML = '<span class="empty-text">No linked items</span>';
+            }
+        } catch (err) {
+            listEl.innerHTML = '<span class="error-text">Failed to load linked items</span>';
+        }
+    }
+
+    function showAddLinkedItemPicker() {
+        const picker = document.getElementById('linkedItemPicker');
+        const searchInput = document.getElementById('linkedItemSearch');
+        picker.style.display = 'block';
+        searchInput.value = '';
+        searchInput.focus();
+        document.getElementById('linkedItemSuggestions').innerHTML = '';
+    }
+
+    document.getElementById('linkedItemSearch')?.addEventListener('input', function(e) {
+        const query = e.target.value.toLowerCase().trim();
+        const suggestionsDiv = document.getElementById('linkedItemSuggestions');
+
+        if (query.length < 2) {
+            suggestionsDiv.innerHTML = '';
+            return;
+        }
+
+        const matches = allItems.filter(item =>
+            item.name.toLowerCase().includes(query)
+        ).slice(0, 5);
+
+        if (matches.length === 0) {
+            suggestionsDiv.innerHTML = '<div class="no-matches">No matching items</div>';
+            return;
+        }
+
+        suggestionsDiv.innerHTML = matches.map(item => `
+            <div class="linked-item-suggestion" onclick="addLinkedItem(${item.id})">
+                <span class="suggestion-name">${item.name}</span>
+                <span class="suggestion-meta">${item.category} - ${item.weight}g</span>
+            </div>
+        `).join('');
+    });
+
+    async function addLinkedItem(linkedItemId) {
+        try {
+            const response = await fetch(`/api/items/${currentItemId}/links`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': editPageCsrfToken
+                },
+                body: JSON.stringify({linked_item_id: linkedItemId})
+            });
+
+            if (!response.ok) {
+                const data = await response.json();
+                alert(data.error || 'Failed to add linked item');
+                return;
+            }
+
+            // Reload linked items and hide picker
+            loadLinkedItems();
+            document.getElementById('linkedItemPicker').style.display = 'none';
+            document.getElementById('linkedItemSearch').value = '';
+        } catch (err) {
+            alert('Failed to add linked item');
+        }
+    }
+
+    async function removeLinkedItem(linkedItemId) {
+        try {
+            const response = await fetch(`/api/items/${currentItemId}/links/${linkedItemId}`, {
+                method: 'DELETE',
+                headers: {'X-CSRF-Token': editPageCsrfToken}
+            });
+
+            if (!response.ok) {
+                const data = await response.json();
+                alert(data.error || 'Failed to remove linked item');
+                return;
+            }
+
+            // Reload linked items
+            loadLinkedItems();
+        } catch (err) {
+            alert('Failed to remove linked item');
+        }
+    }
     </script>
     
     <script>

@@ -186,6 +186,11 @@ func Migrate(db *sql.DB) error {
 		return fmt.Errorf("failed to migrate transport steps: %w", err)
 	}
 
+	// Create item_links table if it doesn't exist
+	if err := createItemLinksTable(db); err != nil {
+		return fmt.Errorf("failed to create item_links table: %w", err)
+	}
+
 	return nil
 }
 
@@ -880,6 +885,31 @@ func createTripsTable(db *sql.DB) error {
 		`CREATE INDEX IF NOT EXISTS idx_trip_packs_pack_id ON trip_packs(pack_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_trip_checklist_items_trip_id ON trip_checklist_items(trip_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_trip_transport_steps_trip_id ON trip_transport_steps(trip_id)`,
+	}
+
+	for _, migration := range migrations {
+		if _, err := db.Exec(migration); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func createItemLinksTable(db *sql.DB) error {
+	migrations := []string{
+		`CREATE TABLE IF NOT EXISTS item_links (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			parent_item_id INTEGER NOT NULL,
+			linked_item_id INTEGER NOT NULL,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (parent_item_id) REFERENCES items(id) ON DELETE CASCADE,
+			FOREIGN KEY (linked_item_id) REFERENCES items(id) ON DELETE CASCADE,
+			UNIQUE(parent_item_id, linked_item_id),
+			CHECK(parent_item_id != linked_item_id)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_item_links_parent ON item_links(parent_item_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_item_links_linked ON item_links(linked_item_id)`,
 	}
 
 	for _, migration := range migrations {

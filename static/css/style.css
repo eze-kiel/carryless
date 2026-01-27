@@ -2154,6 +2154,11 @@ th .dropdown-menu {
     font-weight: var(--font-weight-medium);
 }
 
+.suggestion-linked {
+    color: #92400e;
+    background: #fef3c7;
+}
+
 @keyframes modalAppear {
     to {
         transform: scale(1);

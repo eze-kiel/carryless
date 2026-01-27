@@ -419,19 +419,67 @@ func AddItemToPack(db *sql.DB, packID string, itemID int, userID int) error {
 		return fmt.Errorf("item not found")
 	}
 
+	// Start transaction for atomicity (main item + linked items)
+	tx, err := db.Begin()
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		}
+	}()
+
+	// Add the main item
+	if err := addSingleItemToPackTx(tx, packID, itemID); err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Get linked item IDs and add them too
+	linkedItemIDs, err := GetLinkedItemIDs(db, itemID)
+	if err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to get linked items: %w", err)
+	}
+
+	for _, linkedItemID := range linkedItemIDs {
+		// Add each linked item (ignore if already in pack - just increment count)
+		if err := addSingleItemToPackTx(tx, packID, linkedItemID); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("failed to add linked item %d to pack: %w", linkedItemID, err)
+		}
+	}
+
+	// Commit transaction
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	// Update pack timestamp since items were modified
+	if err := updatePackTimestamp(db, packID); err != nil {
+		return fmt.Errorf("failed to update pack timestamp: %w", err)
+	}
+
+	return nil
+}
+
+// addSingleItemToPackTx adds a single item to a pack within a transaction
+func addSingleItemToPackTx(tx *sql.Tx, packID string, itemID int) error {
 	// Check if item already exists in pack
 	var existingID int
 	var currentCount int
 	checkQuery := `SELECT id, count FROM pack_items WHERE pack_id = ? AND item_id = ?`
-	err = db.QueryRow(checkQuery, packID, itemID).Scan(&existingID, &currentCount)
-	
+	err := tx.QueryRow(checkQuery, packID, itemID).Scan(&existingID, &currentCount)
+
 	if err == sql.ErrNoRows {
 		// Item doesn't exist, insert new with count 1
 		insertQuery := `
 			INSERT INTO pack_items (pack_id, item_id, count)
 			VALUES (?, ?, 1)
 		`
-		_, err = db.Exec(insertQuery, packID, itemID)
+		_, err = tx.Exec(insertQuery, packID, itemID)
 		if err != nil {
 			return fmt.Errorf("failed to add item to pack: %w", err)
 		}
@@ -440,15 +488,10 @@ func AddItemToPack(db *sql.DB, packID string, itemID int, userID int) error {
 	} else {
 		// Item exists, increment count
 		updateQuery := `UPDATE pack_items SET count = count + 1 WHERE id = ?`
-		_, err = db.Exec(updateQuery, existingID)
+		_, err = tx.Exec(updateQuery, existingID)
 		if err != nil {
 			return fmt.Errorf("failed to increment item count: %w", err)
 		}
-	}
-
-	// Update pack timestamp since items were modified
-	if err := updatePackTimestamp(db, packID); err != nil {
-		return fmt.Errorf("failed to update pack timestamp: %w", err)
 	}
 
 	return nil

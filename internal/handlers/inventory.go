@@ -81,12 +81,24 @@ func handleInventory(c *gin.Context) {
 		return
 	}
 
+	// Get linked items count for each item
+	itemLinksCount, err := database.GetItemsLinkedCount(db, userID)
+	if err != nil {
+		c.HTML(http.StatusInternalServerError, "inventory.html", gin.H{
+			"Title": "Inventory - Carryless",
+			"User":  user,
+			"Error": "Failed to load linked items",
+		})
+		return
+	}
+
 	c.HTML(http.StatusOK, "inventory.html", gin.H{
-		"Title":      "Inventory - Carryless",
-		"User":       user,
-		"Items":      items,
-		"Categories": categories,
-		"CSRFToken":  csrfToken.Token,
+		"Title":          "Inventory - Carryless",
+		"User":           user,
+		"Items":          items,
+		"Categories":     categories,
+		"CSRFToken":      csrfToken.Token,
+		"ItemLinksCount": itemLinksCount,
 	})
 }
 
@@ -324,6 +336,17 @@ func handleEditItemPage(c *gin.Context) {
 		return
 	}
 
+	// Get all items for the linked items picker
+	items, err := database.GetItems(db, userID)
+	if err != nil {
+		c.HTML(http.StatusInternalServerError, "edit_item.html", gin.H{
+			"Title": "Edit Item - Carryless",
+			"User":  user,
+			"Error": "Failed to load items",
+		})
+		return
+	}
+
 	csrfToken, err := database.CreateCSRFToken(db, userID)
 	if err != nil {
 		c.HTML(http.StatusInternalServerError, "edit_item.html", gin.H{
@@ -338,6 +361,7 @@ func handleEditItemPage(c *gin.Context) {
 		"Title":      "Edit Item - Carryless",
 		"User":       user,
 		"Item":       item,
+		"Items":      items,
 		"Categories": categories,
 		"CSRFToken":  csrfToken.Token,
 	})
@@ -1437,4 +1461,111 @@ func parseItemIDs(itemIDsStr string) ([]int, error) {
 	}
 
 	return itemIDs, nil
+}
+
+// handleGetItemLinks returns linked items for an item
+func handleGetItemLinks(c *gin.Context) {
+	userID := c.MustGet("user_id").(int)
+	db := c.MustGet("db").(*sql.DB)
+
+	itemIDStr := c.Param("id")
+	itemID, err := strconv.Atoi(itemIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid item ID"})
+		return
+	}
+
+	// Verify ownership
+	_, err = database.GetItem(db, userID, itemID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Item not found"})
+		return
+	}
+
+	links, err := database.GetLinkedItems(db, itemID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get linked items"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"links": links})
+}
+
+// CreateItemLinkRequest represents the JSON body for POST /api/items/:id/links
+type CreateItemLinkRequest struct {
+	LinkedItemID int `json:"linked_item_id" binding:"required"`
+}
+
+// handleCreateItemLink creates a link between two items
+func handleCreateItemLink(c *gin.Context) {
+	userID := c.MustGet("user_id").(int)
+	db := c.MustGet("db").(*sql.DB)
+
+	itemIDStr := c.Param("id")
+	parentItemID, err := strconv.Atoi(itemIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid item ID"})
+		return
+	}
+
+	var req CreateItemLinkRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	err = database.CreateItemLink(db, userID, parentItemID, req.LinkedItemID)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		} else if strings.Contains(err.Error(), "circular") || strings.Contains(err.Error(), "itself") {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		} else if strings.Contains(err.Error(), "UNIQUE constraint") {
+			c.JSON(http.StatusConflict, gin.H{"error": "Item is already linked"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create link"})
+		}
+		return
+	}
+
+	// Get the updated list of linked items
+	links, err := database.GetLinkedItems(db, parentItemID)
+	if err != nil {
+		c.JSON(http.StatusCreated, gin.H{"success": true})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"success": true, "links": links})
+}
+
+// handleDeleteItemLink removes a link between two items
+func handleDeleteItemLink(c *gin.Context) {
+	userID := c.MustGet("user_id").(int)
+	db := c.MustGet("db").(*sql.DB)
+
+	parentItemIDStr := c.Param("id")
+	parentItemID, err := strconv.Atoi(parentItemIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid parent item ID"})
+		return
+	}
+
+	linkedItemIDStr := c.Param("linked_id")
+	linkedItemID, err := strconv.Atoi(linkedItemIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid linked item ID"})
+		return
+	}
+
+	err = database.DeleteItemLink(db, userID, parentItemID, linkedItemID)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete link"})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"success": true})
 }

@@ -512,7 +512,8 @@ const availableItems = [
         category: "{{.Category.Name}}",
         weight: {{.WeightGrams}},
         verify: {{.WeightToVerify}},
-        inPack: {{if index $.ItemsInPack .ID}}true{{else}}false{{end}}
+        inPack: {{if index $.ItemsInPack .ID}}true{{else}}false{{end}},
+        hasLinkedItems: {{.HasLinkedItems}}
     },
     {{end}}
 ];
@@ -561,6 +562,7 @@ function setupItemSearch() {
                 <div class="suggestion-meta">
                     <span class="suggestion-category">${item.category}</span>
                     ${detailsText ? `<span class="suggestion-description">${detailsText}</span>` : ''}
+                    ${item.hasLinkedItems ? '<span class="suggestion-status suggestion-linked">Has linked items</span>' : ''}
                     ${item.inPack ? '<span class="suggestion-status">Already in pack</span>' : ''}
                 </div>
             </div>

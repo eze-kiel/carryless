@@ -63,6 +63,11 @@ func SetupRoutes(r *gin.Engine, db *sql.DB, emailService *email.Service, cfg *co
 		activated.POST("/inventory/items/bulk-delete", handleBulkDeleteItems)
 		activated.PATCH("/api/items/:id", handlePatchItem)
 
+		// Item links API
+		activated.GET("/api/items/:id/links", handleGetItemLinks)
+		activated.POST("/api/items/:id/links", handleCreateItemLink)
+		activated.DELETE("/api/items/:id/links/:linked_id", handleDeleteItemLink)
+
 		activated.GET("/categories", handleCategories)
 		activated.GET("/categories/new", handleNewCategoryPage)
 		activated.POST("/categories", handleCreateCategory)

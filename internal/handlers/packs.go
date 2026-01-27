@@ -150,6 +150,25 @@ func handlePackDetail(c *gin.Context) {
 		return
 	}
 
+	// Get linked items count for each item to mark HasLinkedItems
+	itemLinksCount, err := database.GetItemsLinkedCount(db, userID)
+	if err != nil {
+		c.HTML(http.StatusInternalServerError, "pack_detail.html", gin.H{
+			"Title": "Pack Detail - Carryless",
+			"User":  user,
+			"Pack":  pack,
+			"Error": "Failed to load linked items info",
+		})
+		return
+	}
+
+	// Mark items that have linked items
+	for i := range items {
+		if count, exists := itemLinksCount[items[i].ID]; exists && count > 0 {
+			items[i].HasLinkedItems = true
+		}
+	}
+
 	categoryWeights := make(map[string]int)
 	categoryWornWeights := make(map[string]int)
 	labelWeights := make(map[string]int)

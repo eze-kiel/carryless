@@ -42,6 +42,8 @@ type Item struct {
 	CreatedAt      time.Time  `json:"created_at" db:"created_at"`
 	UpdatedAt      time.Time  `json:"updated_at" db:"updated_at"`
 	Category       *Category  `json:"category,omitempty"`
+	LinkedItems    []ItemLink `json:"linked_items,omitempty"`
+	HasLinkedItems bool       `json:"has_linked_items"`
 }
 
 type Pack struct {
@@ -166,5 +168,13 @@ func (t *TripTransportStep) Duration() *time.Duration {
 		return &duration
 	}
 	return nil
+}
+
+type ItemLink struct {
+	ID           int       `json:"id" db:"id"`
+	ParentItemID int       `json:"parent_item_id" db:"parent_item_id"`
+	LinkedItemID int       `json:"linked_item_id" db:"linked_item_id"`
+	CreatedAt    time.Time `json:"created_at" db:"created_at"`
+	LinkedItem   *Item     `json:"linked_item,omitempty"`
 }
 
