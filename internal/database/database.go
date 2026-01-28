@@ -191,6 +191,11 @@ func Migrate(db *sql.DB) error {
 		return fmt.Errorf("failed to create item_links table: %w", err)
 	}
 
+	// Create user pack labels tables if they don't exist
+	if err := createUserPackLabelsTable(db); err != nil {
+		return fmt.Errorf("failed to create user_pack_labels tables: %w", err)
+	}
+
 	return nil
 }
 
@@ -910,6 +915,40 @@ func createItemLinksTable(db *sql.DB) error {
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_item_links_parent ON item_links(parent_item_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_item_links_linked ON item_links(linked_item_id)`,
+	}
+
+	for _, migration := range migrations {
+		if _, err := db.Exec(migration); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func createUserPackLabelsTable(db *sql.DB) error {
+	migrations := []string{
+		`CREATE TABLE IF NOT EXISTS user_pack_labels (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			user_id INTEGER NOT NULL,
+			name TEXT NOT NULL,
+			color TEXT DEFAULT '#6b7280',
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+			UNIQUE(user_id, name)
+		)`,
+		`CREATE TABLE IF NOT EXISTS pack_label_assignments (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			pack_id TEXT NOT NULL,
+			user_pack_label_id INTEGER NOT NULL,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (pack_id) REFERENCES packs(id) ON DELETE CASCADE,
+			FOREIGN KEY (user_pack_label_id) REFERENCES user_pack_labels(id) ON DELETE CASCADE,
+			UNIQUE(pack_id, user_pack_label_id)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_user_pack_labels_user_id ON user_pack_labels(user_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_pack_label_assignments_pack_id ON pack_label_assignments(pack_id)`,
 	}
 
 	for _, migration := range migrations {

@@ -96,6 +96,15 @@ func SetupRoutes(r *gin.Engine, db *sql.DB, emailService *email.Service, cfg *co
 		activated.POST("/packs/:id/items/:item_id/labels", handleAssignLabelToItem)
 		activated.DELETE("/packs/:id/items/:item_id/labels/:label_id", handleRemoveLabelFromItem)
 
+		// User pack labels (pack-level labels shared across user's packs)
+		activated.POST("/pack-labels", handleCreateUserPackLabel)
+		activated.POST("/pack-labels/:label_id", handleUpdateUserPackLabel)
+		activated.DELETE("/pack-labels/:label_id", handleDeleteUserPackLabel)
+
+		// Pack label assignments (assign user pack labels to specific packs)
+		activated.POST("/packs/:id/pack-labels", handleAssignPackLevelLabel)
+		activated.DELETE("/packs/:id/pack-labels/:label_id", handleRemovePackLevelLabel)
+
 		// Trip routes
 		activated.GET("/trips", handleTrips)
 		activated.GET("/trips/new", handleNewTripPage)

@@ -27,6 +27,17 @@ func handlePacks(c *gin.Context) {
 		return
 	}
 
+	// Get user pack labels for the labels bar
+	userPackLabels, err := database.GetUserPackLabels(db, userID)
+	if err != nil {
+		c.HTML(http.StatusInternalServerError, "packs.html", gin.H{
+			"Title": "Packs - Carryless",
+			"User":  user,
+			"Error": "Failed to load pack labels",
+		})
+		return
+	}
+
 	csrfToken, err := database.CreateCSRFToken(db, userID)
 	if err != nil {
 		c.HTML(http.StatusInternalServerError, "packs.html", gin.H{
@@ -38,10 +49,11 @@ func handlePacks(c *gin.Context) {
 	}
 
 	c.HTML(http.StatusOK, "packs.html", gin.H{
-		"Title":     "Packs - Carryless",
-		"User":      user,
-		"Packs":     packs,
-		"CSRFToken": csrfToken.Token,
+		"Title":          "Packs - Carryless",
+		"User":           user,
+		"Packs":          packs,
+		"UserPackLabels": userPackLabels,
+		"CSRFToken":      csrfToken.Token,
 	})
 }
 
@@ -1047,4 +1059,163 @@ func handleTogglePackLock(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Archive status updated successfully"})
+}
+
+// User Pack Labels handlers (pack-level labels shared across user's packs)
+
+func handleCreateUserPackLabel(c *gin.Context) {
+	userID := c.MustGet("user_id").(int)
+	db := c.MustGet("db").(*sql.DB)
+
+	name := c.PostForm("name")
+	color := c.PostForm("color")
+	if color == "" {
+		color = "#6b7280" // Default gray color
+	}
+
+	if strings.TrimSpace(name) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Label name is required"})
+		return
+	}
+
+	label, err := database.CreateUserPackLabel(db, userID, strings.TrimSpace(name), color)
+	if err != nil {
+		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Label name already exists"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create label"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Label created successfully", "label": label})
+}
+
+func handleUpdateUserPackLabel(c *gin.Context) {
+	userID := c.MustGet("user_id").(int)
+	db := c.MustGet("db").(*sql.DB)
+
+	labelID, err := strconv.Atoi(c.Param("label_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid label ID"})
+		return
+	}
+
+	name := c.PostForm("name")
+	color := c.PostForm("color")
+	if color == "" {
+		color = "#6b7280" // Default gray color
+	}
+
+	if strings.TrimSpace(name) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Label name is required"})
+		return
+	}
+
+	err = database.UpdateUserPackLabel(db, labelID, strings.TrimSpace(name), color, userID)
+	if err != nil {
+		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Label name already exists"})
+			return
+		}
+		if strings.Contains(err.Error(), "unauthorized") {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			return
+		}
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Label not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update label"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Label updated successfully"})
+}
+
+func handleDeleteUserPackLabel(c *gin.Context) {
+	userID := c.MustGet("user_id").(int)
+	db := c.MustGet("db").(*sql.DB)
+
+	labelID, err := strconv.Atoi(c.Param("label_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid label ID"})
+		return
+	}
+
+	err = database.DeleteUserPackLabel(db, labelID, userID)
+	if err != nil {
+		if strings.Contains(err.Error(), "unauthorized") {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			return
+		}
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Label not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete label"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Label deleted successfully"})
+}
+
+func handleAssignPackLevelLabel(c *gin.Context) {
+	userID := c.MustGet("user_id").(int)
+	db := c.MustGet("db").(*sql.DB)
+	packID := c.Param("id")
+
+	labelID, err := strconv.Atoi(c.PostForm("label_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid label ID"})
+		return
+	}
+
+	err = database.AssignLabelToPack(db, packID, labelID, userID)
+	if err != nil {
+		if strings.Contains(err.Error(), "unauthorized") {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			return
+		}
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Pack or label not found"})
+			return
+		}
+		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Label already assigned to this pack"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to assign label"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Label assigned successfully"})
+}
+
+func handleRemovePackLevelLabel(c *gin.Context) {
+	userID := c.MustGet("user_id").(int)
+	db := c.MustGet("db").(*sql.DB)
+	packID := c.Param("id")
+
+	labelID, err := strconv.Atoi(c.Param("label_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid label ID"})
+		return
+	}
+
+	err = database.RemoveLabelFromPack(db, packID, labelID, userID)
+	if err != nil {
+		if strings.Contains(err.Error(), "unauthorized") {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			return
+		}
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Label assignment not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove label"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Label removed successfully"})
 }

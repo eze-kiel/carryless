@@ -151,6 +151,15 @@ func GetPacks(db *sql.DB, userID int) ([]models.Pack, error) {
 		return nil, fmt.Errorf("error iterating packs: %w", err)
 	}
 
+	// Fetch pack-level labels for each pack
+	for i := range packs {
+		labels, err := GetPackLevelLabels(db, packs[i].ID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get pack level labels for pack %s: %w", packs[i].ID, err)
+		}
+		packs[i].PackLevelLabels = labels
+	}
+
 	return packs, nil
 }
 

@@ -47,17 +47,18 @@ type Item struct {
 }
 
 type Pack struct {
-	ID        string    `json:"id" db:"id"`
-	UserID    int       `json:"user_id" db:"user_id"`
-	Name      string    `json:"name" db:"name"`
-	Note      string    `json:"note" db:"note"`
-	IsPublic  bool      `json:"is_public" db:"is_public"`
-	IsLocked  bool      `json:"is_locked" db:"is_locked"`
-	ShortID   string    `json:"short_id,omitempty" db:"short_id"`
-	CreatedAt time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
-	Items     []PackItem `json:"items,omitempty"`
-	Labels    []PackLabel `json:"labels,omitempty"`
+	ID              string          `json:"id" db:"id"`
+	UserID          int             `json:"user_id" db:"user_id"`
+	Name            string          `json:"name" db:"name"`
+	Note            string          `json:"note" db:"note"`
+	IsPublic        bool            `json:"is_public" db:"is_public"`
+	IsLocked        bool            `json:"is_locked" db:"is_locked"`
+	ShortID         string          `json:"short_id,omitempty" db:"short_id"`
+	CreatedAt       time.Time       `json:"created_at" db:"created_at"`
+	UpdatedAt       time.Time       `json:"updated_at" db:"updated_at"`
+	Items           []PackItem      `json:"items,omitempty"`
+	Labels          []PackLabel     `json:"labels,omitempty"`
+	PackLevelLabels []UserPackLabel `json:"pack_level_labels,omitempty"`
 }
 
 type PackItem struct {
@@ -176,5 +177,14 @@ type ItemLink struct {
 	LinkedItemID int       `json:"linked_item_id" db:"linked_item_id"`
 	CreatedAt    time.Time `json:"created_at" db:"created_at"`
 	LinkedItem   *Item     `json:"linked_item,omitempty"`
+}
+
+type UserPackLabel struct {
+	ID        int       `json:"id" db:"id"`
+	UserID    int       `json:"user_id" db:"user_id"`
+	Name      string    `json:"name" db:"name"`
+	Color     string    `json:"color" db:"color"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
 }
 
