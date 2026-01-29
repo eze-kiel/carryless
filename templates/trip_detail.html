@@ -1162,6 +1162,21 @@
             canvas.addEventListener('mouseleave', function() {
                 hideElevationMarker();
             });
+
+            // Remove marker and tooltip when touch ends (mobile)
+            canvas.addEventListener('touchend', function() {
+                hideElevationMarker();
+                elevationChart.setActiveElements([]);
+                elevationChart.tooltip.setActiveElements([], {x: 0, y: 0});
+                elevationChart.update('none');
+            });
+
+            canvas.addEventListener('touchcancel', function() {
+                hideElevationMarker();
+                elevationChart.setActiveElements([]);
+                elevationChart.tooltip.setActiveElements([], {x: 0, y: 0});
+                elevationChart.update('none');
+            });
         }
 
         const gpxData = {{.Trip.GPXData}};
