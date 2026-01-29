@@ -487,36 +487,40 @@
 </div>
 
 <script>
-let csrfToken = '';
+// HTML escape function for XSS prevention (inline version, app.js also has this)
+function escapeHtml(text) {
+    if (text === null || text === undefined) return '';
+    const div = document.createElement('div');
+    div.textContent = String(text);
+    return div.innerHTML;
+}
+
+let packPageCsrfToken = '';
 const packId = '{{.Pack.ID}}';
 
 async function fetchCSRFToken() {
     try {
         const response = await fetch('/api/csrf-token');
         const data = await response.json();
-        csrfToken = data.token;
+        packPageCsrfToken = data.token;
     } catch (error) {
         console.error('Failed to fetch CSRF token:', error);
     }
 }
 
-// Available items data for autocomplete
-const availableItems = [
-    {{range .Items}}
-    {
-        id: {{.ID}},
-        name: "{{.Name}}",
-        brand: "{{if .Brand}}{{.Brand}}{{end}}",
-        model: "{{if .Model}}{{.Model}}{{end}}",
-        description: "{{.Note}}",
-        category: "{{.Category.Name}}",
-        weight: {{.WeightGrams}},
-        verify: {{.WeightToVerify}},
-        inPack: {{if index $.ItemsInPack .ID}}true{{else}}false{{end}},
-        hasLinkedItems: {{.HasLinkedItems}}
-    },
-    {{end}}
-];
+// Available items data for autocomplete - use jsonify for safe JSON encoding
+const availableItems = JSON.parse('{{jsonify .Items}}').map(item => ({
+    id: item.id,
+    name: item.name,
+    brand: item.brand || '',
+    model: item.model || '',
+    description: item.note || '',
+    category: item.category ? item.category.name : '',
+    weight: item.weight_grams,
+    verify: item.weight_to_verify,
+    inPack: {{jsonify .ItemsInPack}}[item.id] || false,
+    hasLinkedItems: item.has_linked_items || false
+}));
 
 function setupItemSearch() {
     const searchInput = document.getElementById('addItemSearch');
@@ -533,10 +537,10 @@ function setupItemSearch() {
         }
         
         const matches = availableItems.filter(item =>
-            item.name.toLowerCase().includes(query) ||
-            item.brand.toLowerCase().includes(query) ||
-            item.model.toLowerCase().includes(query) ||
-            item.description.toLowerCase().includes(query)
+            (item.name && item.name.toLowerCase().includes(query)) ||
+            (item.brand && item.brand.toLowerCase().includes(query)) ||
+            (item.model && item.model.toLowerCase().includes(query)) ||
+            (item.description && item.description.toLowerCase().includes(query))
         ).slice(0, 8); // Limit to 8 suggestions
         
         if (matches.length === 0) {
@@ -553,15 +557,19 @@ function setupItemSearch() {
                 details.push(item.description);
             }
             const detailsText = details.join(', ');
+            // Escape all user data to prevent XSS
+            const escapedName = escapeHtml(item.name || '');
+            const escapedCategory = escapeHtml(item.category || '');
+            const escapedDetails = escapeHtml(detailsText);
             return `
             <div class="suggestion-item" onclick="addItemToPack(${item.id}); clearSearch();">
                 <div class="suggestion-main">
-                    <span class="suggestion-name">${item.name}</span>
+                    <span class="suggestion-name">${escapedName}</span>
                     <span class="suggestion-weight">${item.weight}g</span>
                 </div>
                 <div class="suggestion-meta">
-                    <span class="suggestion-category">${item.category}</span>
-                    ${detailsText ? `<span class="suggestion-description">${detailsText}</span>` : ''}
+                    <span class="suggestion-category">${escapedCategory}</span>
+                    ${detailsText ? `<span class="suggestion-description">${escapedDetails}</span>` : ''}
                     ${item.hasLinkedItems ? '<span class="suggestion-status suggestion-linked">Has linked items</span>' : ''}
                     ${item.inPack ? '<span class="suggestion-status">Already in pack</span>' : ''}
                 </div>
@@ -592,14 +600,14 @@ async function addItemToPack(itemId) {
     
     const formData = new FormData();
     formData.append('item_id', itemId);
-    formData.append('csrf_token', csrfToken);
+    formData.append('csrf_token', packPageCsrfToken);
 
     try {
         const response = await fetch(`/packs/${packId}/items`, {
             method: 'POST',
             body: formData,
             headers: {
-                'X-CSRF-Token': csrfToken
+                'X-CSRF-Token': packPageCsrfToken
             }
         });
 
@@ -720,7 +728,7 @@ async function saveLabelForm(event) {
     const formData = new FormData();
     formData.append('name', name);
     formData.append('color', color);
-    formData.append('csrf_token', csrfToken);
+    formData.append('csrf_token', packPageCsrfToken);
     
     try {
         let url, method;
@@ -736,7 +744,7 @@ async function saveLabelForm(event) {
             method: method,
             body: formData,
             headers: {
-                'X-CSRF-Token': csrfToken
+                'X-CSRF-Token': packPageCsrfToken
             }
         });
         
@@ -763,7 +771,7 @@ async function deleteLabel(labelId) {
         const response = await fetch(`/packs/${packId}/labels/${labelId}`, {
             method: 'DELETE',
             headers: {
-                'X-CSRF-Token': csrfToken
+                'X-CSRF-Token': packPageCsrfToken
             }
         });
         
@@ -794,14 +802,14 @@ async function assignLabelToItem(packItemId, labelId) {
     
     const formData = new FormData();
     formData.append('label_id', labelId);
-    formData.append('csrf_token', csrfToken);
+    formData.append('csrf_token', packPageCsrfToken);
     
     try {
         const response = await fetch(`/packs/${packId}/items/${packItemId}/labels`, {
             method: 'POST',
             body: formData,
             headers: {
-                'X-CSRF-Token': csrfToken
+                'X-CSRF-Token': packPageCsrfToken
             }
         });
         
@@ -824,7 +832,7 @@ async function removeLabelFromItem(packItemId, labelId) {
         const response = await fetch(`/packs/${packId}/items/${packItemId}/labels/${labelId}`, {
             method: 'DELETE',
             headers: {
-                'X-CSRF-Token': csrfToken
+                'X-CSRF-Token': packPageCsrfToken
             }
         });
         
@@ -861,14 +869,14 @@ async function toggleWorn(packId, itemId, isWorn) {
     
     const formData = new FormData();
     formData.append('is_worn', isWorn);
-    formData.append('csrf_token', csrfToken);
+    formData.append('csrf_token', packPageCsrfToken);
 
     try {
         const response = await fetch(`/packs/${packId}/items/${itemId}/worn`, {
             method: 'PUT',
             body: formData,
             headers: {
-                'X-CSRF-Token': csrfToken
+                'X-CSRF-Token': packPageCsrfToken
             }
         });
 
@@ -890,14 +898,14 @@ async function updateWornCount(packId, itemId, wornCount) {
     
     const formData = new FormData();
     formData.append('worn_count', wornCount);
-    formData.append('csrf_token', csrfToken);
+    formData.append('csrf_token', packPageCsrfToken);
 
     try {
         const response = await fetch(`/packs/${packId}/items/${itemId}/worn-count`, {
             method: 'PUT',
             body: formData,
             headers: {
-                'X-CSRF-Token': csrfToken
+                'X-CSRF-Token': packPageCsrfToken
             }
         });
 
@@ -925,7 +933,7 @@ async function removeFromPack(packId, itemId) {
         const response = await fetch(`/packs/${packId}/items/${itemId}`, {
             method: 'DELETE',
             headers: {
-                'X-CSRF-Token': csrfToken
+                'X-CSRF-Token': packPageCsrfToken
             }
         });
 
@@ -945,14 +953,14 @@ async function incrementQuantity(packId, itemId) {
     
     const formData = new FormData();
     formData.append('item_id', itemId);
-    formData.append('csrf_token', csrfToken);
+    formData.append('csrf_token', packPageCsrfToken);
 
     try {
         const response = await fetch(`/packs/${packId}/items`, {
             method: 'POST',
             body: formData,
             headers: {
-                'X-CSRF-Token': csrfToken
+                'X-CSRF-Token': packPageCsrfToken
             }
         });
 
@@ -980,7 +988,7 @@ async function decrementQuantity(packId, itemId, currentCount) {
         const response = await fetch(`/packs/${packId}/items/${itemId}`, {
             method: 'DELETE',
             headers: {
-                'X-CSRF-Token': csrfToken
+                'X-CSRF-Token': packPageCsrfToken
             }
         });
 
@@ -1000,14 +1008,14 @@ async function togglePackLock(packId, isLocked) {
 
     const formData = new FormData();
     formData.append('is_locked', isLocked);
-    formData.append('csrf_token', csrfToken);
+    formData.append('csrf_token', packPageCsrfToken);
 
     try {
         const response = await fetch(`/packs/${packId}/lock`, {
             method: 'POST',
             body: formData,
             headers: {
-                'X-CSRF-Token': csrfToken
+                'X-CSRF-Token': packPageCsrfToken
             }
         });
 
@@ -1366,14 +1374,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const formData = new FormData();
             formData.append('note', note);
-            formData.append('csrf_token', csrfToken);
+            formData.append('csrf_token', packPageCsrfToken);
 
             try {
                 const response = await fetch(`/packs/${packId}/note`, {
                     method: 'POST',
                     body: formData,
                     headers: {
-                        'X-CSRF-Token': csrfToken
+                        'X-CSRF-Token': packPageCsrfToken
                     }
                 });
 
@@ -1381,7 +1389,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (response.ok) {
                     // Update CSRF token if a new one was returned
                     if (data.csrf_token) {
-                        csrfToken = data.csrf_token;
+                        packPageCsrfToken = data.csrf_token;
                     }
 
                     // Show success feedback
@@ -1672,7 +1680,7 @@ async function saveQuickEditField(field, value) {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-Token': csrfToken
+                'X-CSRF-Token': packPageCsrfToken
             },
             body: JSON.stringify(payload)
         });
@@ -1863,7 +1871,7 @@ async function saveFullEdit(event) {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-Token': csrfToken
+                'X-CSRF-Token': packPageCsrfToken
             },
             body: JSON.stringify(payload)
         });

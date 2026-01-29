@@ -1,5 +1,13 @@
 // Global app functionality
 
+// HTML escape function for XSS prevention
+function escapeHtml(text) {
+    if (text === null || text === undefined) return '';
+    const div = document.createElement('div');
+    div.textContent = String(text);
+    return div.innerHTML;
+}
+
 // CSRF token management
 let csrfToken = '';
 
@@ -420,11 +428,12 @@ function showActionSheet(title, actions) {
     const sheet = document.createElement('div');
     sheet.className = 'mobile-action-sheet';
 
-    // Build actions HTML
+    // Build actions HTML with proper escaping
     const actionsHTML = actions.map(action => {
         const dangerClass = action.danger ? ' danger' : '';
+        // onclick is expected to be trusted code, but label needs escaping
         return `<button class="action-sheet-item${dangerClass}" onclick="${action.onclick}; closeActionSheet();">
-            ${action.label}
+            ${escapeHtml(action.label)}
         </button>`;
     }).join('');
 
@@ -432,7 +441,7 @@ function showActionSheet(title, actions) {
         <div class="action-sheet-backdrop" onclick="closeActionSheet()"></div>
         <div class="action-sheet-content">
             <div class="action-sheet-header">
-                <h3>${title}</h3>
+                <h3>${escapeHtml(title)}</h3>
                 <button onclick="closeActionSheet()" class="btn-close">×</button>
             </div>
             <div class="action-sheet-body">
@@ -495,7 +504,7 @@ function showAdminUserActions(userId, username, isAdmin, isActivated) {
         danger: true
     });
 
-    showActionSheet(`${username} Actions`, actions);
+    showActionSheet(username + ' Actions', actions);
     return true;
 }
 
@@ -528,7 +537,7 @@ function showPackActions(packId, packName) {
         }
     ];
 
-    showActionSheet(`${packName}`, actions);
+    showActionSheet(packName, actions);
     return true;
 }
 
@@ -586,6 +595,8 @@ window.Carryless = {
     changeWeightUnit,
     initializeDropdown,
     initializeWeightUnitSelector,
+    // Security
+    escapeHtml,
     // Mobile action sheets
     isMobileViewport,
     showActionSheet,
@@ -595,6 +606,9 @@ window.Carryless = {
     submitPackAction,
     confirmDeletePack
 };
+
+// Make escapeHtml globally available
+window.escapeHtml = escapeHtml;
 
 // Make action sheet functions globally available
 window.showActionSheet = showActionSheet;

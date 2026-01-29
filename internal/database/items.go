@@ -9,6 +9,33 @@ import (
 	"carryless/internal/models"
 )
 
+// validItemUpdateColumns is an allowlist of columns that can be updated via PatchItem and BulkUpdateItems.
+// This prevents SQL injection via dynamic column names.
+var validItemUpdateColumns = map[string]bool{
+	"name":             true,
+	"category_id":      true,
+	"note":             true,
+	"weight_grams":     true,
+	"weight_to_verify": true,
+	"price":            true,
+	"brand":            true,
+	"model":            true,
+	"purchase_date":    true,
+	"capacity":         true,
+	"capacity_unit":    true,
+	"link":             true,
+}
+
+// validateUpdateColumns checks that all column names in updates are in the allowlist.
+func validateUpdateColumns(updates map[string]interface{}) error {
+	for field := range updates {
+		if !validItemUpdateColumns[field] {
+			return fmt.Errorf("invalid column name: %s", field)
+		}
+	}
+	return nil
+}
+
 func CreateItem(db *sql.DB, userID int, item models.Item) (*models.Item, error) {
 	query := `
 		INSERT INTO items (user_id, category_id, name, note, weight_grams, weight_to_verify, price, brand, model, purchase_date, capacity, capacity_unit, link)
@@ -877,6 +904,11 @@ func PatchItem(db *sql.DB, userID int, itemID int, updates map[string]interface{
 		return nil, fmt.Errorf("no updates specified")
 	}
 
+	// Validate column names against allowlist to prevent SQL injection
+	if err := validateUpdateColumns(updates); err != nil {
+		return nil, err
+	}
+
 	// Verify item belongs to user
 	var exists bool
 	err := db.QueryRow("SELECT EXISTS(SELECT 1 FROM items WHERE id = ? AND user_id = ?)", itemID, userID).Scan(&exists)
@@ -919,6 +951,11 @@ func PatchItem(db *sql.DB, userID int, itemID int, updates map[string]interface{
 func BulkUpdateItems(db *sql.DB, userID int, itemIDs []int, updates map[string]interface{}) error {
 	if len(itemIDs) == 0 || len(updates) == 0 {
 		return fmt.Errorf("no items or updates specified")
+	}
+
+	// Validate column names against allowlist to prevent SQL injection
+	if err := validateUpdateColumns(updates); err != nil {
+		return err
 	}
 
 	// Start transaction

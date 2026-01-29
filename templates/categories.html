@@ -148,7 +148,7 @@
 <script>
 let currentCategoryId = null;
 let forceCategoryDelete = false;
-const csrfToken = '{{.CSRFToken}}';
+const categoriesPageCsrfToken = '{{.CSRFToken}}';
 
 // Make rows clickable
 document.querySelectorAll('.clickable-row').forEach(row => {
@@ -184,12 +184,18 @@ async function showDeleteConfirmation() {
         const confirmBtn = document.getElementById('confirmDeleteBtn');
 
         if (data.items && data.items.length > 0) {
+            // Escape item names to prevent XSS
+            const escapedItems = data.items.map(item => {
+                const div = document.createElement('div');
+                div.textContent = item.name;
+                return div.innerHTML;
+            });
             warningContent.innerHTML = `
                 <div class="alert alert-warning" style="margin-bottom: 1rem;">
                     <strong>Warning:</strong> This category contains ${data.items.length} item(s):
                 </div>
                 <ul style="margin: 0.75rem 0; padding-left: 1.5rem; max-height: 150px; overflow-y: auto;">
-                    ${data.items.map(item => `<li>${item.name}</li>`).join('')}
+                    ${escapedItems.map(name => `<li>${name}</li>`).join('')}
                 </ul>
                 <p style="margin-top: 1rem;"><strong>Deleting this category will permanently delete all items above.</strong></p>
             `;
@@ -221,7 +227,7 @@ function confirmCategoryDelete() {
     const csrfInput = document.createElement('input');
     csrfInput.type = 'hidden';
     csrfInput.name = 'csrf_token';
-    csrfInput.value = csrfToken;
+    csrfInput.value = categoriesPageCsrfToken;
     form.appendChild(csrfInput);
 
     if (forceCategoryDelete) {

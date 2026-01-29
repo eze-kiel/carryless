@@ -120,11 +120,11 @@
                                                     {{if .IsActivated}}Deactivate User{{else}}Activate User{{end}}
                                                 </a>
                                                 {{if not .IsActivated}}
-                                                <a href="#" class="dropdown-item" onclick="resendActivation({{.ID}}, '{{.Email}}')">
+                                                <a href="#" class="dropdown-item" data-userid="{{.ID}}" data-email="{{.Email}}" onclick="resendActivationFromElement(this); return false;">
                                                     Resend Activation Email
                                                 </a>
                                                 {{end}}
-                                                <a href="#" class="dropdown-item dropdown-item-danger" onclick="banUser({{.ID}}, '{{.Username}}')">
+                                                <a href="#" class="dropdown-item dropdown-item-danger" data-userid="{{.ID}}" data-username="{{.Username}}" onclick="banUserFromElement(this); return false;">
                                                     Ban User
                                                 </a>
                                             </div>
@@ -421,6 +421,20 @@
                     document.body.removeChild(notification);
                 }, 300);
             }, 3000);
+        }
+
+        // Wrapper function to read user data from data attributes (XSS-safe)
+        function resendActivationFromElement(element) {
+            const userId = element.dataset.userid;
+            const userEmail = element.dataset.email;
+            resendActivation(userId, userEmail);
+        }
+
+        // Wrapper function to read user data from data attributes (XSS-safe)
+        function banUserFromElement(element) {
+            const userId = element.dataset.userid;
+            const username = element.dataset.username;
+            banUser(userId, username);
         }
 
         function resendActivation(userId, userEmail) {

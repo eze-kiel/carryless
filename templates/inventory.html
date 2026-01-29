@@ -460,6 +460,14 @@
         </div>
 
 <script>
+        // HTML escape function for XSS prevention (inline version, app.js also has this)
+        function escapeHtml(text) {
+            if (text === null || text === undefined) return '';
+            const div = document.createElement('div');
+            div.textContent = String(text);
+            return div.innerHTML;
+        }
+
         const userCurrency = '{{.User.Currency}}';
         let currentItemId = null;
 
@@ -533,9 +541,10 @@
                 document.getElementById('itemModalPurchaseDate').textContent = '-';
             }
 
-            // Link
+            // Link - escape URL to prevent XSS
             if (link) {
-                document.getElementById('itemModalLink').innerHTML = `<a href="${link}" target="_blank" rel="noopener noreferrer">${link}</a>`;
+                const escapedLink = escapeHtml(link);
+                document.getElementById('itemModalLink').innerHTML = `<a href="${escapedLink}" target="_blank" rel="noopener noreferrer">${escapedLink}</a>`;
             } else {
                 document.getElementById('itemModalLink').textContent = '-';
             }
@@ -565,12 +574,8 @@
             });
         }
 
-        // Linked items data for picker
-        const allItems = [
-            {{range .Items}}
-            {id: {{.ID}}, name: "{{.Name}}", category: "{{.Category.Name}}", weight: {{.WeightGrams}}, brand: "{{if .Brand}}{{.Brand}}{{end}}", model: "{{if .Model}}{{.Model}}{{end}}", note: "{{.Note}}"},
-            {{end}}
-        ];
+        // Linked items data for picker - use jsonify for safe JSON encoding
+        const allItems = JSON.parse('{{jsonify .Items}}');
 
         async function loadLinkedItems(itemId) {
             const listEl = document.getElementById('linkedItemsList');
@@ -588,9 +593,11 @@
                         const item = link.linked_item;
                         const brandModel = [item.brand, item.model].filter(Boolean).join(' ');
                         const displayName = brandModel ? `${item.name} (${brandModel})` : item.name;
+                        // Escape user data to prevent XSS
+                        const escapedDisplayName = escapeHtml(displayName);
                         return `
                         <div class="linked-item-tag">
-                            <span>${displayName}</span>
+                            <span>${escapedDisplayName}</span>
                             <button type="button" class="linked-item-remove" onclick="removeLinkedItem(${itemId}, ${link.linked_item_id})">&times;</button>
                         </div>
                     `}).join('');
@@ -623,8 +630,8 @@
             // Filter items that are not the current item
             const matches = allItems.filter(item =>
                 item.id !== currentItemId &&
-                (item.name.toLowerCase().includes(query) ||
-                item.category.toLowerCase().includes(query) ||
+                ((item.name && item.name.toLowerCase().includes(query)) ||
+                (item.category && item.category.toLowerCase().includes(query)) ||
                 (item.brand && item.brand.toLowerCase().includes(query)) ||
                 (item.model && item.model.toLowerCase().includes(query)))
             ).slice(0, 5);
@@ -637,11 +644,15 @@
             suggestionsDiv.innerHTML = matches.map(item => {
                 const brandModel = [item.brand, item.model].filter(Boolean).join(' ');
                 const displayName = brandModel ? `${item.name} (${brandModel})` : item.name;
-                const noteHtml = item.note ? `<span class="suggestion-note">${item.note}</span>` : '';
+                // Escape all user data to prevent XSS
+                const escapedDisplayName = escapeHtml(displayName);
+                const escapedCategory = escapeHtml(item.category);
+                const escapedNote = escapeHtml(item.note);
+                const noteHtml = item.note ? `<span class="suggestion-note">${escapedNote}</span>` : '';
                 return `
                     <div class="linked-item-suggestion" onclick="addLinkedItem(${item.id})">
-                        <span class="suggestion-name">${displayName}</span>
-                        <span class="suggestion-meta">${item.category} - ${item.weight}g</span>
+                        <span class="suggestion-name">${escapedDisplayName}</span>
+                        <span class="suggestion-meta">${escapedCategory} - ${item.weight}g</span>
                         ${noteHtml}
                     </div>
                 `;
