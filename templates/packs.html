@@ -553,10 +553,18 @@ let currentPackId = null;
 async function fetchCSRFToken() {
     try {
         const response = await fetch('/api/csrf-token');
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
         const data = await response.json();
+        if (!data.token) {
+            throw new Error('No token in response');
+        }
         csrfToken = data.token;
+        return true;
     } catch (error) {
         console.error('Failed to fetch CSRF token:', error);
+        return false;
     }
 }
 
@@ -632,7 +640,11 @@ function closePackLabelModal() {
 
 async function savePackLabelForm(event) {
     event.preventDefault();
-    await fetchCSRFToken();
+    const tokenOk = await fetchCSRFToken();
+    if (!tokenOk) {
+        alert('Session expired. Please refresh the page.');
+        return;
+    }
 
     const name = document.getElementById('packLabelName').value.trim();
     const color = document.getElementById('packLabelColor').value;
@@ -680,7 +692,11 @@ async function deletePackLabel(labelId) {
         return;
     }
 
-    await fetchCSRFToken();
+    const tokenOk = await fetchCSRFToken();
+    if (!tokenOk) {
+        alert('Session expired. Please refresh the page.');
+        return;
+    }
 
     try {
         const response = await fetch(`/pack-labels/${labelId}`, {
@@ -722,7 +738,11 @@ function closeAssignPackLabelModal() {
 }
 
 async function assignLabelToPack(packId, labelId) {
-    await fetchCSRFToken();
+    const tokenOk = await fetchCSRFToken();
+    if (!tokenOk) {
+        alert('Session expired. Please refresh the page.');
+        return;
+    }
 
     const formData = new FormData();
     formData.append('label_id', labelId);
@@ -750,7 +770,11 @@ async function assignLabelToPack(packId, labelId) {
 }
 
 async function removePackLevelLabel(packId, labelId) {
-    await fetchCSRFToken();
+    const tokenOk = await fetchCSRFToken();
+    if (!tokenOk) {
+        alert('Session expired. Please refresh the page.');
+        return;
+    }
 
     try {
         const response = await fetch(`/packs/${packId}/pack-labels/${labelId}`, {

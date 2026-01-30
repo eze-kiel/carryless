@@ -14,15 +14,19 @@ let csrfToken = '';
 async function fetchCSRFToken() {
     try {
         const response = await fetch('/api/csrf-token');
-        if (response.ok) {
-            const data = await response.json();
-            csrfToken = data.token;
-            return csrfToken;
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
         }
+        const data = await response.json();
+        if (!data.token) {
+            throw new Error('No token in response');
+        }
+        csrfToken = data.token;
+        return csrfToken;
     } catch (error) {
         console.error('Failed to fetch CSRF token:', error);
+        return null;
     }
-    return null;
 }
 
 // Generic modal management
